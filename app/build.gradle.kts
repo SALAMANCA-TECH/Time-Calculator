@@ -1,21 +1,23 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+
     id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.itemidentifier"
+    namespace = "com.example.spla"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.itemidentifier"
+        applicationId = "com.example.spla"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         vectorDrawables {
             useSupportLibrary = true
         }

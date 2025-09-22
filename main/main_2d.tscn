@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://dql7w1whw7j0x"]
+
+[ext_resource type="Texture2D" uid="uid://kenney_panel" path="res://assets/button_rectangle_depth_flat.png" id="1_abcde"]
+
+[node name="Main2D" type="Node2D"]

@@ -19,7 +19,7 @@ var shelf_slots = [
 ]
 
 func _ready():
-	var path = OS.get_system_dir(OS.SYSTEM_DIR_HOME)
+	var path = OS.get_system_dir(OS.SYSTEM_DIR_DOCUMENTS)
 
 	var dir_access = DirAccess.open(path)
 	if dir_access:

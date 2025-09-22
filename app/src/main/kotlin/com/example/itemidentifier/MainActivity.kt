@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.activity.viewModels
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.itemidentifier.navigation.Screen
 import com.example.itemidentifier.ui.screens.BrandScreen
 import com.example.itemidentifier.ui.screens.CategoryScreen
+import com.example.itemidentifier.ui.screens.DiagnosticFunnelScreen
 import com.example.itemidentifier.ui.screens.ModelScreen
 import com.example.itemidentifier.ui.theme.ItemIdentifierTheme
 import com.example.itemidentifier.viewmodel.MainViewModel
@@ -54,7 +56,17 @@ class MainActivity : ComponentActivity() {
                             val categoryId = backStackEntry.arguments?.getString("categoryId")!!
                             ModelScreen(
                                 viewModel = viewModel,
-                                categoryId = categoryId
+                                categoryId = categoryId,
+                                onNavigate = { modelId ->
+                                    navController.navigate(Screen.DiagnosticFunnel.createRoute(modelId))
+                                }
+                            )
+                        }
+                        composable(Screen.DiagnosticFunnel.route) { backStackEntry ->
+                            val modelId = backStackEntry.arguments?.getString("modelId")!!
+                            DiagnosticFunnelScreen(
+                                viewModel = viewModel,
+                                modelId = modelId
                             )
                         }
                     }

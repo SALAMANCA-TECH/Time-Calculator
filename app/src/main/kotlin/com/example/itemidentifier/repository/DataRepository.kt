@@ -1,16 +1,19 @@
 package com.example.itemidentifier.repository
 
+import android.content.Context
 import com.example.itemidentifier.data.Brand
 import com.example.itemidentifier.data.Category
+import com.example.itemidentifier.data.Checklist
 import com.example.itemidentifier.data.Model
+import com.example.spla.FirebaseManager
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
 
-// TODO: Add google-services.json to your app directory
-class DataRepository {
+class DataRepository(context: Context) {
 
     private val db = Firebase.firestore
+    private val firebaseManager = FirebaseManager(context)
 
     suspend fun getBrands(): List<Brand> {
         return try {
@@ -34,5 +37,9 @@ class DataRepository {
         } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    fun getChecklist(brand: String, category: String, model: String): Checklist? {
+        return firebaseManager.getChecklist(brand, category, model)
     }
 }

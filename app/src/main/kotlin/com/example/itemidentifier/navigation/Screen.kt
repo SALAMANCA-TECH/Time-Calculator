@@ -8,4 +8,7 @@ sealed class Screen(val route: String) {
     object Model : Screen("model/{categoryId}") {
         fun createRoute(categoryId: String) = "model/$categoryId"
     }
+    object DiagnosticFunnel : Screen("funnel/{modelId}") {
+        fun createRoute(modelId: String) = "funnel/$modelId"
+    }
 }

@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3 uid="uid://c1jrqg8qj3vcv"]
+
+[ext_resource type="Script" path="res://main/main.gd" id="1_v4p8h"]
+[ext_resource type="PackedScene" uid="uid://b4w5q6e6w7s8h" path="res://player/player.tscn" id="2_yq2v8"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_b2yvq"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_v4p8h")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(20, 0, 0, 0, 1, 0, 0, 0, 20, 0, 0, 0)
+mesh = SubResource("PlaneMesh_b2yvq")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.448074, 0.893997, 0, -0.893997, -0.448074, 0, 10.4331, 0)
+shadow_enabled = true
+
+[node name="Player" parent="." instance=ExtResource("2_yq2v8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 8)

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!--
+    This file is used to configure the Android Full Backup feature.
+    See https://developer.android.com/guide/topics/data/autobackup
+    -->
+</full-backup-content>

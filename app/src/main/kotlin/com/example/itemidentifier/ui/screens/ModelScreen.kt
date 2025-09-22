@@ -25,7 +25,8 @@ import com.example.itemidentifier.viewmodel.MainViewModel
 fun ModelScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
-    categoryId: String
+    categoryId: String,
+    onNavigate: (String) -> Unit
 ) {
     val models by viewModel.models.collectAsState()
 
@@ -39,7 +40,7 @@ fun ModelScreen(
                 model = model,
                 onModelSelected = { checklistId ->
                     Log.d("ModelScreen", "Selected checklist: $checklistId")
-                    // TODO: Load the checklist from Firestore
+                    onNavigate(checklistId)
                 }
             )
         }

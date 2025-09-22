@@ -1,28 +1,9 @@
 package com.example.spla
 
 import android.content.Context
+import com.example.itemidentifier.data.Checklist
 import com.google.gson.Gson
 import java.io.InputStreamReader
-
-data class Checklist(
-    val brand: String,
-    val category: String,
-    val model: String,
-    val checklist: List<ChecklistItem>
-)
-
-data class ChecklistItem(
-    val question: String,
-    val answers: List<Answer>,
-    val inauthentic_image: String,
-    val authentic_image: String
-)
-
-data class Answer(
-    val text: String,
-    val flag: String,
-    val score: Int
-)
 
 class FirebaseManager(private val context: Context) {
 

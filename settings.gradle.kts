@@ -12,5 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "SPLA"
+
+rootProject.name = "Item Identifier"
 include(":app")

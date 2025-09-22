@@ -1,24 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
-    kotlin("jvm") version "1.9.21"
-}
-
-group = "org.example"
-version = "1.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    id("com.android.application") version "8.2.0" apply false
+    kotlin("android") version "1.9.21" apply false
+    id("com.google.gms.google-services") version "4.4.1" apply false
 }

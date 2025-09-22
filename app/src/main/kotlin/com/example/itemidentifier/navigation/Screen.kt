@@ -11,4 +11,5 @@ sealed class Screen(val route: String) {
     object DiagnosticFunnel : Screen("funnel/{modelId}") {
         fun createRoute(modelId: String) = "funnel/$modelId"
     }
+    object FinalResults : Screen("results")
 }

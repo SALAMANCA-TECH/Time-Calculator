@@ -10,22 +10,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.itemidentifier.viewmodel.MainViewModel
-import com.example.itemidentifier.viewmodel.RiskTier
 
 @Composable
 fun DiagnosticFunnelScreen(
     viewModel: MainViewModel,
-    modelId: String
+    modelId: String,
+    onNavigateToResults: () -> Unit
 ) {
     val checklist by viewModel.checklist.collectAsState()
     val currentQuestionIndex by viewModel.currentQuestionIndex.collectAsState()
-    val riskScore by viewModel.riskScore.collectAsState()
-    val riskTier by viewModel.riskTier.collectAsState()
     val assessmentHalted by viewModel.assessmentHalted.collectAsState()
 
     LaunchedEffect(modelId) {
@@ -91,28 +87,9 @@ fun DiagnosticFunnelScreen(
                 }
             }
         } else {
-            FunnelResultsScreen(riskScore = riskScore, riskTier = riskTier, assessmentHalted = assessmentHalted)
+            LaunchedEffect(Unit) {
+                onNavigateToResults()
+            }
         }
-    }
-}
-
-@Composable
-fun FunnelResultsScreen(riskScore: Int, riskTier: RiskTier, assessmentHalted: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        if (assessmentHalted) {
-            Text(text = "Assessment Halted!", fontSize = 24.sp, color = Color.Red)
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-        Text(text = "Funnel Complete!", fontSize = 24.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Final Score: $riskScore", fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Risk Tier: $riskTier", fontSize = 20.sp)
     }
 }

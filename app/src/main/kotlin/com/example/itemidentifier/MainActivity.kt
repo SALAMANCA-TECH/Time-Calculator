@@ -15,6 +15,7 @@ import com.example.itemidentifier.navigation.Screen
 import com.example.itemidentifier.ui.screens.BrandScreen
 import com.example.itemidentifier.ui.screens.CategoryScreen
 import com.example.itemidentifier.ui.screens.DiagnosticFunnelScreen
+import com.example.itemidentifier.ui.screens.FinalResultsScreen
 import com.example.itemidentifier.ui.screens.ModelScreen
 import com.example.itemidentifier.ui.theme.ItemIdentifierTheme
 import com.example.itemidentifier.viewmodel.MainViewModel
@@ -66,8 +67,14 @@ class MainActivity : ComponentActivity() {
                             val modelId = backStackEntry.arguments?.getString("modelId")!!
                             DiagnosticFunnelScreen(
                                 viewModel = viewModel,
-                                modelId = modelId
+                                modelId = modelId,
+                                onNavigateToResults = {
+                                    navController.navigate(Screen.FinalResults.route)
+                                }
                             )
+                        }
+                        composable(Screen.FinalResults.route) {
+                            FinalResultsScreen(viewModel = viewModel)
                         }
                     }
                 }

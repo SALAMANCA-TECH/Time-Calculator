@@ -42,7 +42,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _assessmentHalted = MutableStateFlow(false)
     val assessmentHalted: StateFlow<Boolean> = _assessmentHalted
 
-    private val userAnswers = mutableMapOf<String, Answer>()
+    private val _userAnswers = MutableStateFlow<Map<String, Answer>>(emptyMap())
+    val userAnswers: StateFlow<Map<String, Answer>> = _userAnswers
 
     fun getBrands() {
         viewModelScope.launch {
@@ -66,7 +67,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _checklist.value = repository.getChecklist(brand, category, model)
             _currentQuestionIndex.value = 0
-            userAnswers.clear()
+            _userAnswers.value = emptyMap()
             _riskScore.value = 0
             _riskTier.value = RiskTier.Undetermined
             _assessmentHalted.value = false
@@ -76,7 +77,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun answerQuestion(question: String, answer: Answer) {
         if (_assessmentHalted.value) return
 
-        userAnswers[question] = answer
+        _userAnswers.value = _userAnswers.value + (question to answer)
         _riskScore.value += answer.score
 
         Log.d("MainViewModel", "User answered question: '$question' with '${answer.text}' -> score: ${answer.score}, flag: ${answer.flag}")

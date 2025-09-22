@@ -4,14 +4,15 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.itemidentifier.data.Brand
-import com.example.itemidentifier.data.Category
-import com.example.itemidentifier.data.Checklist
-import com.example.itemidentifier.data.Model
+import com.example.itemidentifier.data.*
 import com.example.itemidentifier.repository.DataRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+enum class RiskTier {
+    Low, Medium, High, Undetermined
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -32,7 +33,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentQuestionIndex = MutableStateFlow(0)
     val currentQuestionIndex: StateFlow<Int> = _currentQuestionIndex
 
-    private val userAnswers = mutableMapOf<String, String>()
+    private val _riskScore = MutableStateFlow(0)
+    val riskScore: StateFlow<Int> = _riskScore
+
+    private val _riskTier = MutableStateFlow(RiskTier.Undetermined)
+    val riskTier: StateFlow<RiskTier> = _riskTier
+
+    private val _assessmentHalted = MutableStateFlow(false)
+    val assessmentHalted: StateFlow<Boolean> = _assessmentHalted
+
+    private val userAnswers = mutableMapOf<String, Answer>()
 
     fun getBrands() {
         viewModelScope.launch {
@@ -57,12 +67,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _checklist.value = repository.getChecklist(brand, category, model)
             _currentQuestionIndex.value = 0
             userAnswers.clear()
+            _riskScore.value = 0
+            _riskTier.value = RiskTier.Undetermined
+            _assessmentHalted.value = false
         }
     }
 
-    fun answerQuestion(question: String, answer: String) {
+    fun answerQuestion(question: String, answer: Answer) {
+        if (_assessmentHalted.value) return
+
         userAnswers[question] = answer
-        Log.d("MainViewModel", "User answered question: '$question' with '$answer'")
+        _riskScore.value += answer.score
+
+        Log.d("MainViewModel", "User answered question: '$question' with '${answer.text}' -> score: ${answer.score}, flag: ${answer.flag}")
+
+        if (answer.flag == "Definitive") {
+            _assessmentHalted.value = true
+            updateRiskTier()
+            return
+        }
+
         _currentQuestionIndex.value++
+        if (_currentQuestionIndex.value >= (_checklist.value?.checklist?.size ?: 0)) {
+            updateRiskTier()
+        }
+    }
+
+    private fun updateRiskTier() {
+        _riskTier.value = when (_riskScore.value) {
+            in 0..30 -> RiskTier.Low
+            in 31..70 -> RiskTier.Medium
+            else -> RiskTier.High
+        }
     }
 }

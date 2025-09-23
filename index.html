@@ -245,9 +245,6 @@
     </div>
 
     <script>
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
-        const apiKey = ""; // This will be automatically provided by the runtime environment.
-
         function showMessage(text, callback) {
             const msgBox = document.getElementById('message-box');
             const msgText = document.getElementById('message-text');
@@ -262,28 +259,6 @@
                 msgBtn.removeEventListener('click', clickHandler);
             };
             msgBtn.addEventListener('click', clickHandler);
-        }
-
-        async function fetchWithBackoff(url, options, retries = 5, delay = 1000) {
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) {
-                    if (response.status === 429 && retries > 0) {
-                        console.log(`Rate limit hit, retrying in ${delay / 1000}s...`);
-                        await new Promise(res => setTimeout(res, delay));
-                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
-                    }
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response;
-            } catch (error) {
-                if (retries > 0) {
-                    console.log(`Fetch failed, retrying in ${delay / 1000}s...`);
-                    await new Promise(res => setTimeout(res, delay));
-                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
-                }
-                throw error;
-            }
         }
 
         const customerTypes = {
@@ -325,6 +300,39 @@
             }
         };
 
+        const predefinedCustomers = {
+            'artist': [
+                { name: "Leo", request: "I need some basic supplies for my life drawing class.", requestedItems: ["Pencil", "Sketchbook"] },
+                { name: "Kara", request: "I want to try some charcoal drawings. Got any?", requestedItems: ["Charcoal"] },
+                { name: "Benny", request: "My markers have all dried out! I need a new set.", requestedItems: ["Markers"] }
+            ],
+            'painter': [
+                { name: "Frida", request: "I'm starting a new self-portrait. I'll need acrylics and a canvas.", requestedItems: ["Acrylics", "Canvas"] },
+                { name: "Claude", request: "Just need some water colors for some light studies.", requestedItems: ["Water Color"] },
+                { name: "Georgia", request: "I'm working on a large piece. I need oil paints.", requestedItems: ["Oils", "Canvas"] }
+            ],
+            'hobbyist': [
+                { name: "Wally", request: "I'm building a new model ship. I need glue and some razors for the small parts.", requestedItems: ["Glue", "Razors"] },
+                { name: "Gundam Guy", request: "I need to paint my latest creation. Got any mini paints?", requestedItems: ["Mini Paints"] },
+                { name: "Tanya", request: "I'm ready to start a new project. A model kit, please!", requestedItems: ["Model Kits"] }
+            ],
+            'woodworker': [
+                { name: "Ron", request: "I need to finish a chair. Some sanding paper and stainer should do it.", requestedItems: ["Sanding Paper", "Stainer"] },
+                { name: "Tammy", request: "I'm just starting out. Do you have any wood scraps I can practice on?", requestedItems: ["Wood Scraps"] },
+                { name: "April", request: "I'm building a large table and need some lumber.", requestedItems: ["Lumber"] }
+            ],
+            'sculptor': [
+                { name: "Michelangelo", request: "I have a vision! I require clay to bring it to life.", requestedItems: ["Clay"] },
+                { name: "Auguste", request: "I need to paint a ceramic piece. Do you have pottery paints?", requestedItems: ["Pottery Paints"] },
+                { name: "Donatello", "request": "I am ready to work with a harder medium. A block of stone, please.", requestedItems: ["Stone", "Clay"] }
+            ],
+            'architect': [
+                { name: "Frank", request: "I'm drafting a new building. I need vellum and some fresh pencil lead.", requestedItems: ["Vellum", "Pencil Lead"] },
+                { name: "Zaha", request: "I need to make a model for a presentation. Do you sell tiny trees?", requestedItems: ["Tiny Trees"] },
+                { name: "Chris", request: "I'm working on some final designs and need some high-quality markers.", requestedItems: ["Fancy Markers", "Vellum"] }
+            ]
+        };
+
         async function generateCustomerRequest() {
             // Determine which customer types can spawn based on unlocked storage cells.
             const availableTypeKeys = ['artist']; // Artists are always available to start the game.
@@ -344,57 +352,18 @@
 
             // Randomly select a customer type from the available ones.
             const chosenTypeKey = availableTypeKeys[Math.floor(Math.random() * availableTypeKeys.length)];
-            const customerType = customerTypes[chosenTypeKey];
 
-            // Get the list of items for that customer type.
-            const storageCell = storageCells.find(cell => cell.label === customerType.storageLabel);
-            if (!storageCell || storageCell.allowedItems.length === 0) {
-                console.error(`No items found for customer type: ${chosenTypeKey}`);
+            const possibleCustomers = predefinedCustomers[chosenTypeKey];
+            if (!possibleCustomers || possibleCustomers.length === 0) {
+                console.error(`No predefined customers found for type: ${chosenTypeKey}`);
                 return null;
             }
 
-            const availableItems = storageCell.allowedItems.join(', ');
-            const numItems = Math.floor(Math.random() * 3) + 1;
-            const prompt = `Generate a single JSON object for a customer who is an ${customerType.name}. The JSON object must have "name", "request" (a single sentence for all items, phrased like an ${customerType.name} would speak), and "requestedItems" (an array of ${numItems} unique item names from the list below). The 'requestedItems' MUST be an array of exact strings from this list: ${availableItems}. Do not include any other text, just the JSON object. The names should be creative. The output must be valid JSON.`;
+            // Randomly select a customer from the predefined list for that type.
+            const customerData = possibleCustomers[Math.floor(Math.random() * possibleCustomers.length)];
 
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            "name": { "type": "STRING" },
-                            "request": { "type": "STRING" },
-                            "requestedItems": {
-                                "type": "ARRAY",
-                                "items": { "type": "STRING" }
-                            }
-                        }
-                    }
-                }
-            };
-
-            const fullUrl = `${API_URL}?key=${apiKey}`;
-
-            try {
-                const response = await fetchWithBackoff(fullUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                const jsonText = result.candidates[0].content.parts[0].text;
-                const customerData = JSON.parse(jsonText);
-
-                // Add the customer type to the returned data
-                return { ...customerData, customerType: chosenTypeKey };
-            } catch (error) {
-                console.error("Error generating customer:", error);
-                showMessage("The muses are quiet... failed to generate a customer. Please try again later.", null);
-                return null;
-            }
+            // Return a copy of the data with the customerType key added.
+            return { ...customerData, customerType: chosenTypeKey };
         }
 
         let cash = 100;

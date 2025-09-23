@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<data-extraction-rules>
-    <!--
-    This file is used to configure the Android Data Extraction feature.
-    See https://developer.android.com/about/versions/12/features#data-extraction
-    -->
-</data-extraction-rules>

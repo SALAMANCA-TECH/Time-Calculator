@@ -1,0 +1,3209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Art Supply Emporium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Patrick+Hand&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Patrick Hand', cursive;
+            background-color: #f7e7d8;
+            color: #5d4037;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+
+        canvas {
+            border: 2px solid #5d4037;
+            background-color: #fcf6e7;
+            touch-action: none;
+            display: block; /* Removes bottom margin */
+            cursor: pointer;
+        }
+
+        #pie-clock-canvas {
+            background-color: transparent;
+            border: none;
+        }
+
+        .font-handwritten {
+            font-family: 'Indie Flower', cursive;
+        }
+
+        .customer-bubble {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 2px solid #5d4037;
+            box-shadow: 4px 4px 0px 0px #5d4037;
+        }
+
+        .btn-style {
+            background-color: #5d4037;
+            color: #f7e7d8;
+            border: 2px solid #5d4037;
+            box-shadow: 4px 4px 0px 0px #5d4037;
+            transition: all 0.1s;
+        }
+
+        .btn-style:active {
+            box-shadow: 0px 0px 0px 0px #5d4037;
+            transform: translate(4px, 4px);
+        }
+
+        .btn-style:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            background-color: #5d4037;
+            color: #f7e7d8;
+            padding: 5px 10px;
+            border-radius: 8px;
+            position: absolute;
+            z-index: 100;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .item-tooltip:hover .tooltip {
+            visibility: visible;
+        }
+
+        #message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fcf6e7;
+            border: 2px solid #5d4037;
+            padding: 2rem;
+            z-index: 1000;
+            box-shadow: 8px 8px 0px 0px #5d4037;
+            text-align: center;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            background-color: #22c55e; /* green-500 */
+            border-color: #166534; /* green-800 */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #f7e7d8;
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center justify-center h-screen">
+
+    <!-- The main container for the game canvas and its overlay UI -->
+    <div id="game-container" class="relative w-full flex-grow">
+        <!-- The UI that sits on top of the canvas -->
+        <div id="game-ui" class="absolute top-4 left-4 z-10 flex items-center space-x-4">
+             <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
+                 $<span id="cash-display">0</span>
+             </div>
+             <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
+                 Day: <span id="day-display">1</span>
+             </div>
+              <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
+                 Points: <span id="shop-points-display">0</span>
+             </div>
+             <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl">Start Day</button>
+             <button id="next-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">End Day</button>
+             <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
+        </div>
+
+        <!-- Settings Button -->
+        <div class="absolute top-4 right-4 z-10">
+            <button id="settings-btn" class="p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-900"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2.4l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </div>
+
+        <!-- Canvas for the game -->
+        <canvas id="game-canvas" class="rounded-lg shadow-xl w-full h-full"></canvas>
+
+        <!-- Hidden canvas for generating the sprite sheet -->
+        <canvas id="spriteSheetCanvas" width="270" height="270" style="display:none;"></canvas>
+
+        <!-- UI for viewing items in a storage cell -->
+        <div id="storage-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-storage" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 id="storage-title" class="text-2xl font-handwritten mb-2 text-center">Storage</h2>
+            <div id="storage-grid" class="grid grid-cols-4 gap-4">
+                <!-- Storage items will be populated here -->
+            </div>
+        </div>
+
+        <!-- UI for viewing items on a shelf -->
+        <div id="shelf-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-shelf" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 id="shelf-title" class="text-2xl font-handwritten mb-2 text-center">Display Shelf</h2>
+            <div id="shelf-grid" class="grid grid-cols-3 gap-4">
+                <!-- Shelf items will be populated here -->
+            </div>
+        </div>
+
+        <!-- UI for assigning items to shelves -->
+        <div id="assignment-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-assignment" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 id="assignment-title" class="text-2xl font-handwritten mb-2 text-center">Assign Item to Slot</h2>
+            <div id="assignment-grid" class="grid grid-cols-3 gap-2 overflow-y-auto max-h-64 p-2 bg-white/50 rounded-md">
+                <!-- Item buttons will be populated here -->
+            </div>
+        </div>
+
+        <!-- UI for placing an item from the basket -->
+        <div id="place-item-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-place-item" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 id="place-item-title" class="text-2xl font-handwritten mb-2 text-center">Place Item from Basket</h2>
+            <div id="place-item-grid" class="grid grid-cols-3 gap-2 overflow-y-auto max-h-64 p-2 bg-white/50 rounded-md">
+                <!-- Item buttons from basket will be populated here -->
+            </div>
+        </div>
+
+        <div id="orders-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-orders" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-2 text-center">Customer Orders</h2>
+            <div id="customer-orders" class="flex flex-col space-y-4 max-h-64 overflow-y-auto">
+                <!-- Customer orders will be populated here -->
+            </div>
+        </div>
+
+        <div id="basket-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-basket" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-2 text-center">Your Basket</h2>
+            <div id="basket-grid" class="flex flex-col space-y-2">
+                <!-- Basket items will be populated here -->
+            </div>
+        </div>
+
+        <!-- Restock Panel -->
+        <div id="restock-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-restock" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Order Supplies</h2>
+            <div id="restock-grid-container" class="h-[500px] overflow-y-auto p-2 bg-white/50 rounded-md">
+                <div id="restock-grid" class="grid grid-cols-1 gap-2">
+                    <!-- Items will be populated here -->
+                </div>
+            </div>
+            <div class="text-right mt-4 p-2 border-t-2 border-amber-900/50 flex justify-end items-center">
+                <span class="text-xl mr-4">Total: $<span id="restock-total">0.00</span></span>
+                <button id="place-order-btn" class="btn-style px-6 py-2 rounded-lg text-lg">Place Order</button>
+            </div>
+        </div>
+
+        <!-- Unlocks Panel -->
+        <div id="unlocks-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-unlocks" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Shop Unlocks</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <h3 class="text-lg font-handwritten border-b-2 border-amber-900/50 mb-2">Employees</h3>
+                    <div id="unlocks-employees" class="space-y-2"></div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-handwritten border-b-2 border-amber-900/50 mb-2">Shelves & Storage</h3>
+                    <div id="unlocks-shelves" class="space-y-2"></div>
+                    <div id="unlocks-storage" class="space-y-2 mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-settings" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Settings</h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-lg">Developer Mode</span>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="developer-toggle" id="developer-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="developer-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                 <div class="flex items-center justify-between">
+                    <span class="text-lg">Continuous Day Cycle</span>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="continuous-toggle" id="continuous-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="continuous-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Message Box -->
+    <div id="message-box" class="hidden rounded-lg">
+        <p id="message-text" class="text-lg"></p>
+        <button id="message-ok-btn" class="btn-style mt-4 px-4 py-2 rounded-lg">OK</button>
+    </div>
+
+    <script>
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
+        const apiKey = ""; // This will be automatically provided by the runtime environment.
+
+        function showMessage(text, callback) {
+            const msgBox = document.getElementById('message-box');
+            const msgText = document.getElementById('message-text');
+            const msgBtn = document.getElementById('message-ok-btn');
+
+            msgText.textContent = text;
+            msgBox.classList.remove('hidden');
+
+            const clickHandler = () => {
+                msgBox.classList.add('hidden');
+                if (callback) callback();
+                msgBtn.removeEventListener('click', clickHandler);
+            };
+            msgBtn.addEventListener('click', clickHandler);
+        }
+
+        async function fetchWithBackoff(url, options, retries = 5, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    if (response.status === 429 && retries > 0) {
+                        console.log(`Rate limit hit, retrying in ${delay / 1000}s...`);
+                        await new Promise(res => setTimeout(res, delay));
+                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (retries > 0) {
+                    console.log(`Fetch failed, retrying in ${delay / 1000}s...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                }
+                throw error;
+            }
+        }
+
+        const customerTypes = {
+            'artist': {
+                name: 'Artist',
+                storageLabel: 'Drawing',
+                storageIndex: 0,
+                spriteType: 'student'
+            },
+            'painter': {
+                name: 'Painter',
+                storageLabel: 'Painting',
+                storageIndex: 1,
+                spriteType: 'painter'
+            },
+            'hobbyist': {
+                name: 'Hobbyist',
+                storageLabel: 'Models',
+                storageIndex: 2,
+                spriteType: 'modelMaker'
+            },
+            'woodworker': {
+                name: 'Woodworker',
+                storageLabel: 'Woodworking',
+                storageIndex: 3,
+                spriteType: 'woodworker'
+            },
+            'sculptor': {
+                name: 'Sculptor',
+                storageLabel: 'Sculpture',
+                storageIndex: 4,
+                spriteType: 'sculptor'
+            },
+            'architect': {
+                name: 'Architect',
+                storageLabel: 'Architectural',
+                storageIndex: 5,
+                spriteType: 'architect'
+            }
+        };
+
+        async function generateCustomerRequest() {
+            // Determine which customer types can spawn based on unlocked storage cells.
+            const availableTypeKeys = ['artist']; // Artists are always available to start the game.
+            unlocks.storage.forEach((isUnlocked, index) => {
+                if (isUnlocked) {
+                    const typeKey = Object.keys(customerTypes).find(key => customerTypes[key].storageIndex === index);
+                    if (typeKey && !availableTypeKeys.includes(typeKey)) {
+                        availableTypeKeys.push(typeKey);
+                    }
+                }
+            });
+
+            if (availableTypeKeys.length === 0) {
+                console.error("No customer types available to spawn.");
+                return null;
+            }
+
+            // Randomly select a customer type from the available ones.
+            const chosenTypeKey = availableTypeKeys[Math.floor(Math.random() * availableTypeKeys.length)];
+            const customerType = customerTypes[chosenTypeKey];
+
+            // Get the list of items for that customer type.
+            const storageCell = storageCells.find(cell => cell.label === customerType.storageLabel);
+            if (!storageCell || storageCell.allowedItems.length === 0) {
+                console.error(`No items found for customer type: ${chosenTypeKey}`);
+                return null;
+            }
+
+            const availableItems = storageCell.allowedItems.join(', ');
+            const numItems = Math.floor(Math.random() * 3) + 1;
+            const prompt = `Generate a single JSON object for a customer who is an ${customerType.name}. The JSON object must have "name", "request" (a single sentence for all items, phrased like an ${customerType.name} would speak), and "requestedItems" (an array of ${numItems} unique item names from the list below). The 'requestedItems' MUST be an array of exact strings from this list: ${availableItems}. Do not include any other text, just the JSON object. The names should be creative. The output must be valid JSON.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "name": { "type": "STRING" },
+                            "request": { "type": "STRING" },
+                            "requestedItems": {
+                                "type": "ARRAY",
+                                "items": { "type": "STRING" }
+                            }
+                        }
+                    }
+                }
+            };
+
+            const fullUrl = `${API_URL}?key=${apiKey}`;
+
+            try {
+                const response = await fetchWithBackoff(fullUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const jsonText = result.candidates[0].content.parts[0].text;
+                const customerData = JSON.parse(jsonText);
+
+                // Add the customer type to the returned data
+                return { ...customerData, customerType: chosenTypeKey };
+            } catch (error) {
+                console.error("Error generating customer:", error);
+                showMessage("The muses are quiet... failed to generate a customer. Please try again later.", null);
+                return null;
+            }
+        }
+
+        let cash = 100;
+        let day = 1;
+        let shopPoints = 0;
+        let customers = [];
+        let canvas, ctx, pieClockCanvas, pieClockCtx;
+        let lastTimestamp = 0;
+        let running = true;
+        let dayStarted = false;
+        let shelfAssignmentMode = false;
+        let developerMode = false;
+        let continuousMode = false;
+
+        const OPENING_DURATION = 60000; // 1 minute
+        const OPEN_DURATION = 180000; // 3 minutes
+        const CLOSING_DURATION = 60000; // 1 minute
+        const DAY_DURATION = OPENING_DURATION + OPEN_DURATION + CLOSING_DURATION; // Total 5 minutes
+        let dayTimer = DAY_DURATION;
+        let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'open', 'closing'
+
+        const CUSTOMER_SPAWN_INTERVAL = 8000;
+        let timeSinceLastCustomer = 0;
+        let floatingTexts = [];
+
+        // Camera and zoom variables
+        let scale = 1.0;
+        const MIN_SCALE = 1.0;
+        const MAX_SCALE = 3.0;
+        let cameraX = 0;
+        let cameraY = 0;
+
+        const desk = { x: 0, y: 0, width: 0, height: 30 };
+        const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
+        const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
+        const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
+        const cashRegister = { x: 0, y: 0, width: 60, height: 50 };
+        const clipboard = { x: 0, y: 0, width: 50, height: 60 };
+        const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
+        const lockIcon = { x: 0, y: 0, width: 50, height: 50 };
+        let storageCells = [];
+        let shelves = [];
+        const MAX_BASKET_SIZE = 5;
+        const MAX_SHELF_STACK = 10;
+        const STOCKER_BASKET_SIZE = 6 * MAX_SHELF_STACK;
+        const LOADER_BASKET_SIZE = 10;
+        const MAX_PACKAGE_SIZE = 20;
+        const PACKAGE_WIDTH = 60;
+        const PACKAGE_HEIGHT = 50;
+        let loadingDockPackages = [];
+
+        let unlocks = {
+            employees: { cashier: false, stocker: false, loader: false, manager: false, salesperson: false },
+            shelves: [true, false, false, false, false],
+            storage: [false, false, false, false, false, false]
+        };
+
+        const unlockCosts = {
+            employees: { cashier: 10, stocker: 15, loader: 20, manager: 50, salesperson: 30 },
+            shelves: [null, 5, 10, 20, 40], // index 0 is free
+            storage: [10, 20, 30, 40, 50, 60]
+        };
+
+        const player = {
+            x: 100, y: 300, width: 50, height: 50, speed: 250,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            basket: []
+        };
+
+        const stocker = {
+            x: 300, y: 300, width: 50, height: 50, speed: 180,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            basket: [],
+            task: null,
+            stateTimer: 0,
+            idleX: 0, idleY: 0
+        };
+
+        const cashier = {
+            x: 100, y: 300, width: 50, height: 50, speed: 200,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            task: null,
+            stateTimer: 0,
+            idleX: 0, idleY: 0
+        };
+
+        const loader = {
+            x: 600, y: 600, width: 50, height: 50, speed: 160,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            basket: [],
+            task: null,
+            stateTimer: 0,
+            idleX: 0, idleY: 0
+        };
+        const manager = {
+            x: 200, y: 300, width: 50, height: 50, speed: 150,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            task: null,
+            stateTimer: 5000,
+            idleX: 0, idleY: 0,
+            canOrder: true,
+            lastOrderQuarter: -1,
+        };
+
+        const salesperson = {
+            x: 400, y: 400, width: 50, height: 50, speed: 120,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            task: null,
+            stateTimer: 0,
+            idleX: 0, idleY: 0
+        };
+
+        const animations = {
+            'idle': { startFrame: 0, frames: 3, cols: 3 },
+            'walk': { startFrame: 3, frames: 3, cols: 3 }
+        };
+
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'KeyF') {
+                togglePanel('orders');
+            } else if (e.code === 'KeyG') {
+                togglePanel('basket');
+            } else if (e.code === 'KeyT') {
+                openUnlocksPanel();
+            } else if (e.code === 'KeyE') {
+                handleInteraction();
+            }
+        });
+
+
+        const items = {
+            // Drawing (formerly General)
+            'Pencil': { cost: 1 }, 'Charcoal': { cost: 2 }, 'Markers': { cost: 5 }, 'Sketchbook': { cost: 10 },
+            // Painting (formerly Quality)
+            'Water Color': { cost: 5 }, 'Oils': { cost: 5 }, 'Acrylics': { cost: 10 }, 'Canvas': { cost: 20 },
+            // Models
+            'Razors': { cost: 5 }, 'Glue': { cost: 7 }, 'Mini Paints': { cost: 20 }, 'Model Kits': { cost: 50 },
+            // Woodworking (formerly Sculpture)
+            'Sanding Paper': { cost: 10 }, 'Stainer': { cost: 20 }, 'Wood Scraps': { cost: 50 }, 'Lumber': { cost: 100 },
+            // Sculpture (formerly Painting)
+            'Clay': { cost: 20 }, 'Pottery Paints': { cost: 50 }, 'Stone': { cost: 150 }, 'Marble': { cost: 300 },
+            // Architectural (formerly Drawing)
+            'Pencil Lead': { cost: 20 }, 'Vellum': { cost: 75 }, 'Fancy Markers': { cost: 100 }, 'Tiny Trees': { cost: 200 }
+        };
+
+        let inventory = {};
+        // Initialize inventory for a new game. This will be overwritten by loadGame if a save exists.
+        Object.keys(items).forEach(item => inventory[item] = 5);
+
+        class Customer {
+            constructor(name, request, requestedItems, customerType) {
+                this.id = Math.random();
+                this.name = name;
+                this.request = request;
+                this.requestedItems = requestedItems;
+                this.customerType = customerType;
+                this.patience = (Math.random() * 5 + 5) * 10;
+                this.budget = Math.floor(Math.random() * 91) + 10;
+                this.x = canvas.width + 50;
+                this.y = desk.y + 75;
+                this.targetX = canvas.width - 150;
+                this.targetY = desk.y + 75;
+                this.speed = 80;
+                this.isServed = false;
+                this.leaving = false;
+
+                this.state = 'entering';
+                this.facing = 'left';
+                this.currentFrame = 0;
+                this.lastFrameTime = 0;
+                this.animationSpeed = 150;
+                this.frameWidth = 90;
+                this.frameHeight = 90;
+                this.speechBubbleTimer = 0;
+                this.showSpeechBubble = false;
+                this.order = [];
+                this.stateTimer = 0;
+                this.currentItemIndex = 0;
+                this.isWaitingForRestock = false;
+
+                this.spriteImage = new Image();
+                this.spriteSheetLoaded = false;
+            }
+
+            draw() {
+                if (this.spriteSheetLoaded) {
+                    drawCharacter(this, this.spriteImage, '', '', false);
+                }
+
+                if (this.showSpeechBubble) {
+                    const bubbleWidth = 200, bubbleHeight = 80;
+                    const bubbleX = this.x - bubbleWidth / 2, bubbleY = this.y - 185;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.strokeStyle = '#5d4037';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(bubbleX + 10, bubbleY); ctx.lineTo(bubbleX + bubbleWidth - 10, bubbleY);
+                    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + 10);
+                    ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - 10);
+                    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - 10, bubbleY + bubbleHeight);
+                    ctx.lineTo(this.x + 10, bubbleY + bubbleHeight); ctx.lineTo(this.x, this.y - 80); ctx.lineTo(this.x - 10, bubbleY + bubbleHeight);
+                    ctx.lineTo(bubbleX + 10, bubbleY + bubbleHeight);
+                    ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - 10);
+                    ctx.lineTo(bubbleX, bubbleY + 10);
+                    ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + 10, bubbleY);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#5d4037';
+                    ctx.font = '16px "Patrick Hand", cursive';
+                    ctx.textAlign = 'center';
+                    wrapText(ctx, this.request, this.x, bubbleY + 20, bubbleWidth - 20, 20);
+                }
+
+                ctx.font = '20px "Indie Flower", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.name, this.x, this.y - this.frameHeight);
+            }
+
+            findNextItemTarget() {
+                const itemToFind = this.requestedItems[this.currentItemIndex];
+                const targetShelf = shelves.find(s => s.items.some(i => i && i.assignedItem === itemToFind && i.quantity > 0));
+                 if (targetShelf) {
+                     this.targetX = targetShelf.rect.x + targetShelf.rect.w / 2;
+                     this.targetY = targetShelf.rect.y + targetShelf.rect.h + 20;
+                     return true;
+                 }
+                return false;
+            }
+
+            update(deltaTime) {
+                if (this.state === 'wandering' && dayPhase === 'closing') {
+                    this.state = 'leaving';
+                    this.request = "Oh, it's closing time! I'll come back another day.";
+                }
+
+                const anim = animations[this.state === 'idle' || this.state === 'waitingAtCounter' ? 'idle' : 'walk'];
+                this.lastFrameTime += deltaTime;
+                if (this.lastFrameTime >= this.animationSpeed) {
+                    this.currentFrame = (this.currentFrame + 1) % anim.frames;
+                    this.lastFrameTime = 0;
+                }
+                if (this.speechBubbleTimer > 0) {
+                    this.speechBubbleTimer -= deltaTime;
+                    if (this.speechBubbleTimer <= 0) {
+                        this.showSpeechBubble = false;
+                    }
+                }
+                switch(this.state) {
+                    case 'entering':
+                        this.targetY = desk.y + 75;
+                        if (this.moveTowardsTarget(deltaTime)) {
+                            this.state = 'browsing';
+                           if (!this.findNextItemTarget()) {
+                                this.request = `Hmm, I don't see what I need. I'll look around.`;
+                                this.state = 'wandering';
+                                this.isWaitingForRestock = true;
+                                this.stateTimer = 0; // Immediately find a wander target
+                            }
+                        }
+                        break;
+                    case 'browsing':
+                        if (this.moveTowardsTarget(deltaTime)) {
+                            this.state = 'takingItem';
+                            this.stateTimer = 1000;
+                        }
+                        break;
+                    case 'takingItem':
+                        this.stateTimer -= deltaTime;
+                        if (this.stateTimer <= 0) {
+                            const currentItem = this.requestedItems[this.currentItemIndex];
+                            const shelf = shelves.find(s => s.items.some(i => i && i.assignedItem === currentItem));
+                            if(shelf) {
+                                const slot = shelf.items.find(i => i && i.assignedItem === currentItem && i.quantity > 0);
+                                if (slot) {
+                                    slot.quantity--;
+                                    this.order.push(currentItem);
+                                    this.currentItemIndex++; // <-- FIX: This was missing!
+                                     if(this.currentItemIndex >= this.requestedItems.length) {
+                                         this.request = `Got everything! Time to check out.`;
+                                         this.state = 'queuing';
+                                     } else {
+                                         this.state = 'browsing';
+                                         if(!this.findNextItemTarget()){
+                                             this.request = `Can't find the other items... I'll just look around.`;
+                                             this.state = 'wandering';
+                                             this.isWaitingForRestock = true;
+                                             this.stateTimer = 0;
+                                         }
+                                     }
+                                } else {
+                                    this.request = `They're out of ${currentItem}!`;
+                                    this.state = 'leaving';
+                                }
+                            } else {
+                                 this.request = `They're out of ${currentItem}!`;
+                                 this.state = 'leaving';
+                            }
+                        }
+                        break;
+                    case 'wandering':
+                        this.stateTimer -= deltaTime;
+                        if (this.stateTimer <= 0 || this.moveTowardsTarget(deltaTime)) {
+                            this.stateTimer = Math.random() * 4000 + 2000; // Wander for 2-6 seconds
+
+                            if (this.isWaitingForRestock && this.findNextItemTarget()) {
+                                this.state = 'browsing';
+                                this.request = `Oh, they have the ${this.requestedItems[this.currentItemIndex]} now!`;
+                                this.isWaitingForRestock = false;
+                                return;
+                            }
+
+                            const firstShelfX = shelves[0].rect.x;
+                            const lastShelf = shelves[shelves.length - 1];
+                            const lastShelfX = lastShelf.rect.x + lastShelf.rect.w;
+                            const shelfYArea = shelves[0].rect.y + shelves[0].rect.h + 60;
+
+                            this.targetX = Math.random() * (lastShelfX - firstShelfX) + firstShelfX;
+                            this.targetY = Math.random() * 100 + shelfYArea - 50;
+                        }
+                        break;
+                    case 'queuing':
+                    case 'waitingAtCounter': {
+                        const waitingCustomers = customers
+                            .filter(c => ['queuing', 'waitingAtCounter'].includes(c.state))
+                            .sort((a,b) => a.x - b.x);
+                        const myQueueIndex = waitingCustomers.findIndex(c => c.id === this.id);
+                        if (myQueueIndex !== -1) {
+                             this.targetX = cashierCounter.x + cashierCounter.w + 60 + myQueueIndex * 90;
+                             this.targetY = cashierCounter.y + cashierCounter.h / 2;
+                        }
+                        if (this.state === 'queuing' && this.moveTowardsTarget(deltaTime)) {
+                            this.state = 'waitingAtCounter';
+                        } else {
+                            this.moveTowardsTarget(deltaTime);
+                        }
+                        break;
+                    }
+                    case 'leaving':
+                        this.targetX = canvas.width + 100;
+                        this.targetY = desk.y + 75;
+                        this.moveTowardsTarget(deltaTime);
+                        break;
+                }
+            }
+
+            moveTowardsTarget(deltaTime) {
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 5) return true;
+                const moveX = (dx / dist) * this.speed * (deltaTime / 1000);
+                const moveY = (dy / dist) * this.speed * (deltaTime / 1000);
+                this.x += moveX;
+                this.y += moveY;
+                this.facing = moveX > 0 ? 'right' : 'left';
+                return false;
+            }
+        }
+
+        function wrapText(context, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const testWidth = context.measureText(testLine).width;
+                if (testWidth > maxWidth && n > 0) {
+                    context.fillText(line, x, y);
+                    line = words[n] + ' ';
+                    y += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line, x, y);
+        }
+
+        function drawLoadingDock() {
+            ctx.fillStyle = 'rgba(255, 235, 59, 0.3)'; // Light yellow background
+            ctx.fillRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height);
+
+            ctx.strokeStyle = 'rgba(255, 193, 7, 0.6)'; // Darker yellow for hatching
+            ctx.lineWidth = 4;
+            const spacing = 40;
+            ctx.beginPath();
+            for (let i = -canvas.height; i < canvas.width; i += spacing) {
+                ctx.moveTo(i, canvas.height);
+                ctx.lineTo(i + loadingDock.height, loadingDock.y);
+            }
+             for (let i = canvas.width + canvas.height; i > 0; i -= spacing) {
+                ctx.moveTo(i, canvas.height);
+                ctx.lineTo(i - loadingDock.height, loadingDock.y);
+            }
+            ctx.stroke();
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
+        }
+
+        function drawManagersOffice() {
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '14px "Indie Flower", cursive';
+            ctx.textAlign = 'center';
+            ctx.fillText("Manager's", managersOffice.x + managersOffice.w / 2, managersOffice.y + 20);
+            ctx.fillText("Office", managersOffice.x + managersOffice.w / 2, managersOffice.y + 35);
+
+            // Desk
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
+            ctx.strokeRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
+        }
+
+        function drawPackage(pkg, x, y) {
+            ctx.fillStyle = '#b9936c';
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 2;
+            ctx.fillRect(x, y, PACKAGE_WIDTH, PACKAGE_HEIGHT);
+            ctx.strokeRect(x, y, PACKAGE_WIDTH, PACKAGE_HEIGHT);
+
+            // Tape
+            ctx.fillStyle = 'rgba(160, 120, 80, 0.7)';
+            ctx.fillRect(x + PACKAGE_WIDTH/2 - 5, y, 10, PACKAGE_HEIGHT);
+            ctx.fillRect(x, y + PACKAGE_HEIGHT/2 - 5, PACKAGE_WIDTH, 10);
+
+            // Label
+            ctx.fillStyle = 'white';
+            ctx.fillRect(x + 5, y + 5, PACKAGE_WIDTH - 10, 20);
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '14px "Patrick Hand"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${pkg.itemName} (${pkg.quantity})`, x + PACKAGE_WIDTH/2, y + 15);
+        }
+
+        function drawPackages() {
+            loadingDockPackages.forEach((pkg, index) => {
+                const x = 10 + index * (PACKAGE_WIDTH + 10);
+                const y = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
+                drawPackage(pkg, x, y);
+            });
+        }
+
+        function drawStoreBackground() {
+            ctx.fillStyle = '#bcaaa4';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(0, 0, canvas.width, desk.y + desk.height);
+            storageCells.forEach((cell, index) => {
+                if (!unlocks.storage[index]) {
+                    const r = cell.rect;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(r.x, r.y, r.w, r.h);
+                    drawLockIcon(r.x + r.w/2 - 25, r.y + r.h/2 - 25, 50, 50);
+                    return;
+                }
+
+                const r = cell.rect;
+                const perspective = 0.25;
+                const insetX = r.w * perspective;
+                const insetY = r.h * perspective;
+
+                const backWall = {
+                    x: r.x + insetX,
+                    y: r.y + insetY,
+                    w: r.w - insetX * 2,
+                    h: r.h - insetY * 2
+                };
+
+                ctx.fillStyle = '#d7ccc8';
+                ctx.fillRect(r.x, r.y, r.w, r.h);
+
+                ctx.fillStyle = '#bcaaa4';
+                ctx.fillRect(backWall.x, backWall.y, backWall.w, backWall.h);
+
+                ctx.strokeStyle = '#5d4037';
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                ctx.moveTo(r.x, r.y); ctx.lineTo(backWall.x, backWall.y);
+                ctx.moveTo(r.x + r.w, r.y); ctx.lineTo(backWall.x + backWall.w, backWall.y);
+                ctx.moveTo(r.x, r.y + r.h); ctx.lineTo(backWall.x, backWall.y + backWall.h);
+                ctx.moveTo(r.x + r.w, r.y + r.h); ctx.lineTo(backWall.x + backWall.w, backWall.y + backWall.h);
+                ctx.stroke();
+
+                ctx.strokeRect(r.x, r.y, r.w, r.h);
+                ctx.strokeRect(backWall.x, backWall.y, backWall.w, backWall.h);
+
+                // Capacity Bar
+                const currentFill = Object.values(cell.items).reduce((a, b) => a + b, 0);
+                const fillPercent = Math.min(1, currentFill / cell.capacity);
+                ctx.fillStyle = '#eeeeee';
+                ctx.fillRect(backWall.x + 5, backWall.y + backWall.h - 15, backWall.w - 10, 10);
+                ctx.fillStyle = '#76ff03';
+                ctx.fillRect(backWall.x + 5, backWall.y + backWall.h - 15, (backWall.w - 10) * fillPercent, 10);
+                ctx.strokeStyle = '#5d4037';
+                ctx.strokeRect(backWall.x + 5, backWall.y + backWall.h - 15, backWall.w - 10, 10);
+
+                ctx.fillStyle = '#5d4037';
+                ctx.font = '18px "Indie Flower", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText(cell.label, cell.rect.x + cell.rect.w / 2, cell.rect.y + cell.rect.h + 20);
+            });
+
+            // Draw Cashier Counter
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
+            ctx.fillStyle = '#6d4c41'; // Darker top
+            ctx.fillRect(cashierCounter.x, cashierCounter.y, 10, cashierCounter.h);
+
+
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(desk.x, desk.y, desk.width, desk.height);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(desk.x, desk.y, desk.width, desk.height);
+
+            drawLoadingDock();
+            drawManagersOffice();
+        }
+
+        function drawStaticUI() {
+            const boxWidth = 290, boxHeight = 70;
+            const boxX = (canvas.width - boxWidth) / 2, boxY = 20;
+
+            ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
+            ctx.strokeStyle = "#4e342e";
+            ctx.lineWidth = 2;
+            ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+            ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+            const iconY = boxY + 10;
+            cashRegister.x = boxX + 20; cashRegister.y = iconY;
+            shoppingBasket.x = boxX + 85; shoppingBasket.y = iconY;
+            clipboard.x = boxX + 150; clipboard.y = iconY;
+            lockIcon.x = boxX + 215; lockIcon.y = iconY;
+
+            drawCashRegister(cashRegister.x, cashRegister.y, cashRegister.width, cashRegister.height);
+            drawShoppingBasket(shoppingBasket.x, shoppingBasket.y, shoppingBasket.width, shoppingBasket.height);
+            drawClipboard(clipboard.x, clipboard.y, clipboard.width, clipboard.height);
+            drawLockIcon(lockIcon.x, lockIcon.y, lockIcon.width, lockIcon.height);
+
+            if (shelfAssignmentMode) {
+                ctx.strokeStyle = '#facc15'; // Bright yellow
+                ctx.lineWidth = 3;
+                ctx.strokeRect(clipboard.x - 5, clipboard.y - 5, clipboard.width + 10, clipboard.height + 10);
+            }
+
+            if (player.basket.length > 0) {
+                const count = player.basket.length;
+                const countX = shoppingBasket.x + shoppingBasket.width - 10;
+                const countY = shoppingBasket.y + 15;
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.arc(countX, countY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#f7e7d8';
+                ctx.font = '16px "Patrick Hand", cursive';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(count, countX, countY);
+            }
+        }
+
+        function drawCashRegister(x, y, w, h) {
+            ctx.fillStyle = '#c0c0c0'; ctx.fillRect(x, y, w, h);
+            ctx.fillStyle = '#808080'; ctx.fillRect(x + 5, y + 5, w - 10, 15);
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x + 8, y + 25, w * 0.4, h * 0.3);
+            const btnW = w * 0.15; const btnH = h * 0.18;
+            ctx.fillRect(x + w * 0.6, y + 25, btnW, btnH);
+            ctx.fillRect(x + w * 0.8, y + 25, btnW, btnH);
+            ctx.fillRect(x + w * 0.6, y + 25 + btnH + 5, btnW, btnH);
+            ctx.fillRect(x + w * 0.8, y + 25 + btnH + 5, btnW, btnH);
+        }
+
+        function drawClipboard(x, y, w, h) {
+             ctx.fillStyle = '#8d6e63'; ctx.fillRect(x, y, w, h);
+             ctx.fillStyle = '#f5f5f5'; ctx.fillRect(x + 5, y + 15, w - 10, h - 20);
+             ctx.fillStyle = '#757575'; ctx.fillRect(x + 10, y + 5, w - 20, 10);
+             ctx.strokeStyle = '#bdbdbd'; ctx.lineWidth = 1;
+             for (let i = 0; i < 4; i++) {
+                 ctx.beginPath();
+                 ctx.moveTo(x + 10, y + 25 + i * 8);
+                 ctx.lineTo(x + w - 10, y + 25 + i * 8);
+                 ctx.stroke();
+             }
+        }
+
+        function drawShoppingBasket(x, y, w, h) {
+            ctx.strokeStyle = '#f5f5f5';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.1, y + h * 0.4);
+            ctx.lineTo(x + w * 0.9, y + h * 0.4);
+            ctx.lineTo(x + w * 0.8, y + h * 0.9);
+            ctx.lineTo(x + w * 0.2, y + h * 0.9);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.3, y + h * 0.4);
+            ctx.quadraticCurveTo(x + w * 0.5, y, x + w * 0.7, y + h * 0.4);
+            ctx.stroke();
+        }
+
+        function drawLockIcon(x, y, w, h) {
+            ctx.strokeStyle = '#f5f5f5';
+            ctx.lineWidth = 4;
+
+            // Shackle (the U part)
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.25, y + h * 0.4);
+            ctx.lineTo(x + w * 0.25, y + h * 0.2);
+            ctx.arc(x + w * 0.5, y + h * 0.2, w * 0.25, Math.PI, 0);
+            ctx.lineTo(x + w * 0.75, y + h * 0.4);
+            ctx.stroke();
+
+            // Body (the square part)
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(x, y + h * 0.4, w, h * 0.6);
+        }
+
+        // --- START: Sprite Sheet Generation Code ---
+
+        // This function generates the original flower-headed sprite for the player and NPCs
+        function generateOriginalSpriteSheet(canvas, ctx) {
+             const frameSize = 90;
+             const sheetSize = 270;
+             const colors = {
+                 skin: '#f2d3b3', petal: '#ffc0cb', flowerCenter: '#ffee00',
+                 top: '#f8f8f8', shorts: '#6E98D9', shoes: '#2d2d2d',
+                 white: '#ffffff', outline: '#333333'
+             };
+             function drawFlowerHead(x, y, isSideView = false) {
+                 const centerX = x + frameSize / 2;
+                 const centerY = y + 25;
+                 const petalRadius = 14;
+                 const centerRadius = 5;
+                 ctx.strokeStyle = colors.outline;
+                 ctx.lineWidth = 1.5;
+                 ctx.fillStyle = colors.petal;
+                 if (isSideView) {
+                     const sidePetals = [
+                         { angle: Math.PI / 2, xOff: 0, yOff: -3, size: 1.1 },
+                         { angle: Math.PI * 0.1, xOff: 5, yOff: 2, size: 1.0 },
+                         { angle: Math.PI * 0.9, xOff: -5, yOff: 2, size: 1.0 },
+                     ];
+                     sidePetals.forEach(p => {
+                         ctx.beginPath();
+                         ctx.ellipse(centerX + p.xOff, centerY + p.yOff, 5 * p.size, 8 * p.size, p.angle, 0, Math.PI * 2);
+                         ctx.fill();
+                         ctx.stroke();
+                     });
+                 } else {
+                     const numPetals = 6;
+                     for (let i = 0; i < numPetals; i++) {
+                         const angle = (i / numPetals) * Math.PI * 2;
+                         const px = centerX + Math.cos(angle) * petalRadius;
+                         const py = centerY + Math.sin(angle) * petalRadius;
+                         ctx.beginPath();
+                         ctx.ellipse(px, py, 6, 10, angle + Math.PI / 2, 0, Math.PI * 2);
+                         ctx.fill();
+                         ctx.stroke();
+                     }
+                 }
+                 ctx.fillStyle = colors.flowerCenter;
+                 ctx.beginPath();
+                 ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
+                 ctx.fill();
+                 ctx.stroke();
+             }
+             function drawBody(x, y, bob = 0) {
+                 ctx.fillStyle = colors.top;
+                 ctx.strokeStyle = colors.outline;
+                 ctx.lineWidth = 1.5;
+                 ctx.beginPath();
+                 ctx.moveTo(x + 38, y + 40 + bob);
+                 ctx.lineTo(x + 52, y + 40 + bob);
+                 ctx.lineTo(x + 55, y + 55 + bob);
+                 ctx.lineTo(x + 35, y + 55 + bob);
+                 ctx.closePath();
+                 ctx.fill();
+                 ctx.stroke();
+                 ctx.fillStyle = colors.shorts;
+                 ctx.beginPath();
+                 ctx.rect(x + 35, y + 55 + bob, 20, 10);
+                 ctx.fill();
+                 ctx.stroke();
+             }
+             function drawLegs(x, y, frame = 1, bob = 0, isSideView = false) {
+                 const legY = y + 65 + bob;
+                 ctx.fillStyle = colors.skin;
+                 ctx.strokeStyle = colors.outline;
+                 ctx.lineWidth = 1.5;
+                 let leftLegX = x + 38, rightLegX = x + 48, leftLegYOffset = 0, rightLegYOffset = 0;
+                 if (isSideView) {
+                     leftLegX = x + 42; rightLegX = x + 46;
+                     if (frame === 1) { leftLegYOffset = 5; rightLegYOffset = 0; }
+                     else if (frame === 2) { leftLegYOffset = 0; rightLegYOffset = 5; }
+                 } else {
+                     if (frame === 2) { rightLegYOffset = 2; }
+                     else if (frame !== 1) { leftLegYOffset = 2; }
+                 }
+                 ctx.beginPath(); ctx.rect(rightLegX, legY + rightLegYOffset, 4, 15); ctx.fill(); ctx.stroke();
+                 drawShoe(rightLegX, legY + 15 + rightLegYOffset, isSideView);
+                 ctx.beginPath(); ctx.rect(leftLegX, legY + leftLegYOffset, 4, 15); ctx.fill(); ctx.stroke();
+                 drawShoe(leftLegX, legY + 15 + leftLegYOffset, isSideView);
+             }
+             function drawShoe(x, y, isSideView) {
+                 ctx.fillStyle = colors.shoes; ctx.strokeStyle = colors.outline; ctx.lineWidth = 1.5;
+                 ctx.beginPath();
+                 if(isSideView){ ctx.rect(x-3, y, 8, 5); } else { ctx.rect(x - 2, y, 8, 5); }
+                 ctx.fill(); ctx.stroke();
+                 ctx.fillStyle = colors.white;
+                 ctx.beginPath();
+                 if(isSideView){ ctx.rect(x+5, y, 2, 5); } else { ctx.rect(x - 2, y, 8, 2); }
+                 ctx.fill();
+             }
+             function drawIdleFrame(col, row) {
+                 const x = col * frameSize, y = row * frameSize;
+                 const bob = (col === 1) ? 1 : 0;
+                 drawBody(x, y, bob); drawLegs(x, y, 1, bob); drawFlowerHead(x, y);
+             }
+             function drawWalkDownFrame(col, row) {
+                 const x = col * frameSize, y = row * frameSize;
+                 const frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
+                 drawBody(x, y); drawLegs(x, y, frame); drawFlowerHead(x, y);
+             }
+             function drawWalkRightFrame(col, row) {
+                 const x = col * frameSize, y = row * frameSize;
+                 const frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
+                 drawBody(x, y); drawLegs(x, y, frame, 0, true); drawFlowerHead(x, y, true);
+             }
+             ctx.clearRect(0, 0, sheetSize, sheetSize);
+             for (let row = 0; row < 3; row++) {
+                 for (let col = 0; col < 3; col++) {
+                     if (row === 0) { drawIdleFrame(col, row); }
+                     else if (row === 1) { drawWalkDownFrame(col, row); }
+                     else if (row === 2) { drawWalkRightFrame(col, row); }
+                 }
+             }
+        }
+
+        // This new function generates the bee sprites for customers
+        function generateBeeSpriteSheet(canvas, ctx, artistType) {
+            const frameSize = 90;
+            const sheetSize = 270;
+            const colors = {
+                beeYellow: '#ffdd00', beeBlack: '#4a4a4a', wingBlue: 'rgba(169, 214, 229, 0.8)',
+                outline: '#333333', beretRed: '#c0392b', paintBlue: '#3498db', paintRed: '#e74c3c',
+                paintGreen: '#2ecc71', paletteBrown: '#8d6e63', glassesGray: '#7f8c8d', lightYellow: '#f1c40f',
+                apronBlue: '#2c3e50', sawGray: '#bdc3c7', woodBrown: '#a0522d', clayGray: '#95a5a6',
+                toolBrown: '#8B4513', smockGray: '#bdc3c7', bagBrown: '#8B5A2B', paperWhite: '#f5f5f5'
+            };
+
+            function drawBeeHead(ctx, x, y, isSideView = false, currentArtistType = '') {
+                const centerX = x + frameSize / 2;
+                const centerY = y + 30;
+                ctx.strokeStyle = colors.outline;
+                ctx.lineWidth = 1.5;
+                ctx.fillStyle = colors.beeYellow;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 15, 14, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = colors.beeBlack;
+                if(currentArtistType === 'modelMaker'){
+                    ctx.fillStyle = colors.glassesGray;
+                    ctx.strokeStyle = colors.outline;
+                    ctx.lineWidth = 1;
+                    if(isSideView){
+                        ctx.beginPath();
+                        ctx.arc(centerX + 6, centerY, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.beeBlack;
+                        ctx.beginPath();
+                        ctx.arc(centerX + 6, centerY, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(centerX - 7, centerY, 6, 0, Math.PI * 2);
+                        ctx.arc(centerX + 7, centerY, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.beeBlack;
+                        ctx.beginPath();
+                        ctx.arc(centerX - 7, centerY, 4, 0, Math.PI * 2);
+                        ctx.arc(centerX + 7, centerY, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = colors.glassesGray;
+                    ctx.fillRect(centerX - 5, centerY - 22, 10, 4);
+                    ctx.strokeRect(centerX - 5, centerY - 22, 10, 4);
+                    ctx.fillStyle = colors.lightYellow;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY - 20, 2, 0, Math.PI*2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    if (isSideView) {
+                        ctx.ellipse(centerX + 6, centerY, 3, 4, 0, 0, Math.PI * 2);
+                    } else {
+                        ctx.ellipse(centerX - 7, centerY, 3, 4, 0, 0, Math.PI * 2);
+                        ctx.ellipse(centerX + 7, centerY, 3, 4, 0, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                }
+                ctx.strokeStyle = colors.beeBlack;
+                ctx.beginPath();
+                if(isSideView){
+                    ctx.moveTo(centerX, centerY - 12);
+                    ctx.quadraticCurveTo(centerX + 5, centerY - 22, centerX + 8, centerY - 20);
+                } else {
+                    ctx.moveTo(centerX - 5, centerY - 12);
+                    ctx.quadraticCurveTo(centerX - 10, centerY - 22, centerX - 4, centerY - 20);
+                    ctx.moveTo(centerX + 5, centerY - 12);
+                    ctx.quadraticCurveTo(centerX + 10, centerY - 22, centerX + 4, centerY - 20);
+                }
+                ctx.stroke();
+                if(currentArtistType === 'student'){
+                    ctx.fillStyle = colors.beretRed;
+                    ctx.beginPath();
+                    ctx.ellipse(isSideView ? centerX + 4 : centerX, centerY - 15, 12, 6, isSideView ? 0.2 : 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+
+            function drawAccessories(ctx, currentArtistType, x, y, bob, isSideView) {
+                const centerX = x + frameSize / 2;
+                const centerY = y + 55 + bob;
+                ctx.strokeStyle = colors.outline;
+                ctx.lineWidth = 1.5;
+                switch(currentArtistType) {
+                    case 'painter':
+                        ctx.fillStyle = colors.paletteBrown;
+                        ctx.beginPath();
+                        ctx.ellipse(isSideView ? centerX + 20 : centerX - 20, centerY + 10, 8, 6, 0, 0, Math.PI*2);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.paintBlue; ctx.beginPath(); ctx.arc(isSideView ? centerX+18 : centerX-22, centerY+8, 1.5, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = colors.paintRed; ctx.beginPath(); ctx.arc(isSideView ? centerX+22 : centerX-18, centerY+8, 1.5, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = colors.paintGreen; ctx.beginPath(); ctx.arc(isSideView ? centerX+20 : centerX-20, centerY+12, 1.5, 0, Math.PI*2); ctx.fill();
+                        ctx.strokeStyle = colors.beeBlack; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(isSideView ? centerX-20 : centerX+20, centerY+5); ctx.lineTo(isSideView ? centerX-28 : centerX+28, centerY); ctx.stroke();
+                        break;
+                    case 'woodworker':
+                        ctx.lineWidth = 1;
+                        ctx.fillStyle = colors.sawGray;
+                        ctx.beginPath();
+                        ctx.moveTo(isSideView ? centerX-20 : centerX+20, centerY);
+                        ctx.lineTo(isSideView ? centerX-28 : centerX+28, centerY+10);
+                        ctx.lineTo(isSideView ? centerX-18 : centerX+18, centerY+12);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.woodBrown;
+                        ctx.fillRect(isSideView ? centerX+15 : centerX-25, centerY+5, 10, 10);
+                        ctx.strokeRect(isSideView ? centerX+15 : centerX-25, centerY+5, 10, 10);
+                        break;
+                    case 'sculptor':
+                        ctx.lineWidth = 1;
+                        ctx.fillStyle = colors.clayGray;
+                        ctx.beginPath();
+                        ctx.ellipse(isSideView ? centerX + 22 : centerX - 20, centerY + 8, 5, 6, 0, 0, Math.PI*2);
+                        ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = colors.toolBrown;
+                        ctx.fillRect(isSideView ? centerX - 25 : centerX + 15, centerY + 5, 12, 3);
+                        ctx.strokeRect(isSideView ? centerX - 25 : centerX + 15, centerY + 5, 12, 3);
+                        break;
+                    case 'architect':
+                        if (isSideView) {
+                            ctx.fillStyle = colors.bagBrown; ctx.beginPath();
+                            ctx.rect(centerX - 20, centerY - 5, 12, 14); ctx.fill(); ctx.stroke();
+                            ctx.fillStyle = colors.paperWhite; ctx.strokeStyle = colors.beeBlack; ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.rect(centerX - 18, centerY - 11, 4, 7); ctx.fill(); ctx.stroke();
+                            ctx.beginPath(); ctx.rect(centerX - 13, centerY - 11, 4, 7); ctx.fill(); ctx.stroke();
+                        } else {
+                            ctx.strokeStyle = colors.bagBrown; ctx.lineWidth = 3;
+                            ctx.beginPath(); ctx.moveTo(centerX - 12, centerY - 10); ctx.lineTo(centerX + 12, centerY + 8); ctx.stroke();
+                            ctx.fillStyle = colors.bagBrown; ctx.lineWidth = 1.5; ctx.strokeStyle = colors.outline;
+                            ctx.beginPath(); ctx.rect(centerX + 8, centerY, 14, 16); ctx.fill(); ctx.stroke();
+                            ctx.fillStyle = colors.paperWhite; ctx.strokeStyle = colors.beeBlack; ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.rect(centerX + 10, centerY - 6, 5, 8); ctx.fill(); ctx.stroke();
+                            ctx.beginPath(); ctx.rect(centerX + 16, centerY - 6, 5, 8); ctx.fill(); ctx.stroke();
+                        }
+                        break;
+                }
+            }
+
+            function drawBeeBody(ctx, currentArtistType, x, y, bob = 0, frame = 0, isSideView = false) {
+                const centerX = x + frameSize / 2;
+                const centerY = y + 55 + bob;
+                ctx.strokeStyle = colors.outline;
+                ctx.lineWidth = 1.5;
+                const wingY = frame === 1 ? -5 : 0;
+                ctx.fillStyle = colors.wingBlue;
+                ctx.beginPath();
+                if(isSideView){
+                    ctx.ellipse(centerX - 12, centerY - 8 + wingY, 12, 7, -0.8, 0, Math.PI * 2);
+                } else {
+                    ctx.ellipse(centerX - 15, centerY - 8 + wingY, 12, 7, -0.8, 0, Math.PI * 2);
+                    ctx.ellipse(centerX + 15, centerY - 8 + wingY, 12, 7, 0.8, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = colors.beeYellow;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 15, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = colors.beeBlack;
+                ctx.beginPath();
+                ctx.rect(centerX - 15, centerY - 5, 30, 5);
+                ctx.rect(centerX - 12, centerY + 5, 24, 4);
+                ctx.fill();
+                if(!isSideView) {
+                    if(currentArtistType === 'woodworker') {
+                        ctx.fillStyle = colors.apronBlue;
+                        ctx.beginPath(); ctx.moveTo(centerX-8,centerY-10); ctx.lineTo(centerX+8,centerY-10); ctx.lineTo(centerX+10, centerY+14); ctx.lineTo(centerX-10, centerY+14); ctx.closePath(); ctx.fill(); ctx.stroke();
+                    } else if (currentArtistType === 'sculptor') {
+                        ctx.fillStyle = colors.smockGray;
+                        ctx.beginPath(); ctx.moveTo(centerX - 10, centerY - 8); ctx.lineTo(centerX + 10, centerY - 8); ctx.lineTo(centerX + 12, centerY + 12); ctx.lineTo(centerX - 12, centerY + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.fillRect(centerX - 5, centerY, 2, 2); ctx.fillRect(centerX + 3, centerY + 5, 2, 2);
+                    }
+                }
+                drawAccessories(ctx, currentArtistType, x, y, bob, isSideView);
+            }
+
+            function drawBeeLegs(ctx, x, y, frame = 1, bob = 0, isSideView = false) {
+                const legY = y + 72 + bob;
+                ctx.strokeStyle = colors.beeBlack;
+                ctx.lineWidth = 2;
+                let leftLegX = x + 38; let rightLegX = x + 52;
+                let leftLegYOffset = 0; let rightLegYOffset = 0;
+                if (isSideView) {
+                    leftLegX = x + 42; rightLegX = x + 48;
+                    if (frame === 1) { leftLegYOffset = 3; }
+                    else if (frame === 2) { rightLegYOffset = 3; }
+                } else {
+                    if (frame === 2) { rightLegYOffset = 2; }
+                    else if (frame === 3) { leftLegYOffset = 2; }
+                }
+                ctx.beginPath(); ctx.moveTo(rightLegX, legY); ctx.lineTo(rightLegX, legY + 8 + rightLegYOffset); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(leftLegX, legY); ctx.lineTo(leftLegX, legY + 8 + leftLegYOffset); ctx.stroke();
+            }
+
+            ctx.clearRect(0, 0, sheetSize, sheetSize);
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const x = col * frameSize;
+                    const y = row * frameSize;
+                    let bob = 0, frame = 1, isSideView = false;
+                    if (row === 0) { // Idle
+                        bob = (col === 1) ? 1 : 0;
+                    } else if (row === 1) { // Walk Down
+                        frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
+                    } else if (row === 2) { // Walk Right
+                        isSideView = true;
+                        frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
+                    }
+                    drawBeeBody(ctx, artistType, x, y, bob, col, isSideView);
+                    drawBeeLegs(ctx, x, y, frame, bob, isSideView);
+                    drawBeeHead(ctx, x, y, isSideView, artistType);
+                }
+            }
+        }
+
+        let playerSpriteImage = null;
+        let spriteSheetLoaded = false;
+        function loadSpriteSheet() {
+            const spriteCanvas = document.getElementById('spriteSheetCanvas');
+            const spriteCtx = spriteCanvas.getContext('2d');
+            generateOriginalSpriteSheet(spriteCanvas, spriteCtx);
+            const dataURL = spriteCanvas.toDataURL('image/png');
+            playerSpriteImage = new Image();
+            playerSpriteImage.onload = () => { spriteSheetLoaded = true; };
+            playerSpriteImage.onerror = () => {
+                showMessage("Critical Error: Failed to load character sprites from generated image data.", null);
+            };
+            playerSpriteImage.src = dataURL;
+        }
+
+        function generateAndLoadCustomerSprite(customer) {
+            const spriteCanvas = document.getElementById('spriteSheetCanvas');
+            const spriteCtx = spriteCanvas.getContext('2d');
+            const spriteType = customerTypes[customer.customerType]?.spriteType;
+
+            if (spriteType) {
+                generateBeeSpriteSheet(spriteCanvas, spriteCtx, spriteType);
+                const dataURL = spriteCanvas.toDataURL('image/png');
+                customer.spriteImage.src = dataURL;
+                customer.spriteImage.onload = () => {
+                    customer.spriteSheetLoaded = true;
+                };
+            }
+        }
+
+
+        /**
+         * REFACTOR: Centralized function to draw any character sprite.
+         * This reduces code duplication across all character draw functions.
+         * @param {object} character - The character object (player, npc, customer).
+         * @param {HTMLImageElement} image - The sprite sheet image to draw from.
+         * @param {string} name - The name to display above the character.
+         * @param {string} [filter=''] - A CSS filter to apply to the sprite (e.g., for different colors).
+         * @param {boolean} [drawName=true] - Whether to draw the name text.
+         */
+        function drawCharacter(character, image, name, filter = '', drawName = true) {
+            if (!image || !image.complete) return;
+
+            // Determine animation state (idle or walking)
+            let animState = 'idle';
+            if (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing'].includes(character.state)) {
+                animState = 'walk';
+            }
+
+            const anim = animations[animState];
+            if (!anim) return;
+
+            // Determine animation row based on direction
+            let animRow = 0;
+            if (animState === 'walk') {
+                animRow = (character.facing === 'left' || character.facing === 'right') ? 2 : 1;
+            }
+
+            const frameIndex = (animRow * anim.cols) + character.currentFrame;
+            const col = frameIndex % anim.cols;
+            const row = Math.floor(frameIndex / anim.cols);
+            const sourceX = col * character.frameWidth;
+            const sourceY = row * character.frameHeight;
+
+            ctx.save();
+            if (filter) {
+                ctx.filter = filter;
+            }
+
+            let drawX = character.x - character.frameWidth / 2;
+            if (character.facing === 'left') {
+                ctx.scale(-1, 1);
+                drawX = -character.x - character.frameWidth / 2;
+            }
+
+            ctx.drawImage(image, sourceX, sourceY, character.frameWidth, character.frameHeight, drawX, character.y - character.frameHeight, character.frameWidth, character.frameHeight);
+            ctx.restore();
+
+            if (drawName && name) {
+                ctx.fillStyle = '#f7e7d8';
+                ctx.font = '20px "Indie Flower", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText(name, character.x, character.y - character.frameHeight - 10);
+            }
+        }
+
+        function drawPlayer() {
+            drawCharacter(player, playerSpriteImage, "Shopkeep");
+        }
+
+        function drawStocker() {
+            if (!unlocks.employees.stocker) return;
+            drawCharacter(stocker, playerSpriteImage, "Stocker", 'hue-rotate(180deg) brightness(1.2)');
+        }
+
+        function drawCashier() {
+            if (!unlocks.employees.cashier) return;
+            drawCharacter(cashier, playerSpriteImage, "Cashier", 'sepia(0.8) saturate(3)');
+        }
+
+        function drawLoader() {
+            if (!unlocks.employees.loader) return;
+            drawCharacter(loader, playerSpriteImage, "Loader", 'hue-rotate(90deg) saturate(1.5)');
+        }
+
+        function drawManager() {
+            if (!unlocks.employees.manager) return;
+            drawCharacter(manager, playerSpriteImage, "Manager", 'hue-rotate(270deg) saturate(2)');
+        }
+
+        function drawSalesperson() {
+            if (!unlocks.employees.salesperson) return;
+            drawCharacter(salesperson, playerSpriteImage, "Sales", 'hue-rotate(320deg) saturate(2.5)');
+        }
+
+        function moveCharacterTowards(character, targetX, targetY, deltaTime) {
+            const dx = targetX - character.x;
+            const dy = targetY - character.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 5) return true;
+            const moveX = (dx / dist) * character.speed * (deltaTime / 1000);
+            const moveY = (dy / dist) * character.speed * (deltaTime / 1000);
+            character.x += moveX;
+            character.y += moveY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                character.facing = moveX > 0 ? 'right' : 'left';
+            }
+            return false;
+        }
+
+        function updateStocker(deltaTime) {
+            if (!unlocks.employees.stocker) return;
+            if (!dayStarted) {
+                if (Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
+                    stocker.state = 'walk';
+                    moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime);
+                } else {
+                    stocker.state = 'idle';
+                }
+                 const anim = animations[stocker.state];
+                 stocker.lastFrameTime += deltaTime;
+                 if (stocker.lastFrameTime >= stocker.animationSpeed) {
+                     stocker.currentFrame = (stocker.currentFrame + 1) % anim.frames;
+                     stocker.lastFrameTime = 0;
+                 }
+                return;
+            }
+            const animState = (stocker.state === 'idle') ? 'idle' : 'walk';
+            const anim = animations[animState];
+            stocker.lastFrameTime += deltaTime;
+            if (stocker.lastFrameTime >= stocker.animationSpeed) {
+                stocker.currentFrame = (stocker.currentFrame + 1) % anim.frames;
+                stocker.lastFrameTime = 0;
+            }
+            stocker.stateTimer -= deltaTime;
+            switch(stocker.state) {
+                case 'idle':
+                    if (stocker.stateTimer <= 0) {
+                        const task = findRestockingTask();
+                        if (task) {
+                            stocker.task = task;
+                            stocker.state = 'fetching';
+                        } else {
+                           stocker.stateTimer = 3000;
+                           if(Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
+                               stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                           } else {
+                               stocker.task = null;
+                           }
+                        }
+                    }
+                    if(stocker.task && stocker.task.target) {
+                        moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime);
+                    }
+                    break;
+                case 'fetching':
+                    if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                        const itemToTake = stocker.task.item;
+                        const cell = storageCells.find(c => c.allowedItems.includes(itemToTake));
+                        while(stocker.basket.length < STOCKER_BASKET_SIZE && cell && cell.items[itemToTake] > 0) {
+                            stocker.basket.push(itemToTake);
+                            cell.items[itemToTake]--;
+                        }
+                        stocker.state = 'stocking';
+                        stocker.task = null;
+                    }
+                    break;
+                case 'stocking':
+                    if (!stocker.task) {
+                        if (stocker.basket.length === 0) {
+                            stocker.state = 'idle';
+                            stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                            break;
+                        }
+                        const itemToStock = stocker.basket[0];
+                        const targetShelf = findShelfForStocking(itemToStock);
+                        if (targetShelf) {
+                            stocker.task = { action: 'place', item: itemToStock, shelf: targetShelf, target: {x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 10} };
+                        } else {
+                            stocker.basket.shift();
+                        }
+                    }
+                    if (stocker.task && moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                        const shelf = stocker.task.shelf;
+                        const itemToStock = stocker.task.item;
+
+                        let slot = shelf.items.find(s => s.assignedItem === itemToStock && s.quantity < MAX_SHELF_STACK);
+                        if (!slot) {
+                            slot = shelf.items.find(s => s.assignedItem === null);
+                        }
+
+                        if (slot) {
+                            const itemIndexInBasket = stocker.basket.indexOf(itemToStock);
+                            if(itemIndexInBasket > -1) {
+                                if(slot.assignedItem === null) {
+                                    slot.assignedItem = itemToStock;
+                                }
+                                stocker.basket.splice(itemIndexInBasket, 1);
+                                slot.quantity++;
+                            }
+                        }
+                        stocker.task = null;
+                    }
+                    break;
+            }
+        }
+
+        function updateCashier(deltaTime) {
+            if (!unlocks.employees.cashier) return;
+            if (!dayStarted) {
+                 if (Math.hypot(cashier.x - cashier.idleX, cashier.y - cashier.idleY) > 5) {
+                    cashier.state = 'walk';
+                    moveCharacterTowards(cashier, cashier.idleX, cashier.idleY, deltaTime);
+                } else {
+                    cashier.state = 'idle';
+                }
+                 const anim = animations[cashier.state];
+                 cashier.lastFrameTime += deltaTime;
+                 if (cashier.lastFrameTime >= cashier.animationSpeed) {
+                     cashier.currentFrame = (stocker.currentFrame + 1) % anim.frames;
+                     cashier.lastFrameTime = 0;
+                 }
+                return;
+            }
+            const animState = (cashier.state === 'idle' || cashier.state === 'transaction') ? 'idle' : 'walk';
+            const anim = animations[animState];
+            cashier.lastFrameTime += deltaTime;
+            if (cashier.lastFrameTime >= cashier.animationSpeed) {
+                cashier.currentFrame = (cashier.currentFrame + 1) % anim.frames;
+                cashier.lastFrameTime = 0;
+            }
+            cashier.stateTimer -= deltaTime;
+            switch (cashier.state) {
+                case 'idle':
+                    const customerToServe = customers
+                        .filter(c => c.state === 'waitingAtCounter' && !c.isServed)
+                        .sort((a, b) => a.x - b.x)[0];
+                    if (customerToServe) {
+                        cashier.task = {
+                            action: 'serve',
+                            customerId: customerToServe.id,
+                            target: { x: customerToServe.x - 30, y: customerToServe.y - 100 }
+                        };
+                        cashier.state = 'serving';
+                    }
+                    break;
+                case 'serving':
+                    if(cashier.task && moveCharacterTowards(cashier, cashier.task.target.x, cashier.task.target.y, deltaTime)) {
+                        cashier.state = 'transaction';
+                        cashier.stateTimer = 1500;
+                    }
+                    break;
+                case 'transaction':
+                    if(cashier.stateTimer <= 0) {
+                        if(cashier.task) {
+                            completeTransaction(cashier.task.customerId);
+                        }
+                        cashier.task = { target: {x: cashier.idleX, y: cashier.idleY } };
+                        cashier.state = 'returning';
+                    }
+                    break;
+                case 'returning':
+                    if(cashier.task && moveCharacterTowards(cashier, cashier.task.target.x, cashier.task.target.y, deltaTime)) {
+                        cashier.state = 'idle';
+                        cashier.task = null;
+                    }
+                    break;
+            }
+        }
+
+        function updateLoader(deltaTime) {
+             if (!unlocks.employees.loader) return;
+             if (!dayStarted) {
+                if (Math.hypot(loader.x - loader.idleX, loader.y - loader.idleY) > 5) {
+                    loader.state = 'walk';
+                    moveCharacterTowards(loader, loader.idleX, loader.idleY, deltaTime);
+                } else {
+                    loader.state = 'idle';
+                }
+                const anim = animations[loader.state];
+                 loader.lastFrameTime += deltaTime;
+                 if (loader.lastFrameTime >= loader.animationSpeed) {
+                     loader.currentFrame = (loader.currentFrame + 1) % anim.frames;
+                     loader.lastFrameTime = 0;
+                 }
+                return;
+            }
+            const animState = (loader.state === 'idle') ? 'idle' : 'walk';
+            const anim = animations[animState];
+            loader.lastFrameTime += deltaTime;
+            if (loader.lastFrameTime >= loader.animationSpeed) {
+                loader.currentFrame = (loader.currentFrame + 1) % anim.frames;
+                loader.lastFrameTime = 0;
+            }
+            loader.stateTimer -= deltaTime;
+
+            switch(loader.state) {
+                case 'idle':
+                    if (loader.stateTimer <= 0) {
+                        if (loadingDockPackages.length > 0) {
+                            loader.state = 'fetching_dock';
+                            const firstPackageX = 10 + PACKAGE_WIDTH / 2;
+                            loader.task = { target: { x: firstPackageX, y: loadingDock.y - 30 } };
+                        } else {
+                            loader.stateTimer = 2000; // Check again in 2 seconds
+                             if(Math.hypot(loader.x - loader.idleX, loader.y - loader.idleY) > 5) {
+                                 loader.task = { target: {x: loader.idleX, y: loader.idleY} };
+                             } else {
+                                 loader.task = null;
+                             }
+                        }
+                    }
+                     if(loader.task && loader.task.target) {
+                         moveCharacterTowards(loader, loader.task.target.x, loader.task.target.y, deltaTime);
+                    }
+                    break;
+                case 'fetching_dock':
+                    if (moveCharacterTowards(loader, loader.task.target.x, loader.task.target.y, deltaTime)) {
+                        if (loadingDockPackages.length > 0) {
+                            const firstPackage = loadingDockPackages[0];
+                            while(loader.basket.length < LOADER_BASKET_SIZE && firstPackage.quantity > 0) {
+                                loader.basket.push(firstPackage.itemName);
+                                firstPackage.quantity--;
+                            }
+                             if (firstPackage.quantity <= 0) {
+                                 loadingDockPackages.shift();
+                            }
+                        }
+                        loader.state = 'delivering';
+                        loader.task = null;
+                    }
+                    break;
+                case 'delivering':
+                     if (!loader.task) {
+                        if (loader.basket.length === 0) {
+                            loader.state = 'idle';
+                            loader.task = { target: {x: loader.idleX, y: loader.idleY} };
+                            break;
+                        }
+                        const itemToDeliver = loader.basket[0];
+                        const targetCell = storageCells.find(c => c.allowedItems.includes(itemToDeliver));
+                         if(targetCell) {
+                             const currentFill = Object.values(targetCell.items).reduce((a, b) => a + b, 0);
+                             if (currentFill < targetCell.capacity) {
+                                 loader.task = { target: { x: targetCell.rect.x + targetCell.rect.w / 2, y: targetCell.rect.y + targetCell.rect.h + 20 }, item: itemToDeliver, cell: targetCell };
+                             } else {
+                                 // Cell is full, wait and try again
+                                 loader.stateTimer = 3000;
+                                 loader.task = null;
+                             }
+                         } else {
+                            console.error(`No storage cell found for ${itemToDeliver}`);
+                            loader.basket.shift(); // discard item if no home
+                         }
+                        }
+                         if (loader.task && moveCharacterTowards(loader, loader.task.target.x, loader.task.target.y, deltaTime)) {
+                         const deliveredItem = loader.basket.shift();
+                         const cell = loader.task.cell;
+                         if (!cell.items[deliveredItem]) {
+                             cell.items[deliveredItem] = 0;
+                         }
+                         cell.items[deliveredItem]++;
+                         loader.task = null;
+                        }
+                    break;
+
+            }
+        }
+
+        function updateManager(deltaTime) {
+             if (!unlocks.employees.manager) return;
+             if (!dayStarted) {
+                if (Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
+                    manager.state = 'walk';
+                    moveCharacterTowards(manager, manager.idleX, manager.idleY, deltaTime);
+                } else {
+                    manager.state = 'idle';
+                }
+                const anim = animations[manager.state];
+                 manager.lastFrameTime += deltaTime;
+                 if (manager.lastFrameTime >= manager.animationSpeed) {
+                     manager.currentFrame = (manager.currentFrame + 1) % anim.frames;
+                     manager.lastFrameTime = 0;
+                 }
+                return;
+            }
+
+            const currentQuarter = Math.floor(((DAY_DURATION - dayTimer) / DAY_DURATION) * 4);
+            if (currentQuarter > manager.lastOrderQuarter) {
+                manager.canOrder = true;
+            }
+
+            const animState = (manager.state === 'idle' || manager.state === 'ordering') ? 'idle' : 'walk';
+            const anim = animations[animState];
+            manager.lastFrameTime += deltaTime;
+            if (manager.lastFrameTime >= manager.animationSpeed) {
+                manager.currentFrame = (manager.currentFrame + 1) % anim.frames;
+                manager.lastFrameTime = 0;
+            }
+            manager.stateTimer -= deltaTime;
+
+            switch(manager.state) {
+                case 'idle':
+                    if (manager.stateTimer <= 0 && manager.canOrder) {
+                        const lowStockItem = Object.keys(inventory).find(item => inventory[item] < 5);
+                        if (lowStockItem) {
+                            manager.task = { action: 'order', item: lowStockItem, target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }};
+                            manager.state = 'going_to_office';
+                        } else {
+                            manager.stateTimer = 10000;
+                             if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
+                                 manager.task = { target: {x: manager.idleX, y: manager.idleY} };
+                             } else {
+                                 manager.task = null;
+                             }
+                        }
+                    }
+                     if(manager.task && manager.task.target) {
+                         moveCharacterTowards(manager, manager.task.target.x, manager.task.target.y, deltaTime);
+                    }
+                    break;
+                case 'going_to_office':
+                     if (moveCharacterTowards(manager, manager.task.target.x, manager.task.target.y, deltaTime)) {
+                        manager.state = 'ordering';
+                        manager.stateTimer = 3000; // Time to "place order"
+                    }
+                    break;
+                case 'ordering':
+                    if(manager.stateTimer <= 0) {
+                        const itemToOrder = manager.task.item;
+                        let quantityToOrder = 10; // Order in batches of 10
+                        while (quantityToOrder > 0) {
+                            const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
+                            loadingDockPackages.push({itemName: itemToOrder, quantity: quantityForPackage});
+                            quantityToOrder -= quantityForPackage;
+                        }
+                        spawnFloatingText(`${itemToOrder} Ordered!`, manager.x, manager.y - 90, '#3b82f6');
+                        manager.state = 'idle';
+                        manager.stateTimer = 5000;
+                        manager.task = { target: {x: manager.idleX, y: manager.idleY} };
+                        manager.canOrder = false;
+                        manager.lastOrderQuarter = currentQuarter;
+                    }
+                    break;
+            }
+        }
+
+        function updateSalesperson(deltaTime) {
+            if (!unlocks.employees.salesperson) return;
+            if (!dayStarted) {
+                if (Math.hypot(salesperson.x - salesperson.idleX, salesperson.y - salesperson.idleY) > 5) {
+                    salesperson.state = 'walk';
+                    moveCharacterTowards(salesperson, salesperson.idleX, salesperson.idleY, deltaTime);
+                } else {
+                    salesperson.state = 'idle';
+                }
+                const anim = animations[salesperson.state];
+                 salesperson.lastFrameTime += deltaTime;
+                 if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
+                     salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
+                     salesperson.lastFrameTime = 0;
+                 }
+                return;
+            }
+            const anim = animations.walk;
+            salesperson.lastFrameTime += deltaTime;
+            if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
+                salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
+                salesperson.lastFrameTime = 0;
+            }
+            salesperson.stateTimer -= deltaTime;
+
+            if (salesperson.task && moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
+                salesperson.task = null;
+                salesperson.stateTimer = Math.random() * 3000 + 2000; // Wait for a bit
+            }
+
+            if (salesperson.stateTimer <= 0 && !salesperson.task) {
+                 const customerToTalkTo = customers.find(c => c.state === 'browsing' && Math.random() < 0.1);
+                 if (customerToTalkTo) {
+                    salesperson.task = { target: {x: customerToTalkTo.x + 50, y: customerToTalkTo.y }};
+                    if (Math.random() < 0.20 && customerToTalkTo.requestedItems.length < 4) { // 20% chance
+                        const allItems = Object.keys(items);
+                        const potentialItems = allItems.filter(i => !customerToTalkTo.requestedItems.includes(i));
+                        if(potentialItems.length > 0) {
+                            const newItem = potentialItems[Math.floor(Math.random() * potentialItems.length)];
+                            customerToTalkTo.requestedItems.push(newItem);
+                            customerToTalkTo.request += ` and a ${newItem}`;
+                            spawnFloatingText('Upsell!', salesperson.x, salesperson.y - 90, '#8b5cf6');
+                        }
+                    }
+
+                 } else {
+                    // Wander around shelves
+                    const randomShelf = shelves[Math.floor(Math.random() * shelves.length)];
+                    salesperson.task = { target: { x: randomShelf.rect.x + randomShelf.rect.w / 2, y: randomShelf.rect.y + randomShelf.rect.h + 20 + (Math.random() - 0.5) * 40 }};
+                 }
+            }
+        }
+
+
+        function findShelfForStocking(itemName) {
+            let targetShelf = shelves.find((s, i) => unlocks.shelves[i] && s.items.some(i => i && i.assignedItem === itemName && i.quantity < MAX_SHELF_STACK));
+             if (!targetShelf) {
+                 targetShelf = shelves.find((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
+            }
+            return targetShelf;
+        }
+
+        function findRestockingTask() {
+            let neededItems = [];
+            // Prioritize assigned but understocked shelves
+            for(let i = 0; i < shelves.length; i++) {
+                if (unlocks.shelves[i]) {
+                    for(const slot of shelves[i].items) {
+                        const storageCell = storageCells.find(c => c.allowedItems.includes(slot.assignedItem));
+                        const stock = storageCell ? storageCell.items[slot.assignedItem] || 0 : 0;
+
+                        if (slot.assignedItem && slot.quantity < MAX_SHELF_STACK && stock > 0) {
+                             if(!neededItems.includes(slot.assignedItem)) neededItems.push(slot.assignedItem);
+                        }
+                    }
+                }
+            }
+            // Then check for unassigned items that have stock
+            for(const item in inventory){
+                const stock = Object.values(storageCells.find(c => c.allowedItems.includes(item))?.items || {}).reduce((a,b)=>a+b, 0) || 0;
+                if (stock > 0) {
+                    const isAssigned = shelves.some(s => s.items.some(i => i.assignedItem === item));
+                    if(!isAssigned && !neededItems.includes(item)) {
+                        const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
+                        if (hasEmptySlot) {
+                            neededItems.push(item);
+                        }
+                    }
+                }
+            }
+
+            if (neededItems.length > 0) {
+                const itemToFetch = neededItems[0];
+                const storageCell = storageCells.find((c,i) => unlocks.storage[i] && c.allowedItems.includes(itemToFetch));
+                if (storageCell) {
+                    return {
+                        action: 'fetch',
+                        item: itemToFetch,
+                        target: { x: storageCell.rect.x + storageCell.rect.w / 2, y: storageCell.rect.y + storageCell.rect.h + 10 }
+                    };
+                }
+            }
+            return null;
+        }
+
+        function updatePlayer(deltaTime) {
+            let dx = 0, dy = 0;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+            if (dx !== 0 || dy !== 0) {
+                const newX = player.x + dx * player.speed * deltaTime / 1000;
+                const newY = player.y + dy * player.speed * deltaTime / 1000;
+                player.y = newY;
+                player.x = newX;
+            }
+            player.x = Math.max(player.frameWidth / 2, Math.min(canvas.width - player.frameWidth / 2, player.x));
+            player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
+            if (dx !== 0 || dy !== 0) {
+                player.state = 'walk';
+                if (dx < 0) player.facing = 'left';
+                if (dx > 0) player.facing = 'right';
+            } else {
+                player.state = 'idle';
+            }
+            const anim = animations[player.state];
+            player.lastFrameTime += deltaTime;
+            if (player.lastFrameTime >= player.animationSpeed) {
+                player.currentFrame = (player.currentFrame + 1) % anim.frames;
+                player.lastFrameTime = 0;
+            }
+        }
+
+        function spawnFloatingText(text, x, y, color = 'green', duration = 1500) {
+            floatingTexts.push({ text, x, y, color, duration, life: duration });
+        }
+
+        function updateAndDrawFloatingTexts(deltaTime) {
+            floatingTexts.forEach(text => {
+                text.life -= deltaTime;
+                text.y -= 20 * (deltaTime / 1000); // Float up
+                const opacity = Math.max(0, text.life / text.duration);
+
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = text.color;
+                ctx.font = 'bold 24px "Patrick Hand", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText(text.text, text.x, text.y);
+                ctx.restore();
+            });
+            floatingTexts = floatingTexts.filter(t => t.life > 0);
+        }
+
+        function drawPieClock() {
+            const centerX = pieClockCanvas.width / 2;
+            const centerY = pieClockCanvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 2;
+            pieClockCtx.clearRect(0, 0, pieClockCanvas.width, pieClockCanvas.height);
+
+            const startAngle = -Math.PI / 2;
+            const openingAngle = (OPENING_DURATION / DAY_DURATION) * 2 * Math.PI;
+            const openAngle = (OPEN_DURATION / DAY_DURATION) * 2 * Math.PI;
+
+            const openingColor = '#facc15'; // Yellow
+            const openColor = '#22c55e'; // Green
+            const closingColor = '#ef4444'; // Red
+            const overlayColor = 'rgba(93, 64, 55, 0.6)'; // Darkening overlay
+
+            // Opening segment
+            pieClockCtx.fillStyle = openingColor;
+            pieClockCtx.beginPath();
+            pieClockCtx.moveTo(centerX, centerY);
+            pieClockCtx.arc(centerX, centerY, radius, startAngle, startAngle + openingAngle);
+            pieClockCtx.closePath();
+            pieClockCtx.fill();
+
+            // Open segment
+            pieClockCtx.fillStyle = openColor;
+            pieClockCtx.beginPath();
+            pieClockCtx.moveTo(centerX, centerY);
+            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle, startAngle + openingAngle + openAngle);
+            pieClockCtx.closePath();
+            pieClockCtx.fill();
+
+            // Closing segment
+            pieClockCtx.fillStyle = closingColor;
+            pieClockCtx.beginPath();
+            pieClockCtx.moveTo(centerX, centerY);
+            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle + openAngle, startAngle + 2 * Math.PI);
+            pieClockCtx.closePath();
+            pieClockCtx.fill();
+
+            if (dayStarted) {
+                 const progressAngle = ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
+                 pieClockCtx.fillStyle = overlayColor;
+                 pieClockCtx.beginPath();
+                 pieClockCtx.moveTo(centerX, centerY);
+                 pieClockCtx.arc(centerX, centerY, radius + 1, startAngle + progressAngle, startAngle + 2 * Math.PI);
+                 pieClockCtx.closePath();
+                 pieClockCtx.fill();
+            } else {
+                // If day is over, cover whole pie
+                pieClockCtx.fillStyle = overlayColor;
+                pieClockCtx.beginPath();
+                pieClockCtx.arc(centerX, centerY, radius + 1, 0, 2 * Math.PI);
+                pieClockCtx.fill();
+            }
+
+            // Border
+            pieClockCtx.strokeStyle = '#5d4037';
+            pieClockCtx.lineWidth = 2;
+            pieClockCtx.beginPath();
+            pieClockCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            pieClockCtx.stroke();
+        }
+
+        function handleClockClick() {
+            if (!dayStarted) return;
+
+            if (dayPhase === 'opening') {
+                dayTimer = OPEN_DURATION + CLOSING_DURATION;
+                dayPhase = 'open'; // Manually update phase
+                spawnFloatingText('Opening Skipped!', canvas.width / 2, 120, '#facc15');
+            } else if (dayPhase === 'closing') {
+                dayTimer = 1; // Set to 1ms to trigger nextDay() on the next frame
+                spawnFloatingText('Closing Skipped!', canvas.width / 2, 120, '#ef4444');
+            }
+        }
+
+        function gameLoop(timestamp) {
+            if (!running || !lastTimestamp) {
+                lastTimestamp = timestamp;
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            if (dayStarted) {
+                dayTimer -= deltaTime;
+
+                if (dayTimer > OPEN_DURATION + CLOSING_DURATION) {
+                    dayPhase = 'opening';
+                } else if (dayTimer > CLOSING_DURATION) {
+                    dayPhase = 'open';
+                } else if (dayTimer > 0) {
+                    dayPhase = 'closing';
+                } else {
+                    dayPhase = 'pre-open';
+                    nextDay();
+                    return;
+                }
+
+                if (dayTimer <= 0) {
+                    nextDay();
+                    return;
+                }
+            }
+
+            updatePlayer(deltaTime);
+            updateStocker(deltaTime);
+            updateCashier(deltaTime);
+            updateLoader(deltaTime);
+            updateManager(deltaTime);
+            updateSalesperson(deltaTime);
+
+            if (dayPhase === 'open') {
+                timeSinceLastCustomer += deltaTime;
+                if (timeSinceLastCustomer >= CUSTOMER_SPAWN_INTERVAL) {
+                    timeSinceLastCustomer = 0;
+                    spawnNewCustomer();
+                }
+            }
+
+            customers.forEach(customer => customer.update(deltaTime));
+            customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
+            updateCustomerUI();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            cameraX = canvas.width / 2 - player.x * scale;
+            cameraY = canvas.height / 2 - player.y * scale;
+            clampCamera();
+            ctx.translate(cameraX, cameraY);
+            ctx.scale(scale, scale);
+
+            drawStoreBackground();
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, { draw: drawPlayer, y: player.y }, { draw: drawStocker, y: stocker.y }, { draw: drawCashier, y: cashier.y }, { draw: drawLoader, y: loader.y }, { draw: drawManager, y: manager.y }, { draw: drawSalesperson, y: salesperson.y }];
+            dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
+            dynamicEntities.forEach(entity => {
+                if (entity.draw) entity.draw();
+            });
+            drawPackages();
+            updateAndDrawFloatingTexts(deltaTime);
+
+            ctx.restore();
+
+            drawStaticUI();
+            drawPieClock();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        async function spawnNewCustomer() {
+            const customerData = await generateCustomerRequest();
+            if (customerData && customerData.requestedItems) {
+                const newCustomer = new Customer(
+                    customerData.name, customerData.request, customerData.requestedItems, customerData.customerType
+                );
+                customers.push(newCustomer);
+                generateAndLoadCustomerSprite(newCustomer);
+                updateCustomerUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('cash-display').textContent = Math.round(cash);
+            document.getElementById('day-display').textContent = day;
+            document.getElementById('shop-points-display').textContent = shopPoints;
+        }
+
+        function updateCustomerUI() {
+            const customerOrdersDiv = document.getElementById('customer-orders');
+            customerOrdersDiv.innerHTML = '';
+            customers.filter(c => !c.leaving && !c.isServed).forEach(customer => {
+                const customerDiv = document.createElement('div');
+                const isReady = customer.state === 'waitingAtCounter';
+                customerDiv.className = `p-4 border-2 rounded-lg bg-white shadow-sm ${isReady ? 'border-green-500 border-4' : 'border-amber-900'}`;
+                customerDiv.dataset.customerId = customer.id;
+                customerDiv.innerHTML = `<h3 class="font-handwritten text-lg">${customer.name}</h3><p class="text-sm">Wants: ${customer.request}</p>`;
+                if (isReady) {
+                    customerDiv.innerHTML += `<p class="text-sm font-bold mt-1 text-green-700">Ready to Checkout!</p>`;
+                }
+                customerOrdersDiv.appendChild(customerDiv);
+            });
+        }
+
+        function completeTransaction(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer || customer.isServed) {
+                console.warn("Attempted to complete transaction for non-existent/served customer:", customerId);
+                return;
+            }
+
+            if (customer.order.length === 0) {
+                customer.leaving = true;
+                customer.state = 'leaving';
+                return;
+            }
+
+            let totalCost = 0;
+            customer.order.forEach(item => {
+                totalCost += items[item].cost;
+            });
+            const salePrice = Math.ceil(totalCost * 1.5);
+            customer.isServed = true;
+
+            if (salePrice <= customer.budget) {
+                cash += salePrice;
+                shopPoints += 3;
+                customer.leaving = true;
+                customer.state = 'leaving';
+                spawnFloatingText(`+$${salePrice}`, customer.x, customer.y - 80, '#22c55e');
+            } else {
+                customer.order.forEach(item => {
+                    const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === item) || s.items.some(i => i.assignedItem === null));
+                    if(shelfToReturn) {
+                        let slot = shelfToReturn.items.find(i => i && i.assignedItem === item);
+                        if(slot) slot.quantity++;
+                        else {
+                            const emptySlot = shelfToReturn.items.find(i => i.assignedItem === null);
+                            if(emptySlot) {
+                                emptySlot.assignedItem = item;
+                                emptySlot.quantity = 1;
+                            }
+                        }
+                    }
+                });
+
+                customer.leaving = true;
+                customer.state = 'leaving';
+                spawnFloatingText('Too Expensive!', customer.x, customer.y - 80, '#ef4444');
+            }
+
+            updateUI();
+            updateCustomerUI();
+            saveGame();
+        }
+
+        function endGame() {
+            running = false;
+            showMessage(`Game Over! You ran out of money. You survived for ${day} days and ended with $${Math.round(cash)}.`, null);
+        }
+
+        function nextDay() {
+            if (!dayStarted) return; // Prevent multiple calls
+            day++;
+            dayStarted = false;
+            dayPhase = 'pre-open';
+            const dailyExpenses = 25;
+            cash -= dailyExpenses;
+
+            // Clear remaining customers
+            customers.forEach(c => c.state = 'leaving');
+
+            timeSinceLastCustomer = 0;
+            document.getElementById('start-day-btn').classList.remove('hidden');
+            document.getElementById('next-day-btn').classList.add('hidden');
+
+            if (cash < 0) {
+                updateUI();
+                endGame();
+                return;
+            }
+            Object.keys(inventory).forEach(item => {
+                if(inventory[item] < 5) inventory[item] +=1;
+            });
+            updateUI();
+
+            saveGame();
+
+            const endDayMessage = document.createElement('div');
+            endDayMessage.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-8 rounded-lg bg-amber-100/90 border-4 border-amber-900 shadow-2xl text-2xl text-center transition-opacity duration-1000 ease-out';
+            endDayMessage.textContent = `Day ${day} begins! Rent: -$${dailyExpenses}`;
+            document.body.appendChild(endDayMessage);
+
+            setTimeout(() => {
+                endDayMessage.style.opacity = '0';
+                setTimeout(() => {
+                    endDayMessage.remove();
+                    if (continuousMode) {
+                        document.getElementById('start-day-btn').click();
+                    }
+                }, 1000);
+            }, 2000);
+        }
+
+        // --- LAYOUT INITIALIZATION ---
+        // The following values determine the layout of the store.
+        // This layout has been finalized and should not be changed.
+        function initializeLayout() {
+            const cellWidth = canvas.width / 5;
+            const cellHeight = ((desk.y - 250) / 2) * 0.8;
+            const topPadding = 160;
+            const cellPadding = 20;
+
+            // New order: Drawing, Painting, Models, Woodworking, Sculpture, Architectural
+            // New layout: Bottom-Left, Bottom-Mid, Bottom-Right, Top-Left, Top-Mid, Top-Right
+            storageCells = [
+                // Bottom Row
+                { label: "Drawing", rect: { x: cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                // Top Row
+                { label: "Woodworking", rect: { x: cellPadding * 2, y: topPadding, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
+                { label: "Sculpture", rect: { x: canvas.width / 2 - cellWidth / 2, y: topPadding, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: canvas.width - cellWidth - cellPadding * 2, y: topPadding, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+            ];
+
+            // --- LOCKED LAYOUT POSITIONS ---
+            // These positions for the counter and shelves are finalized.
+            cashierCounter.x = 141;
+            cashierCounter.y = (desk.y - cashierCounter.h) + 141;
+            managersOffice.x = 0;
+            managersOffice.y = desk.y - managersOffice.h;
+
+            const shelfWidth = 60, shelfHeight = 120;
+            const shelfY = desk.y - shelfHeight + 40;
+            // --- END LOCKED LAYOUT POSITIONS ---
+
+            const numShelves = 5;
+            const shelfPadding = 50;
+            const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
+            const startX = (canvas.width - totalShelvesWidth) / 2;
+            if (shelves.length === 0) {
+                for (let i = 0; i < numShelves; i++) {
+                    const shelf = {
+                        rect: { x: startX + i * (shelfWidth + shelfPadding), y: shelfY, w: shelfWidth, h: shelfHeight },
+                        items: [
+                            { assignedItem: null, quantity: 0 },
+                            { assignedItem: null, quantity: 0 },
+                            { assignedItem: null, quantity: 0 }
+                        ],
+                        y: shelfY + shelfHeight,
+                        draw: function() {
+                            if (!unlocks.shelves[i]) {
+                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                                drawLockIcon(this.rect.x + this.rect.w/2 - 25, this.rect.y + this.rect.h/2-25, 50, 50);
+                                return;
+                            }
+                            ctx.fillStyle = '#8d6e63';
+                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                            ctx.strokeStyle = '#4e342e';
+                            ctx.lineWidth = 4;
+                            ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                            ctx.fillStyle = '#6d4c41';
+                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, 10);
+                            ctx.strokeStyle = '#6d4c41';
+                            ctx.lineWidth = 2;
+                            const slotHeight = (this.rect.h - 10) / 3;
+                            ctx.beginPath();
+                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight);
+                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 2);
+                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 2);
+                            ctx.stroke();
+                            const itemWidth = this.rect.w - 20;
+                            const itemHeight = (this.rect.h - 40) / 3;
+                            for (let i = 0; i < this.items.length; i++) {
+                                if (this.items[i] && this.items[i].assignedItem) {
+                                    const item = this.items[i];
+                                    const stackX = this.rect.x + 10;
+                                    const stackY = this.rect.y + 15 + i * (itemHeight + 5);
+                                    ctx.fillStyle = '#f5f5f5';
+                                    ctx.fillRect(stackX, stackY, itemWidth * (item.quantity / MAX_SHELF_STACK), itemHeight);
+                                    ctx.strokeStyle = '#5d4037';
+                                    ctx.strokeRect(stackX, stackY, itemWidth, itemHeight);
+                                    ctx.fillStyle = '#5d4037';
+                                    ctx.font = '12px "Patrick Hand", cursive';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(item.assignedItem.substring(0,8), stackX + itemWidth / 2, stackY + itemHeight / 2);
+                                }
+                            }
+                        }
+                    };
+                    shelves.push(shelf);
+                }
+            } else {
+                 for (let i = 0; i < shelves.length; i++) {
+                     shelves[i].rect.x = startX + i * (shelfWidth + shelfPadding);
+                     shelves[i].rect.y = shelfY;
+                     shelves[i].y = shelfY + shelfHeight;
+                 }
+            }
+            // Set all worker idle/start positions behind the counter
+            const startY = cashierCounter.y + cashierCounter.h / 2;
+
+            cashier.idleX = cashierCounter.x - 30;
+            cashier.idleY = startY;
+             if (cashier.state === 'idle' && !cashier.task) {
+                cashier.x = cashier.idleX;
+                cashier.y = cashier.idleY;
+            }
+
+            manager.idleX = cashier.idleX - 40;
+            manager.idleY = startY;
+            if (manager.state === 'idle' && !manager.task) {
+                manager.x = manager.idleX;
+                manager.y = manager.idleY;
+            }
+
+            stocker.idleX = manager.idleX - 40;
+            stocker.idleY = startY;
+            if (stocker.state === 'idle' && !stocker.task) {
+                stocker.x = stocker.idleX;
+                stocker.y = stocker.idleY;
+            }
+
+            loader.idleX = managersOffice.x + managersOffice.w + 40;
+            loader.idleY = managersOffice.y + managersOffice.h / 2;
+            if (loader.state === 'idle' && !loader.task) {
+                loader.x = loader.idleX;
+                loader.y = loader.idleY;
+            }
+
+            salesperson.idleX = canvas.width - 100;
+            salesperson.idleY = 400;
+            if (salesperson.state === 'idle' && !salesperson.task) {
+                salesperson.x = salesperson.idleX;
+                salesperson.y = salesperson.idleY;
+            }
+
+            player.x = stocker.idleX - 40;
+            player.y = startY;
+
+        }
+
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            desk.y = canvas.height - 220;
+            desk.width = canvas.width;
+            loadingDock.y = canvas.height - loadingDock.height;
+            loadingDock.width = canvas.width;
+
+            scale = 1.0;
+            cameraX = 0;
+            cameraY = 0;
+
+            initializeLayout();
+        }
+
+        function clampCamera() {
+            const worldWidth = canvas.width * scale;
+            const worldHeight = canvas.height * scale;
+
+            cameraX = Math.max(canvas.clientWidth - worldWidth, Math.min(0, cameraX));
+            cameraY = Math.max(canvas.clientHeight - worldHeight, Math.min(0, cameraY));
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            const zoom = 1 - e.deltaY * 0.001;
+            scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * zoom));
+        }
+
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            let x = event.clientX - rect.left;
+            let y = event.clientY - rect.top;
+
+            const panelWidth = 290;
+            const panelX = (canvas.width - panelWidth) / 2;
+            const panelY = 20;
+            const panelHeight = 70;
+
+            // Check for static UI clicks FIRST, before transforming coordinates
+            if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
+                 if (x >= cashRegister.x && x <= cashRegister.x + cashRegister.width && y >= cashRegister.y && y <= cashRegister.y + cashRegister.height) { togglePanel('restock'); }
+                 else if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { togglePanel('basket'); }
+                 else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) {
+                    toggleShelfAssignmentMode();
+                 }
+                 else if (x >= lockIcon.x && x <= lockIcon.x + lockIcon.width && y >= lockIcon.y && y <= lockIcon.y + lockIcon.height) {
+                    openUnlocksPanel();
+                 }
+                return;
+            }
+
+            // Convert to world coordinates for game object clicks
+            const worldX = (x - cameraX) / scale;
+            const worldY = (y - cameraY) / scale;
+
+            if (worldX > managersOffice.x && worldX < managersOffice.x + managersOffice.w && worldY > managersOffice.y && worldY < managersOffice.y + managersOffice.h) {
+                if (Math.hypot(player.x - (managersOffice.x + managersOffice.w/2), player.y - (managersOffice.y + managersOffice.h/2)) < 150) {
+                    openRestockPanel();
+                    return;
+                }
+            }
+
+            // Check for clicks on packages in the loading dock
+            if (worldY >= loadingDock.y) {
+                 if (Math.hypot(player.x - worldX, player.y - worldY) < 150) {
+                     for(let i = 0; i < loadingDockPackages.length; i++) {
+                         const pkg = loadingDockPackages[i];
+                         const pkgX = 10 + i * (PACKAGE_WIDTH + 10);
+                         const pkgY = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
+                         if(worldX > pkgX && worldX < pkgX + PACKAGE_WIDTH && worldY > pkgY && worldY < pkgY + PACKAGE_HEIGHT) {
+                             takeItemFromPackage(i);
+                             return;
+                         }
+                     }
+                 }
+            }
+
+            const clickedCell = storageCells.find(c => worldX >= c.rect.x && worldX <= c.rect.x + c.rect.w && worldY >= c.rect.y && worldY <= c.rect.y + c.rect.h);
+            if (clickedCell) {
+                if (Math.hypot(player.x - (clickedCell.rect.x + clickedCell.rect.w/2), player.y - (clickedCell.rect.y + clickedCell.rect.h)) < 150) {
+                    openStorageCell(clickedCell); return;
+                }
+            }
+            const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
+            if (clickedShelf) {
+                if (Math.hypot(player.x - (clickedShelf.rect.x + clickedShelf.rect.w/2), player.y - (clickedShelf.rect.y + clickedShelf.rect.h/2)) < 150) {
+                     if (shelfAssignmentMode) {
+                         const slotHeight = clickedShelf.rect.h / 3;
+                         const slotIndex = Math.floor((worldY - clickedShelf.rect.y) / slotHeight);
+                         openAssignmentPanel(clickedShelf, slotIndex);
+                     } else {
+                         openShelfPanel(clickedShelf);
+                     }
+                    return;
+                }
+            }
+        }
+
+        function handleInteraction() {
+            // Priority 1: Check out a customer if they are waiting and player is at the counter.
+            const customerToCheckout = customers
+                .filter(c => c.state === 'waitingAtCounter' && !c.isServed)
+                .sort((a, b) => a.x - b.x)[0]; // Get the first person in line
+
+            const playerAtCounter = Math.hypot(player.x - (cashierCounter.x - 30), player.y - (cashierCounter.y + cashierCounter.h / 2)) < 100;
+
+            if (customerToCheckout && playerAtCounter) {
+                completeTransaction(customerToCheckout.id);
+                return; // Interaction handled, do nothing else.
+            }
+
+            // Priority 2: Fulfill order for a nearby customer.
+            const customerToFulfill = customers.find(c =>
+                !c.leaving &&
+                ['browsing', 'wandering'].includes(c.state) &&
+                Math.hypot(player.x - c.x, player.y - c.y) < 150
+            );
+
+            if (customerToFulfill) {
+                const neededItems = customerToFulfill.requestedItems.filter(item => !customerToFulfill.order.includes(item));
+
+                // Check if player has all needed items
+                const playerBasketCounts = player.basket.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
+                const neededItemsCounts = neededItems.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
+
+                const canFulfill = Object.keys(neededItemsCounts).every(item => (playerBasketCounts[item] || 0) >= neededItemsCounts[item]);
+
+                if (canFulfill && neededItems.length > 0) {
+                    // Fulfill the order
+                    neededItems.forEach(item => {
+                        const index = player.basket.indexOf(item);
+                        player.basket.splice(index, 1);
+                        customerToFulfill.order.push(item);
+                    });
+
+                    customerToFulfill.state = 'queuing';
+                    customerToFulfill.request = `Oh, you have everything! Thanks! I'll go pay now.`;
+                    customerToFulfill.showSpeechBubble = true;
+                    customerToFulfill.speechBubbleTimer = 3000;
+                    spawnFloatingText('Order Fulfilled!', player.x, player.y - 90, '#3b82f6');
+                    return; // Interaction handled
+                }
+            }
+
+            // Priority 3: Talk to a nearby customer who is NOT waiting to check out.
+            const customerToTalkTo = customers.find(c =>
+                !c.leaving &&
+                c.state !== 'waitingAtCounter' && // <-- Important: Don't talk to people in line
+                Math.hypot(player.x - c.x, player.y - c.y) < 150
+            );
+
+            if (customerToTalkTo) {
+                // New logic: Check if customer is wandering and update their request text.
+                if (customerToTalkTo.state === 'wandering') {
+                    const missingItem = customerToTalkTo.requestedItems[customerToTalkTo.currentItemIndex];
+                    if (missingItem) {
+                        customerToTalkTo.request = `I was really hoping to find some ${missingItem} today.`;
+                    }
+                }
+
+                customerToTalkTo.showSpeechBubble = true;
+                customerToTalkTo.speechBubbleTimer = 3000; // 3 seconds
+
+                if (Math.random() < 0.10 && customerToTalkTo.requestedItems.length < 4) { // 10% chance to upsell
+                    const allItems = Object.keys(items);
+                    const potentialItems = allItems.filter(i => !customerToTalkTo.requestedItems.includes(i));
+                    if(potentialItems.length > 0) {
+                        const newItem = potentialItems[Math.floor(Math.random() * potentialItems.length)];
+                        customerToTalkTo.requestedItems.push(newItem);
+                        customerToTalkTo.request += ` and a ${newItem}`;
+                        spawnFloatingText('Upsell!', player.x, player.y - 90, '#8b5cf6');
+                    }
+                }
+            }
+        }
+
+        function toggleShelfAssignmentMode() {
+            shelfAssignmentMode = !shelfAssignmentMode;
+            showMessage("Shelf Assignment Mode: " + (shelfAssignmentMode ? "ON" : "OFF"));
+        }
+
+        function takeItemFromPackage(packageIndex) {
+            if (player.basket.length >= MAX_BASKET_SIZE) {
+                showMessage("Your basket is full!");
+                return;
+            }
+            const pkg = loadingDockPackages[packageIndex];
+            if (pkg && pkg.quantity > 0) {
+                player.basket.push(pkg.itemName);
+                pkg.quantity--;
+                if (pkg.quantity <= 0) {
+                    loadingDockPackages.splice(packageIndex, 1);
+                }
+            }
+        }
+
+
+        let currentRestockOrder = {};
+        function openRestockPanel() {
+            const restockGrid = document.getElementById('restock-grid');
+            restockGrid.innerHTML = '';
+            currentRestockOrder = {};
+            updateRestockTotal();
+
+            // Determine which items are available to order based on unlocked storage
+            const unlockedItems = new Set();
+            storageCells.forEach((cell, index) => {
+                if (unlocks.storage[index]) {
+                    cell.allowedItems.forEach(item => unlockedItems.add(item));
+                }
+            });
+
+            // Always allow ordering of items in the first (default unlocked) storage cell
+            storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
+
+
+            if (unlockedItems.size === 0) {
+                restockGrid.innerHTML = `<p class="text-center p-4">Unlock more storage cells to order new types of items!</p>`;
+                return;
+            }
+
+            restockGrid.innerHTML += `
+                <div class="grid grid-cols-4 gap-4 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                    <span class="font-bold">Item</span>
+                    <span class="text-right font-bold">Cost</span>
+                    <span class="text-right font-bold">In Stock</span>
+                    <span class="text-center font-bold">Order Qty</span>
+                </div>
+            `;
+            for (const itemName of unlockedItems) {
+                const itemData = items[itemName];
+                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid grid-cols-4 gap-4 items-center py-2 border-b border-amber-800/10';
+                itemDiv.innerHTML = `
+                    <span class="text-lg">${itemName}</span>
+                    <span class="text-right text-lg">$${restockPrice.toFixed(2)}</span>
+                    <span class="text-right text-lg">${inventory[itemName]}</span>
+                    <div class="text-center">
+                        <input type="number" min="0" value="0" data-item="${itemName}" class="w-20 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-600">
+                    </div>
+                `;
+                restockGrid.appendChild(itemDiv);
+            }
+            restockGrid.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const itemName = e.target.dataset.item;
+                    const quantity = parseInt(e.target.value, 10) || 0;
+                    if (quantity > 0) {
+                        currentRestockOrder[itemName] = quantity;
+                    } else {
+                        delete currentRestockOrder[itemName];
+                    }
+                    updateRestockTotal();
+                });
+            });
+            togglePanel('restock', true);
+        }
+
+        function purchaseUnlock(type, key) {
+            let cost = 0;
+            let prerequisite = true;
+
+            if (type === 'employee') {
+                cost = unlockCosts.employees[key];
+            } else if (type === 'shelf') {
+                key = parseInt(key);
+                cost = unlockCosts.shelves[key];
+                if (key > 0 && !unlocks.shelves[key - 1]) {
+                    prerequisite = false;
+                }
+            } else if (type === 'storage') {
+                key = parseInt(key);
+                cost = unlockCosts.storage[key];
+                if (key > 0 && !unlocks.storage[key - 1]) {
+                    prerequisite = false;
+                }
+            }
+
+            if (developerMode) {
+                cost = 0;
+            }
+
+            if (!prerequisite) {
+                showMessage("You must unlock the previous tier first!");
+                return;
+            }
+
+            if (shopPoints >= cost) {
+                shopPoints -= cost;
+                if (type === 'employee') {
+                    unlocks.employees[key] = true;
+                } else if (type === 'shelf') {
+                    unlocks.shelves[key] = true;
+                } else if (type === 'storage') {
+                    unlocks.storage[key] = true;
+                }
+
+                spawnFloatingText('Unlocked!', player.x, player.y - 90, '#f59e0b');
+                updateUI();
+                saveGame();
+                openUnlocksPanel(); // Refresh the panel
+            } else {
+                showMessage(`You need ${cost} points to unlock this.`);
+            }
+        }
+
+        function openUnlocksPanel() {
+            const empContainer = document.getElementById('unlocks-employees');
+            const shelvesContainer = document.getElementById('unlocks-shelves');
+            const storageContainer = document.getElementById('unlocks-storage');
+            empContainer.innerHTML = '';
+            shelvesContainer.innerHTML = '';
+            storageContainer.innerHTML = '';
+
+            // Employees
+            for (const emp in unlockCosts.employees) {
+                const cost = developerMode ? 0 : unlockCosts.employees[emp];
+                const isUnlocked = unlocks.employees[emp];
+                const canAfford = shopPoints >= cost;
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+                div.innerHTML = `
+                    <div>
+                        <span class="text-lg">${emp.charAt(0).toUpperCase() + emp.slice(1)}</span>
+                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
+                    </div>
+                    <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
+                        ${isUnlocked ? 'Unlocked' : 'Buy'}
+                    </button>
+                `;
+                empContainer.appendChild(div);
+            }
+
+            // Shelves (starting from the second one)
+            for (let i = 1; i < unlockCosts.shelves.length; i++) {
+                const cost = developerMode ? 0 : unlockCosts.shelves[i];
+                const isUnlocked = unlocks.shelves[i];
+                const canAfford = shopPoints >= cost;
+                const prerequisiteMet = unlocks.shelves[i - 1];
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+                div.innerHTML = `
+                    <div>
+                        <span class="text-lg">Shelf ${i + 1}</span>
+                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
+                    </div>
+                    <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
+                        ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
+                    </button>
+                `;
+                shelvesContainer.appendChild(div);
+            }
+
+            // Storage
+            for (let i = 0; i < unlockCosts.storage.length; i++) {
+                const cost = developerMode ? 0 : unlockCosts.storage[i];
+                const isUnlocked = unlocks.storage[i];
+                const canAfford = shopPoints >= cost;
+                const prerequisiteMet = i === 0 || unlocks.storage[i - 1];
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+                div.innerHTML = `
+                    <div>
+                        <span class="text-lg">${storageCells[i].label} Storage</span>
+                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
+                    </div>
+                    <button class="btn-style px-4 py-1" data-type="storage" data-key="${i}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
+                        ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
+                    </button>
+                `;
+                storageContainer.appendChild(div);
+            }
+
+            document.getElementById('unlocks-panel').querySelectorAll('button[data-type]').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const type = e.currentTarget.dataset.type;
+                    const key = e.currentTarget.dataset.key;
+                    purchaseUnlock(type, key);
+                });
+            });
+
+            togglePanel('unlocks', true);
+        }
+
+
+        function updateRestockTotal() {
+            let total = 0;
+            for (const itemName in currentRestockOrder) {
+                const quantity = currentRestockOrder[itemName];
+                const itemData = items[itemName];
+                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                total += restockPrice * quantity;
+            }
+            document.getElementById('restock-total').textContent = total.toFixed(2);
+        }
+
+        function placeOrder() {
+            let totalCost = 0;
+            let itemsToOrder = 0;
+            for (const itemName in currentRestockOrder) {
+                const quantity = currentRestockOrder[itemName];
+                if (quantity > 0) {
+                    const itemData = items[itemName];
+                    const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                    totalCost += restockPrice * quantity;
+                    itemsToOrder++;
+                }
+            }
+            if (itemsToOrder === 0) {
+                showMessage("Your order is empty.");
+                return;
+            }
+            if (cash >= totalCost) {
+                cash -= totalCost;
+                for (const itemName in currentRestockOrder) {
+                    let quantityToOrder = currentRestockOrder[itemName];
+                    while (quantityToOrder > 0) {
+                        const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
+                        loadingDockPackages.push({itemName: itemName, quantity: quantityForPackage});
+                        quantityToOrder -= quantityForPackage;
+                    }
+                }
+                updateUI();
+                saveGame();
+                togglePanel('restock', false);
+                showMessage(`Order placed for $${totalCost.toFixed(2)}! The supplies have been delivered to the loading dock.`);
+            } else {
+                showMessage(`You can't afford this order! You need $${totalCost.toFixed(2)} but only have $${cash.toFixed(2)}.`);
+            }
+        }
+
+        function openStorageCell(cell) {
+            const storageGrid = document.getElementById('storage-grid');
+            document.getElementById('storage-title').textContent = cell.label;
+            storageGrid.innerHTML = '';
+            if (cell.allowedItems.length === 0) {
+                storageGrid.innerHTML = `<p class="col-span-4 text-center">No items are stored here.</p>`;
+            }
+            cell.allowedItems.forEach(itemName => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `p-2 text-center border-2 border-amber-900 rounded-lg bg-white shadow-sm`;
+                const inStock = cell.items[itemName] > 0;
+                const canPutBack = player.basket.includes(itemName);
+                itemDiv.innerHTML = `
+                    <div class="font-handwritten text-xl">${itemName}</div>
+                    <div class="text-xs">In Stock: ${cell.items[itemName] || 0}</div>
+                    <div class="mt-2 flex justify-center space-x-2">
+                        <button class="btn-style px-3 py-1 text-sm" data-action="take" data-item="${itemName}" ${!inStock || player.basket.length >= MAX_BASKET_SIZE ? 'disabled' : ''}>Take 1</button>
+                        <button class="btn-style px-3 py-1 text-sm" data-action="put_back" data-item="${itemName}" ${!canPutBack ? 'disabled' : ''}>Put Back 1</button>
+                    </div>
+                `;
+                storageGrid.appendChild(itemDiv);
+            });
+            storageGrid.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    const itemName = e.target.dataset.item;
+                    if (action === 'take') {
+                        takeItemFromStorage(itemName, cell);
+                    } else if (action === 'put_back') {
+                        putItemInStorage(itemName, cell);
+                    }
+                });
+            });
+            togglePanel('storage', true);
+        }
+
+        function openAssignmentPanel(shelf, slotIndex) {
+            const assignmentGrid = document.getElementById('assignment-grid');
+            assignmentGrid.innerHTML = '';
+
+            const currentSlot = shelf.items[slotIndex];
+
+            // Add clear button if an item is assigned
+            const clearButton = document.createElement('button');
+            clearButton.className = 'btn-style bg-red-700/80 hover:bg-red-600';
+            clearButton.textContent = 'Clear Assignment';
+            if (currentSlot.quantity > 0) {
+                clearButton.disabled = true;
+                clearButton.title = 'Empty the slot before clearing the assignment.';
+            }
+            clearButton.onclick = () => {
+                currentSlot.assignedItem = null;
+                saveGame();
+                togglePanel('assignment', false);
+            };
+            assignmentGrid.appendChild(clearButton);
+
+            for (const itemName in items) {
+                const button = document.createElement('button');
+                button.className = 'btn-style';
+                button.textContent = itemName;
+                button.dataset.item = itemName;
+                button.onclick = () => {
+                    if (currentSlot.quantity > 0 && currentSlot.assignedItem !== itemName) {
+                        showMessage("You must empty the slot before assigning a new item.");
+                        return;
+                    }
+                    currentSlot.assignedItem = itemName;
+                    saveGame();
+                    togglePanel('assignment', false);
+                };
+                assignmentGrid.appendChild(button);
+            }
+            togglePanel('assignment', true);
+        }
+
+        function openShelfPanel(shelf) {
+            const shelfGrid = document.getElementById('shelf-grid');
+            shelfGrid.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const slot = shelf.items[i];
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'p-2 text-center border-2 border-dashed border-amber-700 rounded-lg flex flex-col justify-between min-h-[100px]';
+                let content = '';
+
+                if (slot.assignedItem) {
+                    const canPlaceMore = player.basket.includes(slot.assignedItem) && slot.quantity < MAX_SHELF_STACK;
+                    const canTake = slot.quantity > 0 && player.basket.length < MAX_BASKET_SIZE;
+                    content = `
+                        <div>
+                            <div class="font-handwritten text-lg">${slot.assignedItem}</div>
+                            <div>${slot.quantity} / ${MAX_SHELF_STACK}</div>
+                        </div>
+                        <div class="mt-2 flex justify-center space-x-2">
+                            <button class="btn-style px-2 py-1 text-sm" data-action="take" data-shelf="${shelves.indexOf(shelf)}" data-slot="${i}" ${!canTake ? 'disabled' : ''}>Take</button>
+                            <button class="btn-style px-2 py-1 text-sm" data-action="place" data-shelf="${shelves.indexOf(shelf)}" data-slot="${i}" ${!canPlaceMore ? 'disabled' : ''}>Place</button>
+                        </div>
+                    `;
+                } else {
+                    content = `<div class="self-center">Empty Slot</div>`;
+                }
+                slotDiv.innerHTML = content;
+                shelfGrid.appendChild(slotDiv);
+            }
+
+            shelfGrid.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', e => {
+                    const shelfIndex = parseInt(e.target.dataset.shelf, 10);
+                    const slotIndex = parseInt(e.target.dataset.slot, 10);
+                    const action = e.target.dataset.action;
+                    const targetShelf = shelves[shelfIndex];
+                    const targetSlot = targetShelf.items[slotIndex];
+                    if (action === 'take') {
+                        player.basket.push(targetSlot.assignedItem);
+                        targetSlot.quantity--;
+                    } else if (action === 'place') {
+                        const itemIndex = player.basket.indexOf(targetSlot.assignedItem);
+                        if (itemIndex > -1) {
+                            player.basket.splice(itemIndex, 1);
+                            targetSlot.quantity++;
+                        }
+                    }
+                    saveGame();
+                    openShelfPanel(targetShelf); // Refresh panel
+                });
+            });
+
+            togglePanel('shelf', true);
+        }
+
+        function takeItemFromStorage(itemName, cell) {
+            if (player.basket.length < MAX_BASKET_SIZE) {
+                if (cell.items[itemName] > 0) {
+                    cell.items[itemName]--;
+                    player.basket.push(itemName);
+                    saveGame();
+                    openStorageCell(cell); // Refresh panel
+                }
+            } else {
+                showMessage("Your basket is full!");
+            }
+        }
+
+        function putItemInStorage(itemName, cell) {
+            const itemIndex = player.basket.indexOf(itemName);
+            if (itemIndex > -1) {
+                player.basket.splice(itemIndex, 1);
+                if (!cell.items[itemName]) cell.items[itemName] = 0;
+                cell.items[itemName]++;
+                saveGame();
+                openStorageCell(cell); // Refresh panel
+            }
+        }
+
+
+        let activePanel = null;
+        function togglePanel(panelName, forceOpen = false) {
+            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel'];
+            const targetPanel = document.getElementById(`${panelName}-panel`);
+
+            if (forceOpen) {
+                // Close all other panels
+                allPanels.forEach(p => {
+                    if (`${panelName}-panel` !== p) {
+                        document.getElementById(p).classList.add('hidden');
+                    }
+                });
+                targetPanel.classList.remove('hidden');
+                activePanel = panelName;
+                return;
+            }
+
+            if (activePanel === panelName) {
+                // Close the current panel
+                targetPanel.classList.add('hidden');
+                activePanel = null;
+            } else {
+                 // Close the previously active panel
+                if (activePanel) {
+                    document.getElementById(`${activePanel}-panel`).classList.add('hidden');
+                }
+                // Open the new panel
+                targetPanel.classList.remove('hidden');
+                activePanel = panelName;
+            }
+        }
+
+        function saveGame() {
+            const gameState = {
+                cash, day, shopPoints,
+                inventory, storageCells, shelves,
+                unlocks, loadingDockPackages
+            };
+            localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
+        }
+
+        function loadGame() {
+            const savedState = localStorage.getItem('artEmporiumSave');
+            if (savedState) {
+                try {
+                    const gameState = JSON.parse(savedState);
+                    cash = gameState.cash || 100;
+                    day = gameState.day || 1;
+                    shopPoints = gameState.shopPoints || 0;
+                    inventory = gameState.inventory || inventory;
+                    storageCells = gameState.storageCells || storageCells;
+                    shelves = gameState.shelves || shelves;
+                    unlocks = gameState.unlocks || unlocks;
+                    loadingDockPackages = gameState.loadingDockPackages || [];
+
+                    // Re-attach draw methods to shelves as they are lost in JSON.
+                    shelves.forEach(shelf => {
+                         shelf.draw = function() {
+                            if (!unlocks.shelves[shelves.indexOf(this)]) {
+                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                                drawLockIcon(this.rect.x + this.rect.w/2 - 25, this.rect.y + this.rect.h/2-25, 50, 50);
+                                return;
+                            }
+                            ctx.fillStyle = '#8d6e63';
+                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                            ctx.strokeStyle = '#4e342e';
+                            ctx.lineWidth = 4;
+                            ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                            ctx.fillStyle = '#6d4c41';
+                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, 10);
+                            ctx.strokeStyle = '#6d4c41';
+                            ctx.lineWidth = 2;
+                            const slotHeight = (this.rect.h - 10) / 3;
+                            ctx.beginPath();
+                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight);
+                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 2);
+                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 2);
+                            ctx.stroke();
+                            const itemWidth = this.rect.w - 20;
+                            const itemHeight = (this.rect.h - 40) / 3;
+                            for (let i = 0; i < this.items.length; i++) {
+                                if (this.items[i] && this.items[i].assignedItem) {
+                                    const item = this.items[i];
+                                    const stackX = this.rect.x + 10;
+                                    const stackY = this.rect.y + 15 + i * (itemHeight + 5);
+                                    ctx.fillStyle = '#f5f5f5';
+                                    ctx.fillRect(stackX, stackY, itemWidth * (item.quantity / MAX_SHELF_STACK), itemHeight);
+                                    ctx.strokeStyle = '#5d4037';
+                                    ctx.strokeRect(stackX, stackY, itemWidth, itemHeight);
+                                    ctx.fillStyle = '#5d4037';
+                                    ctx.font = '12px "Patrick Hand", cursive';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(item.assignedItem.substring(0,8), stackX + itemWidth / 2, stackY + itemHeight / 2);
+                                }
+                            }
+                        }
+                    });
+
+                } catch (e) {
+                    console.error("Failed to parse saved game data:", e);
+                    localStorage.removeItem('artEmporiumSave'); // Clear corrupted save
+                }
+            }
+        }
+
+        function init() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            pieClockCanvas = document.getElementById('pie-clock-canvas');
+            pieClockCtx = pieClockCanvas.getContext('2d');
+
+            loadGame(); // Load game state before resizing/initializing layout
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+            pieClockCanvas.addEventListener('click', handleClockClick);
+
+            document.getElementById('start-day-btn').addEventListener('click', () => {
+                if(dayStarted) return;
+                dayStarted = true;
+                dayTimer = DAY_DURATION;
+                timeSinceLastCustomer = 0;
+                document.getElementById('start-day-btn').classList.add('hidden');
+                document.getElementById('next-day-btn').classList.remove('hidden');
+                // Ensure all idle states are correct before starting
+                if (!stocker.task) stocker.state = 'idle';
+                if (!cashier.task) cashier.state = 'idle';
+                if (!loader.task) loader.state = 'idle';
+                if (!manager.task) manager.state = 'idle';
+                if (!salesperson.task) salesperson.state = 'idle';
+            });
+
+            document.getElementById('next-day-btn').addEventListener('click', () => {
+                if(!dayStarted) return;
+                dayTimer = 1; // Set to 1ms to trigger nextDay() on the next frame
+            });
+
+            document.getElementById('place-order-btn').addEventListener('click', placeOrder);
+            document.getElementById('settings-btn').addEventListener('click', () => togglePanel('settings', true));
+
+            // Setup close buttons for all panels
+            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings'].forEach(panelName => {
+                document.getElementById(`close-${panelName}`).addEventListener('click', () => togglePanel(panelName, false));
+            });
+
+            // Settings Toggles
+            const devToggle = document.getElementById('developer-toggle');
+            devToggle.checked = developerMode;
+            devToggle.addEventListener('change', (e) => {
+                developerMode = e.target.checked;
+                if (developerMode) {
+                    cash = 99999;
+                    shopPoints = 999;
+                }
+                updateUI();
+            });
+            const continuousToggle = document.getElementById('continuous-toggle');
+            continuousToggle.checked = continuousMode;
+            continuousToggle.addEventListener('change', (e) => {
+                continuousMode = e.target.checked;
+            });
+
+            loadSpriteSheet(); // Generate and load player spritesheet
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

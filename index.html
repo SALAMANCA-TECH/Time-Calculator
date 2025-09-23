@@ -1951,8 +1951,14 @@
 
                         salesperson.state = 'wandering';
                         salesperson.stateTimer = Math.random() * 3000 + 2000;
-                        const randomShelf = shelves[Math.floor(Math.random() * shelves.length)];
-                        salesperson.task = { target: { x: randomShelf.rect.x + randomShelf.rect.w / 2, y: randomShelf.rect.y + randomShelf.rect.h + 20 } };
+                        if (shelves && shelves.length > 0) {
+                            const randomShelf = shelves[Math.floor(Math.random() * shelves.length)];
+                            salesperson.task = { target: { x: randomShelf.rect.x + randomShelf.rect.w / 2, y: randomShelf.rect.y + randomShelf.rect.h + 20 } };
+                        } else {
+                            salesperson.state = 'idle';
+                            salesperson.stateTimer = 2000;
+                            salesperson.task = null;
+                        }
                     }
                     break;
 

@@ -1598,7 +1598,7 @@
                  const anim = animations[cashier.state];
                  cashier.lastFrameTime += deltaTime;
                  if (cashier.lastFrameTime >= cashier.animationSpeed) {
-                     cashier.currentFrame = (stocker.currentFrame + 1) % anim.frames;
+                     cashier.currentFrame = (cashier.currentFrame + 1) % anim.frames;
                      cashier.lastFrameTime = 0;
                  }
                 return;
@@ -2405,9 +2405,10 @@
                 salesperson.y = salesperson.idleY;
             }
 
-            player.x = stocker.idleX - 40;
-            player.y = startY;
-
+            if (day === 1 && !dayStarted) {
+                player.x = stocker.idleX - 40;
+                player.y = startY;
+            }
         }
 
         function resizeCanvas() {

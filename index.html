@@ -373,6 +373,7 @@
         let day = 1;
         let shopPoints = 0;
         let customers = [];
+        let customerDemand = {};
         let canvas, ctx, pieClockCanvas, pieClockCtx;
         let lastTimestamp = 0;
         let running = true;
@@ -2132,16 +2133,23 @@
                     }
                 }
             }
-            // Then check for unassigned items that have stock
-            for(const item in inventory){
-                const stock = Object.values(storageCells.find(c => c.allowedItems.includes(item))?.items || {}).reduce((a,b)=>a+b, 0) || 0;
-                if (stock > 0) {
-                    const isAssigned = shelves.some(s => s.items.some(i => i.assignedItem === item));
-                    if(!isAssigned && !neededItems.includes(item)) {
-                        const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
-                        if (hasEmptySlot) {
-                            neededItems.push(item);
-                        }
+            // Part 2: If there are empty slots, decide what new item to stock based on demand.
+            const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
+            if (hasEmptySlot) {
+                const assignedItems = new Set();
+                shelves.forEach(s => s.items.forEach(i => {
+                    if(i.assignedItem) assignedItems.add(i.assignedItem);
+                }));
+
+                const sortedDemand = Object.entries(customerDemand).sort(([,a],[,b]) => b-a).map(([name]) => name);
+
+                for (const demandedItem of sortedDemand) {
+                    if (assignedItems.has(demandedItem)) continue;
+
+                    const storageCell = storageCells.find(c => c.allowedItems.includes(demandedItem));
+                    if (storageCell && storageCell.items[demandedItem] > 0) {
+                        neededItems.push(demandedItem);
+                        break;
                     }
                 }
             }
@@ -2364,6 +2372,9 @@
         async function spawnNewCustomer() {
             const customerData = await generateCustomerRequest();
             if (customerData && customerData.requestedItems) {
+                customerData.requestedItems.forEach(item => {
+                    customerDemand[item] = (customerDemand[item] || 0) + 1;
+                });
                 const newCustomer = new Customer(
                     customerData.name, customerData.request, customerData.requestedItems, customerData.customerType
                 );
@@ -3274,7 +3285,8 @@
             const gameState = {
                 cash, day, shopPoints,
                 inventory, storageCells, shelves,
-                unlocks, loadingDockPackages
+                unlocks, loadingDockPackages,
+                customerDemand
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -3292,6 +3304,7 @@
                     shelves = gameState.shelves || shelves;
                     unlocks = gameState.unlocks || unlocks;
                     loadingDockPackages = gameState.loadingDockPackages || [];
+                    customerDemand = gameState.customerDemand || {};
 
                     // Re-attach draw methods to shelves as they are lost in JSON.
                     shelves.forEach(shelf => {

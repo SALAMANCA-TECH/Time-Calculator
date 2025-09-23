@@ -2023,48 +2023,93 @@
                     salesperson.state = 'collectingItem';
                     // Fall through
                 case 'collectingItem':
-                    const task = salesperson.task;
-                    if (!task.customer || task.customer.leaving) {
-                         salesperson.state = 'idle';
-                         salesperson.task = null;
-                         return;
-                    }
-
-                    // FIX: Add a guard clause to prevent crash if requestedItems is missing.
-                    if (!task.customer.requestedItems || !Array.isArray(task.customer.requestedItems)) {
-                        console.error("Salesperson cannot assist customer with no requested items.", task.customer);
-                        salesperson.state = 'idle';
-                        salesperson.task = null;
-                        return;
-                    }
-
-                    const itemToCollect = task.customer.requestedItems[task.currentItemIndex];
-
-                    if (!itemToCollect || salesperson.basket.length >= task.customer.requestedItems.length) {
-                        salesperson.state = 'deliveringItems';
-                        salesperson.task.target = { x: task.customer.x - 50, y: task.customer.y };
-                        break;
-                    }
-
-                    const targetShelf = shelves.find(s => s.items.some(i => i && i.assignedItem === itemToCollect && i.quantity > 0));
-
-                    if (targetShelf) {
-                        const targetPos = { x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 20 };
-                        if (moveCharacterTowards(salesperson, targetPos.x, targetPos.y, deltaTime)) {
-                            const slot = targetShelf.items.find(i => i && i.assignedItem === itemToCollect && i.quantity > 0);
-                            if (slot) {
-                                slot.quantity--;
-                                salesperson.basket.push(itemToCollect);
-                                task.currentItemIndex++;
-                            } else {
-                                task.currentItemIndex++;
-                            }
+                    {
+                        const task = salesperson.task;
+                        if (!task.customer || task.customer.leaving) {
+                            salesperson.state = 'idle';
+                            salesperson.task = null;
+                            return;
                         }
-                    } else {
-                        task.currentItemIndex++;
+
+                        if (!task.customer.requestedItems || !Array.isArray(task.customer.requestedItems)) {
+                            console.error("Salesperson cannot assist customer with no requested items.", task.customer);
+                            salesperson.state = 'idle';
+                            salesperson.task = null;
+                            return;
+                        }
+
+                        const itemToCollect = task.customer.requestedItems[task.currentItemIndex];
+
+                        if (!itemToCollect || salesperson.basket.length >= task.customer.requestedItems.length) {
+                            salesperson.state = 'deliveringItems';
+                            salesperson.task.target = { x: task.customer.x - 50, y: task.customer.y };
+                            break;
+                        }
+
+                        const targetShelf = shelves.find(s => s.items.some(i => i && i.assignedItem === itemToCollect && i.quantity > 0));
+
+                        if (targetShelf) {
+                            const targetPos = { x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 20 };
+                            if (moveCharacterTowards(salesperson, targetPos.x, targetPos.y, deltaTime)) {
+                                const slot = targetShelf.items.find(i => i && i.assignedItem === itemToCollect && i.quantity > 0);
+                                if (slot) {
+                                    slot.quantity--;
+                                    salesperson.basket.push(itemToCollect);
+                                    task.currentItemIndex++;
+                                }
+                            }
+                            return;
+                        }
+
+                        const targetCell = storageCells.find(c => c.allowedItems.includes(itemToCollect) && c.items[itemToCollect] > 0);
+                        if (targetCell) {
+                            salesperson.state = 'fetchingFromStorage';
+                            salesperson.task.target = {
+                                x: targetCell.rect.x + targetCell.rect.w / 2,
+                                y: targetCell.rect.y + targetCell.rect.h + 20,
+                                cell: targetCell,
+                                item: itemToCollect
+                            };
+                            return;
+                        }
+
+                        const isOnLoadingDock = loadingDockPackages.some(pkg => pkg.itemName === itemToCollect);
+                        if (isOnLoadingDock) {
+                            salesperson.state = 'reportingToPlayer';
+                            salesperson.task.message = `The '${itemToCollect}' for ${task.customer.name} is on the loading dock!`;
+                            return;
+                        }
+
+                        salesperson.state = 'reportingToPlayer';
+                        salesperson.task.message = `We are all out of '${itemToCollect}' for ${task.customer.name}!`;
                     }
                     break;
 
+                case 'fetchingFromStorage':
+                    if (moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
+                        const cell = salesperson.task.target.cell;
+                        const item = salesperson.task.target.item;
+                        if (cell && item && cell.items[item] > 0) {
+                            cell.items[item]--;
+                            salesperson.basket.push(item);
+                            salesperson.task.currentItemIndex++;
+                        }
+                        salesperson.state = 'collectingItem';
+                        salesperson.task.target = null;
+                    }
+                    break;
+                case 'reportingToPlayer':
+                    salesperson.task.target = { x: player.x, y: player.y + 50 };
+
+                    if (moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
+                        spawnFloatingText(salesperson.task.message, salesperson.x, salesperson.y - 90, '#8b5cf6');
+
+                        salesperson.task.currentItemIndex++;
+                        salesperson.state = 'collectingItem';
+                        salesperson.task.target = null;
+                        salesperson.task.message = null;
+                    }
+                    break;
                 case 'deliveringItems':
                      if (!salesperson.task.customer || salesperson.task.customer.leaving) {
                          salesperson.state = 'idle';

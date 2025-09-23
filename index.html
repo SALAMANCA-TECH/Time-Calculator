@@ -453,7 +453,8 @@
             state: 'idle', facing: 'right',
             task: null,
             stateTimer: 0,
-            idleX: 0, idleY: 0
+            idleX: 0, idleY: 0,
+            basket: []
         };
 
         const loader = {
@@ -548,6 +549,17 @@
                 this.leaving = false;
 
                 this.state = 'entering';
+                this.isInteractedWith = false;
+                this.needsAssistanceFulfilled = false;
+
+                const rand = Math.random();
+                if (rand < 0.4) {
+                    this.behaviorType = 'direct';
+                } else if (rand < 0.8) {
+                    this.behaviorType = 'needsInteraction';
+                } else {
+                    this.behaviorType = 'needsAssistance';
+                }
                 this.facing = 'left';
                 this.currentFrame = 0;
                 this.lastFrameTime = 0;
@@ -634,12 +646,32 @@
                     case 'entering':
                         this.targetY = desk.y + 75;
                         if (this.moveTowardsTarget(deltaTime)) {
-                            this.state = 'browsing';
-                           if (!this.findNextItemTarget()) {
-                                this.request = `Hmm, I don't see what I need. I'll look around.`;
-                                this.state = 'wandering';
-                                this.isWaitingForRestock = true;
-                                this.stateTimer = 0; // Immediately find a wander target
+                            switch (this.behaviorType) {
+                                case 'direct':
+                                    this.state = 'browsing';
+                                    if (!this.findNextItemTarget()) {
+                                        this.request = `Hmm, I don't see any ${this.requestedItems[0]}. I'll look around.`;
+                                        this.state = 'wandering';
+                                        this.isWaitingForRestock = true;
+                                        this.stateTimer = 0;
+                                    }
+                                    break;
+                                case 'needsInteraction':
+                                    this.state = 'waitingForInteraction';
+                                    this.request = "Hello? Could someone help me find something?";
+                                    this.showSpeechBubble = true;
+                                    this.speechBubbleTimer = 5000;
+                                    // Start wandering
+                                    this.stateTimer = 0;
+                                    break;
+                                case 'needsAssistance':
+                                    this.state = 'waitingForAssistance';
+                                    this.request = "Could someone get these items for me, please?";
+                                    this.showSpeechBubble = true;
+                                    this.speechBubbleTimer = 5000;
+                                    // Start wandering
+                                    this.stateTimer = 0;
+                                    break;
                             }
                         }
                         break;
@@ -702,6 +734,46 @@
                             this.targetX = Math.random() * (lastShelfX - firstShelfX) + firstShelfX;
                             this.targetY = Math.random() * 100 + shelfYArea - 50;
                         }
+                        break;
+                    case 'waitingForInteraction':
+                        // Wander around until interacted with
+                        this.stateTimer -= deltaTime;
+                        if (this.stateTimer <= 0 || this.moveTowardsTarget(deltaTime)) {
+                            this.stateTimer = Math.random() * 4000 + 2000; // Wander for 2-6 seconds
+                            const firstShelfX = shelves[0].rect.x;
+                            const lastShelf = shelves[shelves.length - 1];
+                            const lastShelfX = lastShelf.rect.x + lastShelf.rect.w;
+                            const shelfYArea = shelves[0].rect.y + shelves[0].rect.h + 60;
+                            this.targetX = Math.random() * (lastShelfX - firstShelfX) + firstShelfX;
+                            this.targetY = Math.random() * 100 + shelfYArea - 50;
+                        }
+                        if (this.isInteractedWith) {
+                            this.state = 'browsing';
+                            this.request = "Ah, thank you! Let me see...";
+                            this.showSpeechBubble = true;
+                            this.speechBubbleTimer = 3000;
+                            if (!this.findNextItemTarget()) {
+                                this.request = `Hmm, I still don't see what I need. I'll look around.`;
+                                this.state = 'wandering';
+                                this.isWaitingForRestock = true;
+                                this.stateTimer = 0;
+                            }
+                        }
+                        break;
+                    case 'waitingForAssistance':
+                        // Wander around until order is fulfilled
+                        this.stateTimer -= deltaTime;
+                        if (this.stateTimer <= 0 || this.moveTowardsTarget(deltaTime)) {
+                            this.stateTimer = Math.random() * 5000 + 3000;
+                            const firstShelfX = shelves[0].rect.x;
+                            const lastShelf = shelves[shelves.length - 1];
+                            const lastShelfX = lastShelf.rect.x + lastShelf.rect.w;
+                            const shelfYArea = shelves[0].rect.y + shelves[0].rect.h + 60;
+                            this.targetX = Math.random() * (lastShelfX - firstShelfX) + firstShelfX;
+                            this.targetY = Math.random() * 100 + shelfYArea - 50;
+                        }
+                        // The check for fulfillment will be external (player/salesperson)
+                        // and will change the customer's state directly to 'queuing'.
                         break;
                     case 'queuing':
                     case 'waitingAtCounter': {
@@ -1828,6 +1900,7 @@
 
         function updateSalesperson(deltaTime) {
             if (!unlocks.employees.salesperson) return;
+
             if (!dayStarted) {
                 if (Math.hypot(salesperson.x - salesperson.idleX, salesperson.y - salesperson.idleY) > 5) {
                     salesperson.state = 'walk';
@@ -1836,46 +1909,136 @@
                     salesperson.state = 'idle';
                 }
                 const anim = animations[salesperson.state];
-                 salesperson.lastFrameTime += deltaTime;
-                 if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
-                     salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
-                     salesperson.lastFrameTime = 0;
-                 }
+                salesperson.lastFrameTime += deltaTime;
+                if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
+                    salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
+                    salesperson.lastFrameTime = 0;
+                }
                 return;
             }
-            const anim = animations.walk;
+
+            const animState = ['idle', 'interacting'].includes(salesperson.state) ? 'idle' : 'walk';
+            const anim = animations[animState];
             salesperson.lastFrameTime += deltaTime;
             if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
                 salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
                 salesperson.lastFrameTime = 0;
             }
+
             salesperson.stateTimer -= deltaTime;
 
-            if (salesperson.task && moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
-                salesperson.task = null;
-                salesperson.stateTimer = Math.random() * 3000 + 2000; // Wait for a bit
-            }
-
-            if (salesperson.stateTimer <= 0 && !salesperson.task) {
-                 const customerToTalkTo = customers.find(c => c.state === 'browsing' && Math.random() < 0.1);
-                 if (customerToTalkTo) {
-                    salesperson.task = { target: {x: customerToTalkTo.x + 50, y: customerToTalkTo.y }};
-                    if (Math.random() < 0.20 && customerToTalkTo.requestedItems.length < 4) { // 20% chance
-                        const allItems = Object.keys(items);
-                        const potentialItems = allItems.filter(i => !customerToTalkTo.requestedItems.includes(i));
-                        if(potentialItems.length > 0) {
-                            const newItem = potentialItems[Math.floor(Math.random() * potentialItems.length)];
-                            customerToTalkTo.requestedItems.push(newItem);
-                            customerToTalkTo.request += ` and a ${newItem}`;
-                            spawnFloatingText('Upsell!', salesperson.x, salesperson.y - 90, '#8b5cf6');
+            switch (salesperson.state) {
+                case 'idle':
+                    if (salesperson.stateTimer <= 0) {
+                        const customerToAssist = customers.find(c => c.behaviorType === 'needsAssistance' && !c.needsAssistanceFulfilled && !c.leaving);
+                        if (customerToAssist) {
+                            salesperson.state = 'assistingCustomer';
+                            salesperson.task = { customer: customerToAssist, currentItemIndex: 0 };
+                            return;
                         }
+
+                        const customerToInteract = customers.find(c => c.behaviorType === 'needsInteraction' && !c.isInteractedWith && !c.leaving);
+                        if (customerToInteract) {
+                            salesperson.state = 'goingToInteract';
+                            salesperson.task = { customer: customerToInteract, target: { x: customerToInteract.x + 50, y: customerToInteract.y } };
+                            return;
+                        }
+
+                        salesperson.state = 'wandering';
+                        salesperson.stateTimer = Math.random() * 3000 + 2000;
+                        const randomShelf = shelves[Math.floor(Math.random() * shelves.length)];
+                        salesperson.task = { target: { x: randomShelf.rect.x + randomShelf.rect.w / 2, y: randomShelf.rect.y + randomShelf.rect.h + 20 } };
+                    }
+                    break;
+
+                case 'wandering':
+                    if (!salesperson.task || moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
+                        salesperson.state = 'idle';
+                        salesperson.task = null;
+                        salesperson.stateTimer = 1000;
+                    }
+                    break;
+
+                case 'goingToInteract':
+                    if (!salesperson.task.customer || salesperson.task.customer.leaving) {
+                         salesperson.state = 'idle';
+                         salesperson.task = null;
+                         return;
+                    }
+                    if (moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
+                        salesperson.state = 'interacting';
+                        salesperson.stateTimer = 1000;
+                    }
+                    break;
+
+                case 'interacting':
+                    if (salesperson.stateTimer <= 0) {
+                        if (salesperson.task.customer && !salesperson.task.customer.leaving) {
+                           salesperson.task.customer.isInteractedWith = true;
+                           spawnFloatingText("Let me help!", salesperson.x, salesperson.y - 90, '#3b82f6');
+                        }
+                        salesperson.state = 'idle';
+                        salesperson.task = null;
+                        salesperson.stateTimer = 2000;
+                    }
+                    break;
+
+                case 'assistingCustomer':
+                    salesperson.state = 'collectingItem';
+                    // Fall through
+                case 'collectingItem':
+                    const task = salesperson.task;
+                    if (!task.customer || task.customer.leaving) {
+                         salesperson.state = 'idle';
+                         salesperson.task = null;
+                         return;
+                    }
+                    const itemToCollect = task.customer.requestedItems[task.currentItemIndex];
+
+                    if (!itemToCollect || salesperson.basket.length >= task.customer.requestedItems.length) {
+                        salesperson.state = 'deliveringItems';
+                        salesperson.task.target = { x: task.customer.x - 50, y: task.customer.y };
+                        break;
                     }
 
-                 } else {
-                    // Wander around shelves
-                    const randomShelf = shelves[Math.floor(Math.random() * shelves.length)];
-                    salesperson.task = { target: { x: randomShelf.rect.x + randomShelf.rect.w / 2, y: randomShelf.rect.y + randomShelf.rect.h + 20 + (Math.random() - 0.5) * 40 }};
-                 }
+                    const targetShelf = shelves.find(s => s.items.some(i => i && i.assignedItem === itemToCollect && i.quantity > 0));
+
+                    if (targetShelf) {
+                        const targetPos = { x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 20 };
+                        if (moveCharacterTowards(salesperson, targetPos.x, targetPos.y, deltaTime)) {
+                            const slot = targetShelf.items.find(i => i && i.assignedItem === itemToCollect && i.quantity > 0);
+                            if (slot) {
+                                slot.quantity--;
+                                salesperson.basket.push(itemToCollect);
+                                task.currentItemIndex++;
+                            } else {
+                                task.currentItemIndex++;
+                            }
+                        }
+                    } else {
+                        task.currentItemIndex++;
+                    }
+                    break;
+
+                case 'deliveringItems':
+                     if (!salesperson.task.customer || salesperson.task.customer.leaving) {
+                         salesperson.state = 'idle';
+                         salesperson.task = null;
+                         return;
+                    }
+                    if (moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
+                        salesperson.task.customer.order.push(...salesperson.basket);
+                        salesperson.basket = [];
+                        salesperson.task.customer.needsAssistanceFulfilled = true;
+                        salesperson.task.customer.state = 'queuing';
+                        salesperson.task.customer.request = "Thank you so much for your help!";
+                        spawnFloatingText("Here you go!", salesperson.x, salesperson.y - 90, '#22c55e');
+
+                        salesperson.state = 'idle';
+                        salesperson.task = null;
+                        salesperson.stateTimer = 3000;
+                    }
+                    break;
             }
         }
 
@@ -2523,67 +2686,70 @@
                 return; // Interaction handled, do nothing else.
             }
 
-            // Priority 2: Fulfill order for a nearby customer.
-            const customerToFulfill = customers.find(c =>
+            // Find the closest customer the player can interact with
+            const nearbyCustomer = customers.find(c =>
                 !c.leaving &&
-                ['browsing', 'wandering'].includes(c.state) &&
+                c.state !== 'waitingAtCounter' &&
+                c.state !== 'queuing' &&
                 Math.hypot(player.x - c.x, player.y - c.y) < 150
             );
 
-            if (customerToFulfill) {
-                const neededItems = customerToFulfill.requestedItems.filter(item => !customerToFulfill.order.includes(item));
+            if (!nearbyCustomer) return; // No one nearby to interact with
 
-                // Check if player has all needed items
+            // Interaction Logic, based on customer behavior type
+            if (nearbyCustomer.behaviorType === 'needsInteraction' && !nearbyCustomer.isInteractedWith) {
+                nearbyCustomer.isInteractedWith = true;
+                spawnFloatingText("Right this way!", player.x, player.y - 90, '#3b82f6');
+                nearbyCustomer.showSpeechBubble = true;
+                nearbyCustomer.speechBubbleTimer = 3000;
+                return;
+            }
+
+            if (nearbyCustomer.behaviorType === 'needsAssistance' && !nearbyCustomer.needsAssistanceFulfilled) {
+                const neededItems = nearbyCustomer.requestedItems.filter(item => !nearbyCustomer.order.includes(item));
                 const playerBasketCounts = player.basket.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
                 const neededItemsCounts = neededItems.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
-
                 const canFulfill = Object.keys(neededItemsCounts).every(item => (playerBasketCounts[item] || 0) >= neededItemsCounts[item]);
 
                 if (canFulfill && neededItems.length > 0) {
-                    // Fulfill the order
                     neededItems.forEach(item => {
                         const index = player.basket.indexOf(item);
                         player.basket.splice(index, 1);
-                        customerToFulfill.order.push(item);
+                        nearbyCustomer.order.push(item);
                     });
 
-                    customerToFulfill.state = 'queuing';
-                    customerToFulfill.request = `Oh, you have everything! Thanks! I'll go pay now.`;
-                    customerToFulfill.showSpeechBubble = true;
-                    customerToFulfill.speechBubbleTimer = 3000;
+                    nearbyCustomer.state = 'queuing';
+                    nearbyCustomer.needsAssistanceFulfilled = true;
+                    nearbyCustomer.request = `Oh, you have everything! Thanks! I'll go pay now.`;
+                    nearbyCustomer.showSpeechBubble = true;
+                    nearbyCustomer.speechBubbleTimer = 3000;
                     spawnFloatingText('Order Fulfilled!', player.x, player.y - 90, '#3b82f6');
-                    return; // Interaction handled
+                    return;
                 }
             }
 
-            // Priority 3: Talk to a nearby customer who is NOT waiting to check out.
-            const customerToTalkTo = customers.find(c =>
-                !c.leaving &&
-                c.state !== 'waitingAtCounter' && // <-- Important: Don't talk to people in line
-                Math.hypot(player.x - c.x, player.y - c.y) < 150
-            );
+            // Default interaction: show speech bubble and maybe upsell
+            if (nearbyCustomer.state === 'wandering' || nearbyCustomer.state === 'waitingForInteraction' || nearbyCustomer.state === 'waitingForAssistance') {
+                 const missingItem = nearbyCustomer.requestedItems[nearbyCustomer.currentItemIndex];
+                 if (missingItem) {
+                     nearbyCustomer.request = `I was really hoping to find some ${missingItem} today.`;
+                 } else if (nearbyCustomer.behaviorType === 'needsInteraction') {
+                     nearbyCustomer.request = "Hello? Could someone help me find something?";
+                 } else if (nearbyCustomer.behaviorType === 'needsAssistance') {
+                     nearbyCustomer.request = "Could someone get these items for me, please?";
+                 }
+            }
+            nearbyCustomer.showSpeechBubble = true;
+            nearbyCustomer.speechBubbleTimer = 3000;
 
-            if (customerToTalkTo) {
-                // New logic: Check if customer is wandering and update their request text.
-                if (customerToTalkTo.state === 'wandering') {
-                    const missingItem = customerToTalkTo.requestedItems[customerToTalkTo.currentItemIndex];
-                    if (missingItem) {
-                        customerToTalkTo.request = `I was really hoping to find some ${missingItem} today.`;
-                    }
-                }
-
-                customerToTalkTo.showSpeechBubble = true;
-                customerToTalkTo.speechBubbleTimer = 3000; // 3 seconds
-
-                if (Math.random() < 0.10 && customerToTalkTo.requestedItems.length < 4) { // 10% chance to upsell
-                    const allItems = Object.keys(items);
-                    const potentialItems = allItems.filter(i => !customerToTalkTo.requestedItems.includes(i));
-                    if(potentialItems.length > 0) {
-                        const newItem = potentialItems[Math.floor(Math.random() * potentialItems.length)];
-                        customerToTalkTo.requestedItems.push(newItem);
-                        customerToTalkTo.request += ` and a ${newItem}`;
-                        spawnFloatingText('Upsell!', player.x, player.y - 90, '#8b5cf6');
-                    }
+            if (Math.random() < 0.10 && nearbyCustomer.requestedItems.length < 4 && nearbyCustomer.behaviorType !== 'needsAssistance') {
+                const allItems = Object.keys(items);
+                const potentialItems = allItems.filter(i => !nearbyCustomer.requestedItems.includes(i));
+                if (potentialItems.length > 0) {
+                    const newItem = potentialItems[Math.floor(Math.random() * potentialItems.length)];
+                    nearbyCustomer.requestedItems.push(newItem);
+                    nearbyCustomer.request += ` and maybe a ${newItem}?`;
+                    spawnFloatingText('Upsell!', player.x, player.y - 90, '#8b5cf6');
                 }
             }
         }

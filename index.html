@@ -232,6 +232,9 @@
                         <label for="continuous-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                 </div>
+                <div class="border-t-2 border-amber-900/20 pt-4 mt-4">
+                    <button id="new-game-btn" class="btn-style w-full bg-red-700/80 hover:bg-red-600">Start New Game</button>
+                </div>
             </div>
         </div>
 
@@ -2026,6 +2029,15 @@
                          salesperson.task = null;
                          return;
                     }
+
+                    // FIX: Add a guard clause to prevent crash if requestedItems is missing.
+                    if (!task.customer.requestedItems || !Array.isArray(task.customer.requestedItems)) {
+                        console.error("Salesperson cannot assist customer with no requested items.", task.customer);
+                        salesperson.state = 'idle';
+                        salesperson.task = null;
+                        return;
+                    }
+
                     const itemToCollect = task.customer.requestedItems[task.currentItemIndex];
 
                     if (!itemToCollect || salesperson.basket.length >= task.customer.requestedItems.length) {
@@ -3229,6 +3241,13 @@
             }
         }
 
+        function startNewGame() {
+            if (confirm("Are you sure you want to start a new game? All your progress will be lost.")) {
+                localStorage.removeItem('artEmporiumSave');
+                window.location.reload();
+            }
+        }
+
         function saveGame() {
             const gameState = {
                 cash, day, shopPoints,
@@ -3343,6 +3362,7 @@
 
             document.getElementById('place-order-btn').addEventListener('click', placeOrder);
             document.getElementById('settings-btn').addEventListener('click', () => togglePanel('settings', true));
+            document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
             // Setup close buttons for all panels
             ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings'].forEach(panelName => {

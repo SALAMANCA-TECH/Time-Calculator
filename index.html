@@ -582,6 +582,7 @@
                 this.state = 'entering';
                 this.isInteractedWith = false;
                 this.needsAssistanceFulfilled = false;
+                this.hasReachedWaitingPoint = false;
 
                 const rand = Math.random();
                 if (rand < 0.4) {
@@ -661,7 +662,7 @@
                     this.request = "Oh, it's closing time! I'll come back another day.";
                 }
 
-                const anim = animations[this.state === 'idle' || this.state === 'waitingAtCounter' ? 'idle' : 'walk'];
+                const anim = animations[this.state === 'idle' || this.state === 'waitingAtCounter' || (this.state === 'waitingForInteraction' && this.hasReachedWaitingPoint) ? 'idle' : 'walk'];
                 this.lastFrameTime += deltaTime;
                 if (this.lastFrameTime >= this.animationSpeed) {
                     this.currentFrame = (this.currentFrame + 1) % anim.frames;
@@ -692,8 +693,12 @@
                                     this.request = "Hello? Could someone help me find something?";
                                     this.showSpeechBubble = true;
                                     this.speechBubbleTimer = 5000;
-                                    // Start wandering
-                                    this.stateTimer = 0;
+                                    // Set target to a point past the shelves
+                                    const firstShelfX = shelves[0].rect.x;
+                                    const lastShelf = shelves[shelves.length - 1];
+                                    const lastShelfX = lastShelf.rect.x + lastShelf.rect.w;
+                                    this.targetX = (firstShelfX + lastShelfX) / 2; // Middle of aisle
+                                    this.targetY = shelves[0].rect.y + shelves[0].rect.h + 40; // Below shelves
                                     break;
                                 case 'needsAssistance':
                                     this.state = 'waitingForAssistance';
@@ -767,17 +772,14 @@
                         }
                         break;
                     case 'waitingForInteraction':
-                        // Wander around until interacted with
-                        this.stateTimer -= deltaTime;
-                        if (this.stateTimer <= 0 || this.moveTowardsTarget(deltaTime)) {
-                            this.stateTimer = Math.random() * 4000 + 2000; // Wander for 2-6 seconds
-                            const firstShelfX = shelves[0].rect.x;
-                            const lastShelf = shelves[shelves.length - 1];
-                            const lastShelfX = lastShelf.rect.x + lastShelf.rect.w;
-                            const shelfYArea = shelves[0].rect.y + shelves[0].rect.h + 60;
-                            this.targetX = Math.random() * (lastShelfX - firstShelfX) + firstShelfX;
-                            this.targetY = Math.random() * 100 + shelfYArea - 50;
+                        if (!this.hasReachedWaitingPoint) {
+                            if (this.moveTowardsTarget(deltaTime)) {
+                                this.hasReachedWaitingPoint = true;
+                                this.facing = 'down'; // Face forward
+                            }
                         }
+                        // Once waiting point is reached, do nothing, just stand still.
+
                         if (this.isInteractedWith) {
                             this.state = 'browsing';
                             this.request = "Ah, thank you! Let me see...";

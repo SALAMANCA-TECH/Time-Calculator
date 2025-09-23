@@ -489,7 +489,8 @@
             state: 'idle', facing: 'right',
             task: null,
             stateTimer: 0,
-            idleX: 0, idleY: 0
+            idleX: 0, idleY: 0,
+            basket: []
         };
 
         const animations = {
@@ -1996,7 +1997,7 @@
 
                 case 'assistingCustomer':
                     salesperson.state = 'collectingItem';
-                    // Fall through
+                    break;
                 case 'collectingItem':
                     {
                         const task = salesperson.task;

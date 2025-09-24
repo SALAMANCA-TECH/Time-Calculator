@@ -446,32 +446,47 @@
                 }
             });
 
+            const unlockedItems = new Set();
+            unlocks.storage.forEach((isUnlocked, index) => {
+                if (isUnlocked) {
+                    storageCells[index].allowedItems.forEach(item => unlockedItems.add(item));
+                }
+            });
+
+
             if (availableTypeKeys.length === 0) {
                 console.warn("No customer types available to spawn.");
                 return null;
             }
 
-            const chosenTypeKey = availableTypeKeys[Math.floor(Math.random() * availableTypeKeys.length)];
-            const customersForType = customerProfiles[chosenTypeKey];
+            for (let i = 0; i < 20; i++) { // Retry loop
+                const chosenTypeKey = availableTypeKeys[Math.floor(Math.random() * availableTypeKeys.length)];
+                const customersForType = customerProfiles[chosenTypeKey];
 
-            const availableCustomers = Object.keys(customersForType).filter(name => !customersForType[name].visitedToday);
+                const availableCustomers = Object.keys(customersForType).filter(name => !customersForType[name].visitedToday);
 
-            if (availableCustomers.length === 0) {
-                // console.log(`All customers of type ${chosenTypeKey} have visited today.`);
-                return null;
+                if (availableCustomers.length === 0) {
+                    continue;
+                }
+
+                const chosenCustomerName = availableCustomers[Math.floor(Math.random() * availableCustomers.length)];
+                const customerData = { ...customersForType[chosenCustomerName] };
+
+                const validRequestedItems = customerData.requestedItems.filter(item => unlockedItems.has(item));
+
+                if (validRequestedItems.length > 0) {
+                    customerData.requestedItems = validRequestedItems;
+                    customersForType[chosenCustomerName].visitedToday = true;
+
+                    return {
+                        name: chosenCustomerName,
+                        ...customerData,
+                        customerType: chosenTypeKey
+                    };
+                }
             }
 
-            const chosenCustomerName = availableCustomers[Math.floor(Math.random() * availableCustomers.length)];
-            const customerData = customersForType[chosenCustomerName];
-
-            // Mark as visited for the day
-            customerData.visitedToday = true;
-
-            return {
-                name: chosenCustomerName,
-                ...customerData,
-                customerType: chosenTypeKey
-            };
+            return null;
         }
 
         let cash = 100;
@@ -3388,6 +3403,7 @@
                         <div>${status}</div>
                     </div>
                     <div class="text-sm">Wait Time: ${Math.round(customer.waitTimer)}s</div>
+                    <div class="text-xs mt-1">Looking for: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
                 `;
 
                 customerDiv.addEventListener('click', () => {

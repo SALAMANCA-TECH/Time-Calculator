@@ -414,6 +414,8 @@
         let dayStarted = false;
         let developerMode = false;
         let continuousMode = false;
+        let isMandatoryBreak = false;
+        let midDayBreakTriggered = false;
 
         const OPENING_DURATION = 60000; // 1 minute
         const OPEN_DURATION = 180000; // 3 minutes
@@ -483,7 +485,8 @@
             task: null,
             stateTimer: 0,
             idleX: 0, idleY: 0,
-            onBreak: false
+            onBreak: false,
+            playerInitiatedBreak: false
         };
 
         const cashier = {
@@ -495,6 +498,7 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
+            playerInitiatedBreak: false,
             basket: []
         };
 
@@ -507,7 +511,8 @@
             task: null,
             stateTimer: 0,
             idleX: 0, idleY: 0,
-            onBreak: false
+            onBreak: false,
+            playerInitiatedBreak: false
         };
         const manager = {
             x: 200, y: 300, width: 50, height: 50, speed: 150,
@@ -518,6 +523,7 @@
             stateTimer: 5000,
             idleX: 0, idleY: 0,
             onBreak: false,
+            playerInitiatedBreak: false,
             canOrder: true,
             lastOrderQuarter: -1,
         };
@@ -531,6 +537,7 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
+            playerInitiatedBreak: false,
             basket: []
         };
 
@@ -2405,6 +2412,38 @@
             if (dayStarted) {
                 dayTimer -= deltaTime;
 
+                if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2)) {
+                    midDayBreakTriggered = true;
+                    isMandatoryBreak = true;
+                    spawnFloatingText("LUNCH BREAK!", canvas.width / 2, 120, '#3b82f6');
+
+                    const employees = { cashier, stocker, loader, manager, salesperson };
+                    for (const empKey in employees) {
+                        if (unlocks.employees[empKey]) {
+                            employees[empKey].onBreak = true;
+                        }
+                    }
+
+                    if (activePanel === 'clipboard') {
+                        showEmployeesOnClipboard();
+                    }
+
+                    setTimeout(() => {
+                        isMandatoryBreak = false;
+                        for (const empKey in employees) {
+                            if (unlocks.employees[empKey]) {
+                                if (!employees[empKey].playerInitiatedBreak) {
+                                    employees[empKey].onBreak = false;
+                                }
+                            }
+                        }
+                        if (activePanel === 'clipboard') {
+                            showEmployeesOnClipboard();
+                        }
+                        spawnFloatingText("Break's over!", canvas.width / 2, 120, '#22c55e');
+                    }, 20000);
+                }
+
                 if (dayTimer > OPEN_DURATION + CLOSING_DURATION) {
                     dayPhase = 'opening';
                 } else if (dayTimer > CLOSING_DURATION) {
@@ -2574,6 +2613,7 @@
             day++;
             dayStarted = false;
             dayPhase = 'pre-open';
+            midDayBreakTriggered = false;
             const dailyExpenses = 25;
             cash -= dailyExpenses;
 
@@ -3006,11 +3046,17 @@
                         </div>
                     `;
                     employeeList.appendChild(empDiv);
-                    empDiv.querySelector(`#${empKey}-toggle`).addEventListener('change', (e) => {
+                    const toggle = empDiv.querySelector(`#${empKey}-toggle`);
+                    toggle.addEventListener('change', (e) => {
                         employee.onBreak = e.target.checked;
+                        employee.playerInitiatedBreak = e.target.checked;
                         showEmployeesOnClipboard();
                         saveGame();
                     });
+
+                    if (isMandatoryBreak) {
+                        toggle.disabled = true;
+                    }
                 }
             }
 

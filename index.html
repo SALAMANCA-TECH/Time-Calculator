@@ -491,6 +491,7 @@
         let cash = 100;
         let day = 1;
         let shopPoints = 0;
+        let itemPopularity = {};
         let customers = [];
         let customerDemand = {};
         let canvas, ctx, pieClockCanvas, pieClockCtx;
@@ -2039,6 +2040,14 @@
                     total += pkg.quantity;
                 }
             });
+            // Check shelves
+            shelves.forEach(shelf => {
+                shelf.items.forEach(slot => {
+                    if (slot.assignedItem === itemName) {
+                        total += slot.quantity;
+                    }
+                });
+            });
             return total;
         }
 
@@ -2114,16 +2123,19 @@
 
                         // 3. Original low-stock check (periodic)
                         if (manager.canOrder && (dayPhase === 'opening' || dayPhase === 'closing')) {
-                            // This check is for items that are low in stock, but not necessarily empty.
-                            const lowStockItem = Object.keys(items).find(item => {
+                            // Find all low-stock items and sort them by popularity
+                            const lowStockItems = Object.keys(items).filter(item => {
                                 const stock = getTotalStock(item);
-                                return stock > 0 && stock < 5;
+                                return stock < 5;
                             });
 
-                            if (lowStockItem) {
+                            if (lowStockItems.length > 0) {
+                                lowStockItems.sort((a, b) => (itemPopularity[b] || 0) - (itemPopularity[a] || 0));
+                                const mostPopularLowItem = lowStockItems[0];
+
                                 manager.task = {
                                     action: 'order',
-                                    item: lowStockItem,
+                                    item: mostPopularLowItem,
                                     isUrgent: false, // Not urgent
                                     target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
                                 };
@@ -2155,15 +2167,29 @@
                     if(manager.stateTimer <= 0) {
                         const orderTask = manager.task;
                         const itemToOrder = orderTask.item;
-                        // Use dynamic quantity for urgent orders, otherwise default to 10
-                        let quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 10;
+                        const quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 10;
+                        const restockPrice = parseFloat((items[itemToOrder].cost * 0.75).toFixed(2));
+                        const totalCost = restockPrice * quantityToOrder;
 
-                        while (quantityToOrder > 0) {
-                            const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
-                            loadingDockPackages.push({itemName: itemToOrder, quantity: quantityForPackage});
-                            quantityToOrder -= quantityForPackage;
+                        if (cash - totalCost < 30) {
+                            spawnFloatingText(`Can't afford ${itemToOrder}!`, manager.x, manager.y - 90, '#ef4444');
+                            manager.state = 'idle';
+                            manager.stateTimer = 15000; // Wait longer before trying again
+                            manager.task = { target: {x: manager.idleX, y: manager.idleY} };
+                            break;
                         }
-                        spawnFloatingText(`${itemToOrder} Ordered!`, manager.x, manager.y - 90, '#3b82f6');
+
+                        cash -= totalCost;
+                        updateUI();
+
+                        let remainingQuantity = quantityToOrder;
+                        while (remainingQuantity > 0) {
+                            const quantityForPackage = Math.min(remainingQuantity, MAX_PACKAGE_SIZE);
+                            loadingDockPackages.push({itemName: itemToOrder, quantity: quantityForPackage});
+                            remainingQuantity -= quantityForPackage;
+                        }
+
+                        spawnFloatingText(`${itemToOrder} Ordered! (-$${totalCost.toFixed(2)})`, manager.x, manager.y - 90, '#3b82f6');
                         manager.state = 'idle';
                         manager.stateTimer = 5000;
                         manager.task = { target: {x: manager.idleX, y: manager.idleY} };
@@ -2913,6 +2939,12 @@
                 customer.state = 'leaving';
                 const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
                 spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
+
+                // Track popularity of sold items
+                customer.order.forEach(item => {
+                    itemPopularity[item] = (itemPopularity[item] || 0) + 1;
+                });
+
             } else {
                 customer.order.forEach(item => {
                     const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === item) || s.items.some(i => i.assignedItem === null));
@@ -4255,7 +4287,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         function saveGame() {
             const gameState = {
-                cash, day, shopPoints,
+                cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
                 customerProfiles
@@ -4271,12 +4303,20 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     cash = gameState.cash || 100;
                     day = gameState.day || 1;
                     shopPoints = gameState.shopPoints || 0;
+                    itemPopularity = gameState.itemPopularity || {};
                     inventory = gameState.inventory || inventory;
                     storageCells = gameState.storageCells || storageCells;
                     shelves = gameState.shelves || shelves;
                     unlocks = gameState.unlocks || unlocks;
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
+
+                    // Initialize popularity for any items missing from save
+                    Object.keys(items).forEach(item => {
+                        if (!itemPopularity[item]) {
+                            itemPopularity[item] = 0;
+                        }
+                    });
 
                     if (gameState.customerProfiles) {
                         // Deep merge saved profiles into the default ones

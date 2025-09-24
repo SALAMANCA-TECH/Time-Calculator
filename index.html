@@ -2731,18 +2731,9 @@
         }
 
         function logCustomerToSalesReport(customer) {
-            // Find the customer's profile to get the type key for starring
-            let customerTypeKey = null;
-            for (const typeKey in customerProfiles) {
-                if (customerProfiles[typeKey][customer.name]) {
-                    customerTypeKey = typeKey;
-                    break;
-                }
-            }
-
             dailySalesReport.push({
                 name: customer.name,
-                typeKey: customerTypeKey,
+                typeKey: customer.customerType,
                 requestedItems: customer.requestedItems,
                 purchasedItems: [...customer.order],
                 waitTime: Math.round(customer.waitTimer),

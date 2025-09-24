@@ -289,6 +289,36 @@
         <button id="message-ok-btn" class="btn-style mt-4 px-4 py-2 rounded-lg">OK</button>
     </div>
 
+    <!-- End of Day Report Panel -->
+    <div id="end-of-day-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900">
+            <h2 class="text-3xl font-handwritten text-center mb-4">End of Day Report</h2>
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Left Side: Summary -->
+                <div>
+                    <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Summary</h3>
+                    <div class="space-y-2 text-lg">
+                        <p>Day Ended: <span id="report-day" class="font-bold"></span></p>
+                        <p>Gross Sales: <span id="report-sales" class="font-bold"></span></p>
+                        <p>Daily Expenses: <span id="report-expenses" class="font-bold"></span></p>
+                        <p class="border-t border-amber-800/30 pt-2">Net Profit: <span id="report-profit" class="font-bold"></span></p>
+                    </div>
+                </div>
+                <!-- Right Side: Sales Details -->
+                <div>
+                    <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Customer Details</h3>
+                    <div id="sales-report-list" class="h-64 overflow-y-auto space-y-3 p-2 bg-white/30 rounded-md border">
+                        <!-- Report items will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-6">
+                <button id="next-day-report-btn" class="btn-style px-8 py-3 text-xl">Start Next Day</button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         function showMessage(text, callback) {
             const msgBox = document.getElementById('message-box');
@@ -467,6 +497,7 @@
         let floatingTexts = [];
         let clipboardUpdateTimer = 0;
         const CLIPBOARD_UPDATE_INTERVAL = 250; // ms
+        let dailySalesReport = [];
 
         // Camera and zoom variables
         let scale = 1.0;
@@ -648,7 +679,9 @@
                 this.requestedItems = requestedItems;
                 this.customerType = customerType;
                 this.patience = this.profile.patience; // Use persistent patience
+                this.initialPatience = this.profile.patience; // For sales report
                 this.waitTimer = 0; // New timer for interaction logic
+                this.discount = 0; // Discount for special interactions
                 this.budget = Math.floor(Math.random() * 91) + 10;
                 this.x = canvas.width + 50;
                 this.y = desk.y + 75;
@@ -736,7 +769,8 @@
             }
 
             update(deltaTime) {
-                if (this.state === 'wandering' && dayPhase === 'closing') {
+                if (this.state !== 'leaving' && dayPhase === 'closing') {
+                    logCustomerToSalesReport(this);
                     this.state = 'leaving';
                     this.request = "Oh, it's closing time! I'll come back another day.";
                 }
@@ -821,10 +855,12 @@
                                      }
                                 } else {
                                     this.request = `They're out of ${currentItem}!`;
+                                    logCustomerToSalesReport(this);
                                     this.state = 'leaving';
                                 }
                             } else {
                                  this.request = `They're out of ${currentItem}!`;
+                                 logCustomerToSalesReport(this);
                                  this.state = 'leaving';
                             }
                         }
@@ -2101,7 +2137,10 @@
                             if (customer.waitTimer > 60) { // Check for 60 seconds
                                 // The salesperson can also convince waiting customers
                                 if (customer.order.length > 0) {
-                                    completePartialTransaction(customer, 0.25);
+                                    customer.discount = 0.25;
+                                    customer.state = 'queuing';
+                                    customer.request = "Okay, you've convinced me.";
+                                    spawnFloatingText("Deal Made!", salesperson.x, salesperson.y - 90, '#3b82f6');
                                 } else {
                                     // Same 50/50 logic as player
                                     if (Math.random() < 0.5) {
@@ -2120,6 +2159,7 @@
                                         } else {
                                             customer.profile.patience -= 30;
                                             customer.patience = customer.profile.patience; // Sync instance
+                                            logCustomerToSalesReport(customer);
                                             customer.state = 'leaving';
                                             customer.request = "Your staff couldn't find anything either!";
                                             spawnFloatingText("Leaving Angry!", salesperson.x, salesperson.y - 90, '#ef4444');
@@ -2127,6 +2167,7 @@
                                     } else {
                                         customer.profile.patience -= 30;
                                         customer.patience = customer.profile.patience; // Sync instance
+                                        logCustomerToSalesReport(customer);
                                         customer.state = 'leaving';
                                         customer.request = "I'm tired of waiting, even with your help.";
                                         spawnFloatingText("Leaving Angry!", salesperson.x, salesperson.y - 90, '#ef4444');
@@ -2652,26 +2693,14 @@
             });
         }
 
-        function completePartialTransaction(customer, discount) {
-            if (!customer || customer.isServed) return;
-
-            let totalCost = 0;
-            customer.order.forEach(item => {
-                totalCost += items[item].cost;
+        function logCustomerToSalesReport(customer) {
+            dailySalesReport.push({
+                name: customer.name,
+                requestedItems: customer.requestedItems,
+                purchasedItems: customer.order,
+                waitTime: Math.round(customer.waitTimer),
+                patienceChange: customer.profile.patience - customer.initialPatience
             });
-            const salePrice = Math.ceil((totalCost * 1.5) * (1 - discount));
-            customer.isServed = true;
-
-            cash += salePrice;
-            shopPoints += 1; // Give a small reward
-            customer.leaving = true;
-            customer.state = 'leaving';
-            customer.request = "Oh, thank you! This is great.";
-            spawnFloatingText(`+$${salePrice} (Discounted)`, customer.x, customer.y - 80, '#3b82f6');
-
-            updateUI();
-            updateCustomerUI();
-            saveGame();
         }
 
         function completeTransaction(customerId) {
@@ -2682,6 +2711,7 @@
             }
 
             if (customer.order.length === 0) {
+                logCustomerToSalesReport(customer);
                 customer.leaving = true;
                 customer.state = 'leaving';
                 return;
@@ -2691,15 +2721,22 @@
             customer.order.forEach(item => {
                 totalCost += items[item].cost;
             });
-            const salePrice = Math.ceil(totalCost * 1.5);
+            let salePrice = Math.ceil(totalCost * 1.5);
+
+            // Apply discount if applicable
+            if (customer.discount > 0) {
+                salePrice = Math.ceil(salePrice * (1 - customer.discount));
+            }
+
             customer.isServed = true;
 
             if (salePrice <= customer.budget) {
                 cash += salePrice;
-                shopPoints += 3;
+                shopPoints += customer.discount > 0 ? 1 : 3; // Less points for discounted sales
                 customer.leaving = true;
                 customer.state = 'leaving';
-                spawnFloatingText(`+$${salePrice}`, customer.x, customer.y - 80, '#22c55e');
+                const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
+                spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
             } else {
                 customer.order.forEach(item => {
                     const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === item) || s.items.some(i => i.assignedItem === null));
@@ -2720,7 +2757,7 @@
                 customer.state = 'leaving';
                 spawnFloatingText('Too Expensive!', customer.x, customer.y - 80, '#ef4444');
             }
-
+            logCustomerToSalesReport(customer);
             updateUI();
             updateCustomerUI();
             saveGame();
@@ -2763,23 +2800,53 @@
                 if(inventory[item] < 5) inventory[item] +=1;
             });
             updateUI();
-
             saveGame();
 
-            const endDayMessage = document.createElement('div');
-            endDayMessage.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-8 rounded-lg bg-amber-100/90 border-4 border-amber-900 shadow-2xl text-2xl text-center transition-opacity duration-1000 ease-out';
-            endDayMessage.textContent = `Day ${day} begins! Rent: -$${dailyExpenses}`;
-            document.body.appendChild(endDayMessage);
+            // Show End of Day Report
+            const reportPanel = document.getElementById('end-of-day-panel');
+            const reportList = document.getElementById('sales-report-list');
+            reportList.innerHTML = ''; // Clear previous report
 
-            setTimeout(() => {
-                endDayMessage.style.opacity = '0';
-                setTimeout(() => {
-                    endDayMessage.remove();
-                    if (continuousMode) {
-                        document.getElementById('start-day-btn').click();
-                    }
-                }, 1000);
-            }, 2000);
+            let grossSales = 0;
+            dailySalesReport.forEach(report => {
+                const reportDiv = document.createElement('div');
+                reportDiv.className = 'text-sm p-2 border-b border-amber-800/20';
+
+                const patienceColor = report.patienceChange < 0 ? 'text-red-600' : 'text-green-600';
+                const patienceSign = report.patienceChange > 0 ? '+' : '';
+
+                let purchaseSummary = 'None';
+                if (report.purchasedItems.length > 0) {
+                    const itemCosts = report.purchasedItems.map(item => items[item].cost);
+                    const totalCost = itemCosts.reduce((a, b) => a + b, 0);
+                    const salePrice = Math.ceil(totalCost * 1.5); // Note: this doesn't account for discounts in the report, which is a minor simplification.
+                    grossSales += salePrice;
+                    purchaseSummary = `${report.purchasedItems.join(', ')} ($${salePrice})`;
+                }
+
+                reportDiv.innerHTML = `
+                    <div class="font-bold">${report.name}</div>
+                    <div>Purchased: <span class="font-handwritten">${purchaseSummary}</span></div>
+                    <div>Intended: <span class="font-handwritten">${report.requestedItems.join(', ')}</span></div>
+                    <div>Wait Time: <span class="font-handwritten">${report.waitTime}s</span> | Patience: <span class="font-handwritten ${patienceColor}">${patienceSign}${report.patienceChange}</span></div>
+                `;
+                reportList.appendChild(reportDiv);
+            });
+
+            document.getElementById('report-day').textContent = day - 1;
+            document.getElementById('report-sales').textContent = `$${grossSales}`;
+            document.getElementById('report-expenses').textContent = `-$${dailyExpenses}`;
+            document.getElementById('report-profit').textContent = `$${grossSales - dailyExpenses}`;
+
+            reportPanel.classList.remove('hidden');
+
+            document.getElementById('next-day-report-btn').onclick = () => {
+                reportPanel.classList.add('hidden');
+                dailySalesReport = []; // Clear the report for the next day
+                if (continuousMode) {
+                    document.getElementById('start-day-btn').click();
+                }
+            };
         }
 
         // --- LAYOUT INITIALIZATION ---
@@ -3061,7 +3128,10 @@
             if (nearbyCustomer.waitTimer > 60) { // Check for 60 seconds
                 // Scenario A: Customer has items and has been waiting.
                 if (nearbyCustomer.order.length > 0) {
-                    completePartialTransaction(nearbyCustomer, 0.25); // 25% discount
+                    nearbyCustomer.discount = 0.25; // Apply 25% discount
+                    nearbyCustomer.state = 'queuing';
+                    nearbyCustomer.request = "Alright, I'll take what you have for a discount.";
+                    spawnFloatingText("Deal Made!", nearbyCustomer.x, nearbyCustomer.y - 90, '#3b82f6');
                     return;
                 }
                 // Scenario B: Customer has no items and has been waiting.
@@ -3089,6 +3159,7 @@
                             // No items in stock, so they just leave.
                             nearbyCustomer.profile.patience -= 30; // Large patience hit
                             nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                            logCustomerToSalesReport(nearbyCustomer);
                             nearbyCustomer.state = 'leaving';
                             nearbyCustomer.request = "There's nothing here! I'm leaving.";
                             spawnFloatingText("Leaving Angry!", nearbyCustomer.x, nearbyCustomer.y - 90, '#ef4444');
@@ -3097,6 +3168,7 @@
                         // 50% chance: Leave the store.
                         nearbyCustomer.profile.patience -= 30; // Large patience hit
                         nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                        logCustomerToSalesReport(nearbyCustomer);
                         nearbyCustomer.state = 'leaving';
                         nearbyCustomer.request = "I've waited long enough. Goodbye.";
                         spawnFloatingText("Leaving Angry!", nearbyCustomer.x, nearbyCustomer.y - 90, '#ef4444');
@@ -3207,8 +3279,8 @@
                     customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 grid grid-cols-2 gap-x-4';
 
                     let visitedStatus = profile.visitedToday
-                        ? '<span class="font-bold text-red-600">Visited</span>'
-                        : '<span class="font-bold text-green-600">Not Visited</span>';
+                        ? '<span class="font-bold text-green-600">Visited</span>'
+                        : '<span class="font-bold text-red-600">Not Visited</span>';
 
                     customerDiv.innerHTML = `
                         <div class="font-bold text-lg col-span-2">${name}</div>

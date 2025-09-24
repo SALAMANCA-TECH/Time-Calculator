@@ -2878,13 +2878,17 @@
             document.getElementById('report-expenses').textContent = `-$${dailyExpenses}`;
             document.getElementById('report-profit').textContent = `$${grossSales - dailyExpenses}`;
             reportPanel.classList.remove('hidden');
+
+            // Reset visited flags as soon as the day ends to prevent save/load issues.
+            for (const type in customerProfiles) {
+                for (const name in customerProfiles[type]) {
+                    customerProfiles[type][name].visitedToday = false;
+                }
+            }
+            saveGame(); // Persist the reset state immediately.
+
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;
-                for (const type in customerProfiles) {
-                    for (const name in customerProfiles[type]) {
-                        customerProfiles[type][name].visitedToday = false;
-                    }
-                }
                 Object.keys(inventory).forEach(item => {
                     if (inventory[item] < 5) inventory[item] += 1;
                 });

@@ -522,6 +522,11 @@
         const MAX_SCALE = 3.0;
         let cameraX = 0;
         let cameraY = 0;
+        let targetCameraX = 0;
+        let cameraState = 'store'; // 'store' or 'office'
+        const officeWidth = 400;
+        let worldWidth;
+
 
         const desk = { x: 0, y: 0, width: 0, height: 30 };
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
@@ -964,7 +969,7 @@
                         break;
                     }
                     case 'leaving':
-                        this.targetX = canvas.width + 100;
+            this.targetX = worldWidth + 100;
                         this.targetY = desk.y + 75;
                         this.moveTowardsTarget(deltaTime);
                         break;
@@ -1074,9 +1079,9 @@
 
         function drawStoreBackground() {
             ctx.fillStyle = '#bcaaa4';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, worldWidth, canvas.height);
             ctx.fillStyle = '#a1887f';
-            ctx.fillRect(0, 0, canvas.width, desk.y + desk.height);
+            ctx.fillRect(0, 0, worldWidth, desk.y + desk.height);
             storageCells.forEach((cell, index) => {
                 if (!unlocks.storage[index]) {
                     const r = cell.rect;
@@ -2460,8 +2465,18 @@
                 player.state = 'idle';
             }
 
-            player.x = Math.max(player.frameWidth / 2, Math.min(canvas.width - player.frameWidth / 2, player.x));
+            player.x = Math.max(player.frameWidth / 2, Math.min(worldWidth - player.frameWidth / 2, player.x));
             player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
+
+            // Camera control logic
+            const officeThreshold = officeWidth + 50; // 50px into the store
+            if (player.x < officeThreshold && cameraState !== 'office') {
+                cameraState = 'office';
+                targetCameraX = 0;
+            } else if (player.x >= officeThreshold && cameraState !== 'store') {
+                cameraState = 'store';
+                targetCameraX = -officeWidth;
+            }
 
             updateCharacterAnimation(player, deltaTime);
         }
@@ -2671,7 +2686,12 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             ctx.save();
-            cameraX = canvas.width / 2 - player.x * scale;
+
+            // Smooth camera movement
+            const cameraSpeed = 0.05;
+            cameraX += (targetCameraX - cameraX) * cameraSpeed;
+
+            // cameraX = canvas.width / 2 - player.x * scale;
             cameraY = canvas.height / 2 - player.y * scale;
             clampCamera();
             ctx.translate(cameraX, cameraY);
@@ -2900,7 +2920,8 @@
         // The following values determine the layout of the store.
         // This layout has been finalized and should not be changed.
         function initializeLayout() {
-            const cellWidth = canvas.width / 5;
+            const storeWidth = canvas.width;
+            const cellWidth = storeWidth / 5;
             const cellHeight = ((desk.y - 250) / 2) * 0.8;
             const topPadding = 90;
             const cellPadding = 20;
@@ -2909,20 +2930,20 @@
             // New layout: Bottom-Left, Bottom-Mid, Bottom-Right, Top-Left, Top-Mid, Top-Right
             storageCells = [
                 // Bottom Row
-                { label: "Drawing", rect: { x: cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
-                { label: "Painting", rect: { x: canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
-                { label: "Models", rect: { x: canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                { label: "Drawing", rect: { x: officeWidth + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: officeWidth + storeWidth / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: officeWidth + storeWidth - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
                 // Top Row
-                { label: "Woodworking", rect: { x: cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
-                { label: "Sculpture", rect: { x: canvas.width / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
-                { label: "Architectural", rect: { x: canvas.width - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+                { label: "Woodworking", rect: { x: officeWidth + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
+                { label: "Sculpture", rect: { x: officeWidth + storeWidth / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: officeWidth + storeWidth - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
 
             // --- LOCKED LAYOUT POSITIONS ---
             // These positions for the counter and shelves are finalized.
-            cashierCounter.x = 141;
+            cashierCounter.x = officeWidth + 141;
             cashierCounter.y = (desk.y - cashierCounter.h) + 141;
-            managersOffice.x = 0;
+            managersOffice.x = 0; // Stays on the far left
             managersOffice.y = desk.y - managersOffice.h;
 
             const shelfWidth = 60, shelfHeight = 120;
@@ -2932,7 +2953,7 @@
             const numShelves = 6;
             const shelfPadding = 50;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
-            const startX = (canvas.width - totalShelvesWidth) / 2;
+            const startX = officeWidth + (storeWidth - totalShelvesWidth) / 2;
             if (shelves.length === 0) {
                 for (let i = 0; i < numShelves; i++) {
                     const shelf = {
@@ -2986,7 +3007,7 @@
                 loader.y = loader.idleY;
             }
 
-            salesperson.idleX = canvas.width - 100;
+            salesperson.idleX = worldWidth - 100;
             salesperson.idleY = 400;
             if (salesperson.state === 'idle' && !salesperson.task) {
                 salesperson.x = salesperson.idleX;
@@ -3054,23 +3075,25 @@
         function resizeCanvas() {
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
+            worldWidth = canvas.width + officeWidth;
             desk.y = canvas.height - 220;
-            desk.width = canvas.width;
+            desk.width = worldWidth;
             loadingDock.y = canvas.height - loadingDock.height;
-            loadingDock.width = canvas.width;
+            loadingDock.width = worldWidth;
 
             scale = 1.0;
-            cameraX = 0;
             cameraY = 0;
 
             initializeLayout();
+            cameraX = -officeWidth;
+            targetCameraX = -officeWidth;
         }
 
         function clampCamera() {
-            const worldWidth = canvas.width * scale;
+            const scaledWorldWidth = worldWidth * scale;
             const worldHeight = canvas.height * scale;
 
-            cameraX = Math.max(canvas.clientWidth - worldWidth, Math.min(0, cameraX));
+            cameraX = Math.max(canvas.clientWidth - scaledWorldWidth, Math.min(0, cameraX));
             cameraY = Math.max(canvas.clientHeight - worldHeight, Math.min(0, cameraY));
         }
 

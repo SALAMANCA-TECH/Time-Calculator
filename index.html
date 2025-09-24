@@ -337,42 +337,65 @@
             }
         };
 
-        const predefinedCustomers = {
-            'artist': [
-                { name: "Leo", request: "I need some basic supplies for my life drawing class.", requestedItems: ["Pencil", "Sketchbook"] },
-                { name: "Kara", request: "I want to try some charcoal drawings. Got any?", requestedItems: ["Charcoal"] },
-                { name: "Benny", request: "My markers have all dried out! I need a new set.", requestedItems: ["Markers"] }
-            ],
-            'painter': [
-                { name: "Frida", request: "I'm starting a new self-portrait. I'll need acrylics and a canvas.", requestedItems: ["Acrylics", "Canvas"] },
-                { name: "Claude", request: "Just need some water colors for some light studies.", requestedItems: ["Water Color"] },
-                { name: "Georgia", request: "I'm working on a large piece. I need oil paints.", requestedItems: ["Oils", "Canvas"] }
-            ],
-            'hobbyist': [
-                { name: "Wally", request: "I'm building a new model ship. I need glue and some razors for the small parts.", requestedItems: ["Glue", "Razors"] },
-                { name: "Gundam Guy", request: "I need to paint my latest creation. Got any mini paints?", requestedItems: ["Mini Paints"] },
-                { name: "Tanya", request: "I'm ready to start a new project. A model kit, please!", requestedItems: ["Model Kits"] }
-            ],
-            'woodworker': [
-                { name: "Ron", request: "I need to finish a chair. Some sanding paper and stainer should do it.", requestedItems: ["Sanding Paper", "Stainer"] },
-                { name: "Tammy", request: "I'm just starting out. Do you have any wood scraps I can practice on?", requestedItems: ["Wood Scraps"] },
-                { name: "April", request: "I'm building a large table and need some lumber.", requestedItems: ["Lumber"] }
-            ],
-            'sculptor': [
-                { name: "Michelangelo", request: "I have a vision! I require clay to bring it to life.", requestedItems: ["Clay"] },
-                { name: "Auguste", request: "I need to paint a ceramic piece. Do you have pottery paints?", requestedItems: ["Pottery Paints"] },
-                { name: "Donatello", "request": "I am ready to work with a harder medium. A block of stone, please.", requestedItems: ["Stone", "Clay"] }
-            ],
-            'architect': [
-                { name: "Frank", request: "I'm drafting a new building. I need vellum and some fresh pencil lead.", requestedItems: ["Vellum", "Pencil Lead"] },
-                { name: "Zaha", request: "I need to make a model for a presentation. Do you sell tiny trees?", requestedItems: ["Tiny Trees"] },
-                { name: "Chris", request: "I'm working on some final designs and need some high-quality markers.", requestedItems: ["Fancy Markers", "Vellum"] }
-            ]
+        let customerProfiles = {
+            'artist': {
+                "Leo": { "request": "I need some basic supplies for my life drawing class.", "requestedItems": ["Pencil", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Kara": { "request": "I want to try some charcoal drawings. Got any?", "requestedItems": ["Charcoal"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Benny": { "request": "My markers have all dried out! I need a new set.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Vince": { "request": "I'm teaching a class, I need a bulk order of sketchbooks.", "requestedItems": ["Sketchbook", "Sketchbook", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Arturo": { "request": "Just a pencil for now, maybe a sketchbook if I feel inspired.", "requestedItems": ["Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Penelope": { "request": "I need a good set of colored markers for a commission piece.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Chuck": { "request": "Do you have any fine-tipped charcoal pencils?", "requestedItems": ["Charcoal", "Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+            },
+            'painter': {
+                "Frida": { "request": "I'm starting a new self-portrait. I'll need acrylics and a canvas.", "requestedItems": ["Acrylics", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Claude": { "request": "Just need some water colors for some light studies.", "requestedItems": ["Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Georgia": { "request": "I'm working on a large piece. I need oil paints.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Bob": { "request": "Time to paint some happy little trees. Need some oils.", "requestedItems": ["Oils"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Rembrandt": { "request": "I require the finest acrylics for my next masterpiece.", "requestedItems": ["Acrylics"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Sonia": { "request": "A small canvas and some water colors, please.", "requestedItems": ["Canvas", "Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "JMW": { "request": "I'm feeling dramatic. Give me your most vibrant oils and a large canvas.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+            },
+            'hobbyist': {
+                "Wally": { "request": "I'm building a new model ship. I need glue and some razors for the small parts.", "requestedItems": ["Glue", "Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Gundam Guy": { "request": "I need to paint my latest creation. Got any mini paints?", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Tanya": { "request": "I'm ready to start a new project. A model kit, please!", "requestedItems": ["Model Kits"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Duncan": { "request": "Two thin coats of mini paints are all I need.", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Rick": { "request": "I need razors to... uh... 'customize' my models. Yeah, that's it.", "requestedItems": ["Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Mini Martha": { "request": "A little glue can fix anything!", "requestedItems": ["Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Captain Kit": { "request": "I'm on the hunt for a new model kit to assemble.", "requestedItems": ["Model Kits", "Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+            },
+            'woodworker': {
+                "Ron": { "request": "I need to finish a chair. Some sanding paper and stainer should do it.", "requestedItems": ["Sanding Paper", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Tammy": { "request": "I'm just starting out. Do you have any wood scraps I can practice on?", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "April": { "request": "I'm building a large table and need some lumber.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Nick": { "request": "I need some quality lumber for a custom piece.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Pat": { "request": "Just some sanding paper to smooth things over.", "requestedItems": ["Sanding Paper"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Woody": { "request": "Got any interesting wood scraps? I like a challenge.", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Cheryl": { "request": "I'm staining a deck. I'll need a lot of stainer.", "requestedItems": ["Stainer", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+            },
+            'sculptor': {
+                "Michelangelo": { "request": "I have a vision! I require clay to bring it to life.", "requestedItems": ["Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Auguste": { "request": "I need to paint a ceramic piece. Do you have pottery paints?", "requestedItems": ["Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Donatello": { "request": "I am ready to work with a harder medium. A block of stone, please.", "requestedItems": ["Stone", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Henry": { "request": "I'm thinking... bigger. A block of marble.", "requestedItems": ["Marble"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Camille": { "request": "I need clay, and perhaps some pottery paints for the details.", "requestedItems": ["Clay", "Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Constantin": { "request": "Just a simple block of stone today.", "requestedItems": ["Stone"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Barbara": { "request": "I'm making a set of mugs. Clay and pottery paints, please.", "requestedItems": ["Clay", "Pottery Paints", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+            },
+            'architect': {
+                "Frank": { "request": "I'm drafting a new building. I need vellum and some fresh pencil lead.", "requestedItems": ["Vellum", "Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Zaha": { "request": "I need to make a model for a presentation. Do you sell tiny trees?", "requestedItems": ["Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Chris": { "request": "I'm working on some final designs and need some high-quality markers.", "requestedItems": ["Fancy Markers", "Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Renzo": { "request": "I've run out of pencil lead again.", "requestedItems": ["Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Tadao": { "request": "I require vellum for some concrete plans.", "requestedItems": ["Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Maya": { "request": "I'm designing a park. I'll take all the tiny trees you have.", "requestedItems": ["Tiny Trees", "Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Norman": { "request": "A set of your fanciest markers, if you please.", "requestedItems": ["Fancy Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+            }
         };
 
         async function generateCustomerRequest() {
-            // Determine which customer types can spawn based on unlocked storage cells.
-            const availableTypeKeys = ['artist']; // Artists are always available to start the game.
+            const availableTypeKeys = ['artist'];
             unlocks.storage.forEach((isUnlocked, index) => {
                 if (isUnlocked) {
                     const typeKey = Object.keys(customerTypes).find(key => customerTypes[key].storageIndex === index);
@@ -383,24 +406,31 @@
             });
 
             if (availableTypeKeys.length === 0) {
-                console.error("No customer types available to spawn.");
+                console.warn("No customer types available to spawn.");
                 return null;
             }
 
-            // Randomly select a customer type from the available ones.
             const chosenTypeKey = availableTypeKeys[Math.floor(Math.random() * availableTypeKeys.length)];
+            const customersForType = customerProfiles[chosenTypeKey];
 
-            const possibleCustomers = predefinedCustomers[chosenTypeKey];
-            if (!possibleCustomers || possibleCustomers.length === 0) {
-                console.error(`No predefined customers found for type: ${chosenTypeKey}`);
+            const availableCustomers = Object.keys(customersForType).filter(name => !customersForType[name].visitedToday);
+
+            if (availableCustomers.length === 0) {
+                // console.log(`All customers of type ${chosenTypeKey} have visited today.`);
                 return null;
             }
 
-            // Randomly select a customer from the predefined list for that type.
-            const customerData = possibleCustomers[Math.floor(Math.random() * possibleCustomers.length)];
+            const chosenCustomerName = availableCustomers[Math.floor(Math.random() * availableCustomers.length)];
+            const customerData = customersForType[chosenCustomerName];
 
-            // Return a copy of the data with the customerType key added.
-            return { ...customerData, customerType: chosenTypeKey };
+            // Mark as visited for the day
+            customerData.visitedToday = true;
+
+            return {
+                name: chosenCustomerName,
+                ...customerData,
+                customerType: chosenTypeKey
+            };
         }
 
         let cash = 100;
@@ -600,13 +630,15 @@
         Object.keys(items).forEach(item => inventory[item] = 5);
 
         class Customer {
-            constructor(name, request, requestedItems, customerType) {
+            constructor(profile, name, request, requestedItems, customerType) {
                 this.id = Math.random();
+                this.profile = profile; // Reference to the persistent profile
                 this.name = name;
                 this.request = request;
                 this.requestedItems = requestedItems;
                 this.customerType = customerType;
-                this.patience = (Math.random() * 5 + 5) * 10;
+                this.patience = this.profile.patience; // Use persistent patience
+                this.waitTimer = 0; // New timer for interaction logic
                 this.budget = Math.floor(Math.random() * 91) + 10;
                 this.x = canvas.width + 50;
                 this.y = desk.y + 75;
@@ -788,6 +820,7 @@
                         }
                         break;
                     case 'wandering':
+                        this.waitTimer += (deltaTime / 1000); // Start waiting (in seconds)
                         this.stateTimer -= deltaTime;
                         if (this.stateTimer <= 0 || this.moveTowardsTarget(deltaTime)) {
                             this.stateTimer = Math.random() * 4000 + 2000; // Wander for 2-6 seconds
@@ -796,6 +829,7 @@
                                 this.state = 'browsing';
                                 this.request = `Oh, they have the ${this.requestedItems[this.currentItemIndex]} now!`;
                                 this.isWaitingForRestock = false;
+                                this.waitTimer = 0; // Reset timer
                                 return;
                             }
 
@@ -814,10 +848,12 @@
                                 this.hasReachedWaitingPoint = true;
                                 this.facing = 'down'; // Face forward
                             }
+                        } else {
+                            this.waitTimer += (deltaTime / 1000); // Start waiting once in position (in seconds)
                         }
-                        // Once waiting point is reached, do nothing, just stand still.
 
                         if (this.isInteractedWith) {
+                            this.waitTimer = 0; // Reset wait timer
                             this.state = 'browsing';
                             this.request = "Ah, thank you! Let me see...";
                             this.showSpeechBubble = true;
@@ -831,6 +867,7 @@
                         }
                         break;
                     case 'waitingForAssistance':
+                        this.waitTimer += (deltaTime / 1000); // Start waiting (in seconds)
                         // Wander around until order is fulfilled
                         this.stateTimer -= deltaTime;
                         if (this.stateTimer <= 0 || this.moveTowardsTarget(deltaTime)) {
@@ -2049,9 +2086,47 @@
 
                 case 'interacting':
                     if (salesperson.stateTimer <= 0) {
-                        if (salesperson.task.customer && !salesperson.task.customer.leaving) {
-                           salesperson.task.customer.isInteractedWith = true;
-                           spawnFloatingText("Let me help!", salesperson.x, salesperson.y - 90, '#3b82f6');
+                        const customer = salesperson.task.customer;
+                        if (customer && !customer.leaving) {
+                            if (customer.waitTimer > 60) { // Check for 60 seconds
+                                // The salesperson can also convince waiting customers
+                                if (customer.order.length > 0) {
+                                    completePartialTransaction(customer, 0.25);
+                                } else {
+                                    // Same 50/50 logic as player
+                                    if (Math.random() < 0.5) {
+                                        const allStockedItems = [];
+                                        shelves.forEach(shelf => shelf.items.forEach(slot => {
+                                            if (slot.assignedItem && slot.quantity > 0) allStockedItems.push(slot.assignedItem);
+                                        }));
+                                        if (allStockedItems.length > 0) {
+                                            const randomItem = allStockedItems[Math.floor(Math.random() * allStockedItems.length)];
+                                            customer.order.push(randomItem);
+                                            customer.profile.patience -= 10;
+                                            customer.patience = customer.profile.patience; // Sync instance
+                                            customer.state = 'queuing';
+                                            customer.request = `Alright, you've convinced me. I'll take the ${randomItem}.`;
+                                            spawnFloatingText("Convinced!", salesperson.x, salesperson.y - 90, '#f59e0b');
+                                        } else {
+                                            customer.profile.patience -= 30;
+                                            customer.patience = customer.profile.patience; // Sync instance
+                                            customer.state = 'leaving';
+                                            customer.request = "Your staff couldn't find anything either!";
+                                            spawnFloatingText("Leaving Angry!", salesperson.x, salesperson.y - 90, '#ef4444');
+                                        }
+                                    } else {
+                                        customer.profile.patience -= 30;
+                                        customer.patience = customer.profile.patience; // Sync instance
+                                        customer.state = 'leaving';
+                                        customer.request = "I'm tired of waiting, even with your help.";
+                                        spawnFloatingText("Leaving Angry!", salesperson.x, salesperson.y - 90, '#ef4444');
+                                    }
+                                }
+                            } else {
+                                // Original interaction logic
+                                customer.isInteractedWith = true;
+                                spawnFloatingText("Let me help!", salesperson.x, salesperson.y - 90, '#3b82f6');
+                            }
                         }
                         salesperson.state = 'idle';
                         salesperson.task = null;
@@ -2159,6 +2234,7 @@
                             salesperson.basket = [];
                             spawnFloatingText("Here's what I found!", salesperson.x, salesperson.y - 90, '#22c55e');
                         }
+                        salesperson.task.customer.waitTimer = 0; // Reset wait timer
                         salesperson.task.customer.needsAssistanceFulfilled = true;
                         salesperson.task.customer.state = 'queuing';
                         salesperson.task.customer.request = "Thank you so much for your help!";
@@ -2521,7 +2597,11 @@
             const customerData = await generateCustomerRequest();
             if (customerData && customerData.requestedItems) {
                 const newCustomer = new Customer(
-                    customerData.name, customerData.request, customerData.requestedItems, customerData.customerType
+                    customerProfiles[customerData.customerType][customerData.name], // Pass the profile object
+                    customerData.name,
+                    customerData.request,
+                    customerData.requestedItems,
+                    customerData.customerType
                 );
                 customers.push(newCustomer);
                 generateAndLoadCustomerSprite(newCustomer);
@@ -2549,6 +2629,28 @@
                 }
                 customerOrdersDiv.appendChild(customerDiv);
             });
+        }
+
+        function completePartialTransaction(customer, discount) {
+            if (!customer || customer.isServed) return;
+
+            let totalCost = 0;
+            customer.order.forEach(item => {
+                totalCost += items[item].cost;
+            });
+            const salePrice = Math.ceil((totalCost * 1.5) * (1 - discount));
+            customer.isServed = true;
+
+            cash += salePrice;
+            shopPoints += 1; // Give a small reward
+            customer.leaving = true;
+            customer.state = 'leaving';
+            customer.request = "Oh, thank you! This is great.";
+            spawnFloatingText(`+$${salePrice} (Discounted)`, customer.x, customer.y - 80, '#3b82f6');
+
+            updateUI();
+            updateCustomerUI();
+            saveGame();
         }
 
         function completeTransaction(customerId) {
@@ -2616,6 +2718,13 @@
             midDayBreakTriggered = false;
             const dailyExpenses = 25;
             cash -= dailyExpenses;
+
+            // Reset visited status for all customer profiles
+            for (const type in customerProfiles) {
+                for (const name in customerProfiles[type]) {
+                    customerProfiles[type][name].visitedToday = false;
+                }
+            }
 
             // Clear remaining customers
             customers.forEach(c => c.state = 'leaving');
@@ -2927,7 +3036,55 @@
 
             if (!nearbyCustomer) return; // No one nearby to interact with
 
-            // Interaction Logic, based on customer behavior type
+            // --- New Interaction Logic for Waiting Customers (PRIORITY CHECK) ---
+            if (nearbyCustomer.waitTimer > 60) { // Check for 60 seconds
+                // Scenario A: Customer has items and has been waiting.
+                if (nearbyCustomer.order.length > 0) {
+                    completePartialTransaction(nearbyCustomer, 0.25); // 25% discount
+                    return;
+                }
+                // Scenario B: Customer has no items and has been waiting.
+                else {
+                    if (Math.random() < 0.5) {
+                        // 50% chance: Buy a random in-stock item.
+                        const allStockedItems = [];
+                        shelves.forEach(shelf => {
+                            shelf.items.forEach(slot => {
+                                if (slot.assignedItem && slot.quantity > 0) {
+                                    allStockedItems.push(slot.assignedItem);
+                                }
+                            });
+                        });
+
+                        if (allStockedItems.length > 0) {
+                            const randomItem = allStockedItems[Math.floor(Math.random() * allStockedItems.length)];
+                            nearbyCustomer.order.push(randomItem);
+                            nearbyCustomer.profile.patience -= 10; // Small patience hit
+                            nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                            nearbyCustomer.state = 'queuing';
+                            nearbyCustomer.request = `Alright, I'll take a ${randomItem} then.`;
+                            spawnFloatingText("Convinced!", nearbyCustomer.x, nearbyCustomer.y - 90, '#f59e0b');
+                        } else {
+                            // No items in stock, so they just leave.
+                            nearbyCustomer.profile.patience -= 30; // Large patience hit
+                            nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                            nearbyCustomer.state = 'leaving';
+                            nearbyCustomer.request = "There's nothing here! I'm leaving.";
+                            spawnFloatingText("Leaving Angry!", nearbyCustomer.x, nearbyCustomer.y - 90, '#ef4444');
+                        }
+                    } else {
+                        // 50% chance: Leave the store.
+                        nearbyCustomer.profile.patience -= 30; // Large patience hit
+                        nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                        nearbyCustomer.state = 'leaving';
+                        nearbyCustomer.request = "I've waited long enough. Goodbye.";
+                        spawnFloatingText("Leaving Angry!", nearbyCustomer.x, nearbyCustomer.y - 90, '#ef4444');
+                    }
+                    return;
+                }
+            }
+
+            // --- Original Interaction Logic ---
             if (nearbyCustomer.behaviorType === 'needsInteraction' && !nearbyCustomer.isInteractedWith) {
                 nearbyCustomer.isInteractedWith = true;
                 spawnFloatingText("Right this way!", player.x, player.y - 90, '#3b82f6');
@@ -2949,6 +3106,7 @@
                         nearbyCustomer.order.push(item);
                     });
 
+                    nearbyCustomer.waitTimer = 0; // Reset wait timer
                     nearbyCustomer.state = 'queuing';
                     nearbyCustomer.needsAssistanceFulfilled = true;
                     nearbyCustomer.request = `Oh, you have everything! Thanks! I'll go pay now.`;
@@ -2989,7 +3147,7 @@
             const customerList = document.getElementById('customer-list');
             customerList.innerHTML = '';
 
-            document.getElementById('clipboard-title').textContent = 'Customers';
+            document.getElementById('clipboard-title').textContent = 'Customer Profiles';
             document.getElementById('clipboard-shelves-content').classList.add('hidden');
             document.getElementById('clipboard-employees-content').classList.add('hidden');
             document.getElementById('clipboard-customers-content').classList.remove('hidden');
@@ -2997,21 +3155,35 @@
             document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
             document.getElementById('clipboard-tab-customers').classList.remove('bg-opacity-50');
 
-            if (customers.filter(c => !c.leaving).length === 0) {
-                customerList.innerHTML = `<p class="text-center p-4">No customers in the shop.</p>`;
-                return;
-            }
+            for (const typeKey in customerTypes) {
+                const typeInfo = customerTypes[typeKey];
+                const profilesForType = customerProfiles[typeKey];
 
-            customers.filter(c => !c.leaving).forEach(customer => {
-                const customerDiv = document.createElement('div');
-                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50';
-                customerDiv.innerHTML = `
-                    <div class="font-bold text-lg">${customer.name}</div>
-                    <div>Needs: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
-                    <div>Patience: <span class="font-handwritten">${Math.round(customer.patience)}</span></div>
-                `;
-                customerList.appendChild(customerDiv);
-            });
+                const typeHeader = document.createElement('h3');
+                typeHeader.className = 'font-handwritten text-xl mt-4 px-1 border-b-2 border-amber-800/30';
+                typeHeader.textContent = typeInfo.name;
+                customerList.appendChild(typeHeader);
+
+                if (!profilesForType) continue;
+
+                for (const name in profilesForType) {
+                    const profile = profilesForType[name];
+                    const customerDiv = document.createElement('div');
+                    customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 grid grid-cols-2 gap-x-4';
+
+                    let visitedStatus = profile.visitedToday
+                        ? '<span class="font-bold text-red-600">Visited</span>'
+                        : '<span class="font-bold text-green-600">Not Visited</span>';
+
+                    customerDiv.innerHTML = `
+                        <div class="font-bold text-lg col-span-2">${name}</div>
+                        <div>Patience: <span class="font-handwritten">${Math.round(profile.patience)}</span></div>
+                        <div>Status: ${visitedStatus}</div>
+                        <div class="col-span-2 mt-1">Tools: <span class="font-handwritten text-sm">${profile.toolsOwned.length > 0 ? profile.toolsOwned.join(', ') : 'None'}</span></div>
+                    `;
+                    customerList.appendChild(customerDiv);
+                }
+            }
         }
 
         function showEmployeesOnClipboard() {
@@ -3660,7 +3832,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const gameState = {
                 cash, day, shopPoints,
                 inventory, storageCells, shelves,
-                unlocks, loadingDockPackages, customerDemand
+                unlocks, loadingDockPackages, customerDemand,
+                customerProfiles
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -3679,6 +3852,20 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     unlocks = gameState.unlocks || unlocks;
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
+
+                    if (gameState.customerProfiles) {
+                        // Deep merge saved profiles into the default ones
+                        for (const type in gameState.customerProfiles) {
+                            if (customerProfiles[type]) {
+                                for (const name in gameState.customerProfiles[type]) {
+                                    if (customerProfiles[type][name]) {
+                                        Object.assign(customerProfiles[type][name], gameState.customerProfiles[type][name]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
 
                     // Re-attach draw methods to shelves as they are lost in JSON.
                     shelves.forEach(shelf => {

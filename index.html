@@ -635,12 +635,21 @@
             basket: []
         };
 
-        function getBreakSpot() {
-            // Return a random coordinate within officeZone3
-            const padding = 10; // To keep them away from the very edge
-            const randomX = officeZone3.x + padding + (Math.random() * (officeZone3.w - padding * 2));
-            const randomY = officeZone3.y + padding + (Math.random() * (officeZone3.h - padding * 2));
-            return { x: randomX, y: randomY };
+        const breakSpots = {
+            cashier: { x: 20, y: 30 },
+            stocker: { x: 50, y: 30 },
+            loader: { x: 80, y: 30 },
+            manager: { x: 35, y: 60 },
+            salesperson: { x: 65, y: 60 }
+        };
+
+        function getBreakSpot(employeeKey) {
+            const spot = breakSpots[employeeKey];
+            // The break spot coordinates are relative to the break room (officeZone3)
+            return {
+                x: officeZone3.x + spot.x,
+                y: officeZone3.y + spot.y
+            };
         }
 
         const animations = {
@@ -1780,7 +1789,7 @@
             if (!unlocks.employees.stocker) return;
 
             if (stocker.onBreak) {
-                const breakSpot = getBreakSpot();
+                const breakSpot = getBreakSpot('stocker');
                 if (moveCharacterTowards(stocker, breakSpot.x, breakSpot.y, deltaTime)) {
                     stocker.state = 'idle';
                 } else {
@@ -1871,7 +1880,7 @@
             if (!unlocks.employees.cashier) return;
 
             if (cashier.onBreak) {
-                const breakSpot = getBreakSpot();
+                const breakSpot = getBreakSpot('cashier');
                 if (moveCharacterTowards(cashier, breakSpot.x, breakSpot.y, deltaTime)) {
                     cashier.state = 'idle';
                 } else {
@@ -1928,7 +1937,7 @@
              if (!unlocks.employees.loader) return;
 
             if (loader.onBreak) {
-                const breakSpot = getBreakSpot();
+                const breakSpot = getBreakSpot('loader');
                 if (moveCharacterTowards(loader, breakSpot.x, breakSpot.y, deltaTime)) {
                     loader.state = 'idle';
                 } else {
@@ -2020,7 +2029,7 @@
              if (!unlocks.employees.manager) return;
 
             if (manager.onBreak) {
-                const breakSpot = getBreakSpot();
+                const breakSpot = getBreakSpot('manager');
                 if (moveCharacterTowards(manager, breakSpot.x, breakSpot.y, deltaTime)) {
                     manager.state = 'idle';
                 } else {
@@ -2100,7 +2109,7 @@
             if (!unlocks.employees.salesperson) return;
 
             if (salesperson.onBreak) {
-                const breakSpot = getBreakSpot();
+                const breakSpot = getBreakSpot('salesperson');
                 if (moveCharacterTowards(salesperson, breakSpot.x, breakSpot.y, deltaTime)) {
                     salesperson.state = 'idle';
                 } else {
@@ -2978,6 +2987,28 @@
             managersOffice.h = canvas.height / 2;
             managersOffice.x = 0;
             managersOffice.y = (canvas.height - managersOffice.h) / 2;
+
+            // --- Office Zone Calculations ---
+            const zoneSize = 80;
+            const zonePadding = 20;
+
+            // Zone 3 (Break Room) - Inside the office
+            officeZone3.w = managersOffice.w * 0.7;
+            officeZone3.h = managersOffice.h * 0.5;
+            officeZone3.x = managersOffice.x + (managersOffice.w - officeZone3.w) / 2;
+            officeZone3.y = managersOffice.y + (managersOffice.h - officeZone3.h) / 2 + 30; // Shift down a bit
+
+            // Zone 1 & 2 (Desk & Waiting) - Below the office
+            officeZone1.w = zoneSize;
+            officeZone1.h = zoneSize;
+            officeZone1.x = managersOffice.x + zonePadding;
+            officeZone1.y = managersOffice.y + managersOffice.h + zonePadding;
+
+            officeZone2.w = zoneSize;
+            officeZone2.h = zoneSize;
+            officeZone2.x = officeZone1.x + officeZone1.w + zonePadding;
+            officeZone2.y = officeZone1.y;
+
             const shelfWidth = 60, shelfHeight = 120;
             const shelfY = desk.y - shelfHeight + 40;
 
@@ -3009,11 +3040,19 @@
             }
             const startY = cashierCounter.y + cashierCounter.h / 2;
 
+            // --- Employee Idle Positions ---
             cashier.idleX = cashierCounter.x - 30;
             cashier.idleY = startY;
-             if (cashier.state === 'idle' && !cashier.task) {
+            if (cashier.state === 'idle' && !cashier.task) {
                 cashier.x = cashier.idleX;
                 cashier.y = cashier.idleY;
+            }
+
+            stocker.idleX = cashier.idleX - 40;
+            stocker.idleY = startY;
+            if (stocker.state === 'idle' && !stocker.task) {
+                stocker.x = stocker.idleX;
+                stocker.y = stocker.idleY;
             }
 
             manager.idleX = officeZone2.x + officeZone2.w / 2 - 20;
@@ -3023,19 +3062,13 @@
                 manager.y = manager.idleY;
             }
 
-            stocker.idleX = manager.idleX - 40;
-            stocker.idleY = startY;
-            if (stocker.state === 'idle' && !stocker.task) {
-                stocker.x = stocker.idleX;
-                stocker.y = stocker.idleY;
-            }
-
             loader.idleX = officeZone2.x + officeZone2.w / 2 + 20;
             loader.idleY = officeZone2.y + officeZone2.h / 2;
             if (loader.state === 'idle' && !loader.task) {
                 loader.x = loader.idleX;
                 loader.y = loader.idleY;
             }
+
             salesperson.idleX = storeShiftX + canvas.width - 100;
             salesperson.idleY = 400;
             if (salesperson.state === 'idle' && !salesperson.task) {
@@ -3047,27 +3080,6 @@
                 player.x = stocker.idleX - 40;
                 player.y = startY;
             }
-
-            // --- Office Zone Calculations ---
-            const zoneSize = 80;
-            const zonePadding = 20;
-
-            // Zone 3 (Break Room) - Inside the office
-            officeZone3.w = managersOffice.w * 0.7;
-            officeZone3.h = managersOffice.h * 0.5;
-            officeZone3.x = managersOffice.x + (managersOffice.w - officeZone3.w) / 2;
-            officeZone3.y = managersOffice.y + (managersOffice.h - officeZone3.h) / 2 + 30; // Shift down a bit
-
-            // Zone 1 & 2 (Desk & Waiting) - Below the office
-            officeZone1.w = zoneSize;
-            officeZone1.h = zoneSize;
-            officeZone1.x = managersOffice.x + zonePadding;
-            officeZone1.y = managersOffice.y + managersOffice.h + zonePadding;
-
-            officeZone2.w = zoneSize;
-            officeZone2.h = zoneSize;
-            officeZone2.x = officeZone1.x + officeZone1.w + zonePadding;
-            officeZone2.y = officeZone1.y;
         }
 
         // --- REFACTOR: Standalone Shelf Drawing Function ---

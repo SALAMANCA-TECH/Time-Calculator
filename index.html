@@ -239,7 +239,7 @@
         </div>
 
         <!-- Clipboard Panel -->
-        <div id="clipboard-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+        <div id="clipboard-panel" class="fixed top-4 right-0 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm transition-transform duration-300 ease-in-out translate-x-full">
             <button id="close-clipboard" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
             <h2 id="clipboard-title" class="text-2xl font-handwritten mb-4 text-center">Clipboard</h2>
 
@@ -465,6 +465,8 @@
         const CUSTOMER_SPAWN_INTERVAL = 8000;
         let timeSinceLastCustomer = 0;
         let floatingTexts = [];
+        let clipboardUpdateTimer = 0;
+        const CLIPBOARD_UPDATE_INTERVAL = 250; // ms
 
         // Camera and zoom variables
         let scale = 1.0;
@@ -2574,6 +2576,17 @@
             customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
             updateCustomerUI();
 
+            // Real-time clipboard updates
+            clipboardUpdateTimer += deltaTime;
+            if (activePanel === 'clipboard' && clipboardUpdateTimer >= CLIPBOARD_UPDATE_INTERVAL) {
+                const inStoreList = document.getElementById('in-store-customer-list');
+                // Only update if the "In Store" tab is visible
+                if (inStoreList && inStoreList.offsetParent !== null) {
+                    populateInStoreCustomers();
+                }
+                clipboardUpdateTimer = 0;
+            }
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             ctx.save();
@@ -3169,10 +3182,22 @@
                 const typeInfo = customerTypes[typeKey];
                 const profilesForType = customerProfiles[typeKey];
 
+                const typeContainer = document.createElement('div');
                 const typeHeader = document.createElement('h3');
-                typeHeader.className = 'font-handwritten text-xl mt-4 px-1 border-b-2 border-amber-800/30';
-                typeHeader.textContent = typeInfo.name;
-                customerList.appendChild(typeHeader);
+                typeHeader.className = 'font-handwritten text-xl mt-4 px-1 border-b-2 border-amber-800/30 flex justify-between items-center cursor-pointer';
+                typeHeader.innerHTML = `<span>${typeInfo.name}</span><span class="text-sm mr-2">[+]</span>`;
+
+                const customerSubList = document.createElement('div');
+                customerSubList.className = 'pl-2 hidden'; // Initially hidden
+
+                typeContainer.appendChild(typeHeader);
+                typeContainer.appendChild(customerSubList);
+                customerList.appendChild(typeContainer);
+
+                typeHeader.addEventListener('click', () => {
+                    const isHidden = customerSubList.classList.toggle('hidden');
+                    typeHeader.querySelector('span:last-child').textContent = isHidden ? '[+]' : '[-]';
+                });
 
                 if (!profilesForType) return;
 
@@ -3191,7 +3216,7 @@
                         <div>Status: ${visitedStatus}</div>
                         <div class="col-span-2 mt-1">Tools: <span class="font-handwritten text-sm">${profile.toolsOwned.length > 0 ? profile.toolsOwned.join(', ') : 'None'}</span></div>
                     `;
-                    customerList.appendChild(customerDiv);
+                    customerSubList.appendChild(customerDiv);
                 }
             });
         }
@@ -3881,11 +3906,38 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'clipboard-panel'];
             const targetPanel = document.getElementById(`${panelName}-panel`);
 
+            // Special handling for animated clipboard
+            if (panelName === 'clipboard') {
+                allPanels.forEach(p => {
+                    if (p !== 'clipboard-panel') document.getElementById(p).classList.add('hidden');
+                });
+                if (forceOpen) {
+                    targetPanel.classList.remove('translate-x-full');
+                    activePanel = 'clipboard';
+                } else {
+                    const isOpen = !targetPanel.classList.contains('translate-x-full');
+                    if(isOpen) {
+                        targetPanel.classList.add('translate-x-full');
+                        activePanel = null;
+                    } else {
+                        targetPanel.classList.remove('translate-x-full');
+                        activePanel = 'clipboard';
+                    }
+                }
+                 // Reset other active items
+                activeShelf = null;
+                activeStorageCell = null;
+                return;
+            }
+
+
             if (forceOpen) {
                 // Close all other panels
                 allPanels.forEach(p => {
                     if (`${panelName}-panel` !== p) {
-                        document.getElementById(p).classList.add('hidden');
+                         const panel = document.getElementById(p);
+                        if (p === 'clipboard-panel') panel.classList.add('translate-x-full');
+                        else panel.classList.add('hidden');
                     }
                 });
                 targetPanel.classList.remove('hidden');
@@ -3897,16 +3949,15 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 // Close the current panel
                 targetPanel.classList.add('hidden');
                 activePanel = null;
-                if (panelName === 'shelf') {
-                    activeShelf = null;
-                }
-                if (panelName === 'storage') {
-                    activeStorageCell = null;
-                }
+                if (panelName === 'shelf') activeShelf = null;
+                if (panelName === 'storage') activeStorageCell = null;
+
             } else {
                  // Close the previously active panel
                 if (activePanel) {
-                    document.getElementById(`${activePanel}-panel`).classList.add('hidden');
+                    const oldPanel = document.getElementById(`${activePanel}-panel`);
+                    if (activePanel === 'clipboard') oldPanel.classList.add('translate-x-full');
+                    else oldPanel.classList.add('hidden');
                 }
                 // Open the new panel
                 targetPanel.classList.remove('hidden');

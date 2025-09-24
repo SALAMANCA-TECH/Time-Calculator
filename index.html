@@ -3457,10 +3457,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             devToggle.checked = developerMode;
             devToggle.addEventListener('change', (e) => {
                 developerMode = e.target.checked;
-                if (developerMode) {
-                    cash = 99999;
-                    shopPoints = 999;
-                }
                 updateUI();
             });
             const continuousToggle = document.getElementById('continuous-toggle');

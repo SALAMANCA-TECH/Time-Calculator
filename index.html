@@ -517,12 +517,11 @@
         let dailySalesReport = [];
 
         // Camera and zoom variables
-        let scale = 1.0;
         let cameraX = 0;
         let cameraY = 0;
         let targetCameraX = 0;
         let cameraState = 'store'; // 'store' or 'office'
-        const officeWidth = 400;
+        let officeWidth;
         let worldWidth;
 
 
@@ -2467,6 +2466,7 @@
             player.x = Math.max(player.frameWidth / 2, Math.min(worldWidth - player.frameWidth / 2, player.x));
             player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
 
+
             // Camera control logic
             const officeThreshold = officeWidth + 50; // 50px into the store
             if (player.x < officeThreshold && cameraState !== 'office') {
@@ -2690,11 +2690,10 @@
             const cameraSpeed = 0.05;
             cameraX += (targetCameraX - cameraX) * cameraSpeed;
 
-            // cameraX = canvas.width / 2 - player.x * scale;
-            cameraY = canvas.height / 2 - player.y * scale;
+            // cameraX = canvas.width / 2 - player.x;
+            cameraY = 0;
             clampCamera();
             ctx.translate(cameraX, cameraY);
-            ctx.scale(scale, scale);
 
             drawStoreBackground();
             const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, { draw: drawPlayer, y: player.y }, { draw: drawStocker, y: stocker.y }, { draw: drawCashier, y: cashier.y }, { draw: drawLoader, y: loader.y }, { draw: drawManager, y: manager.y }, { draw: drawSalesperson, y: salesperson.y }];
@@ -2919,7 +2918,7 @@
         // The following values determine the layout of the store.
         // This layout has been finalized and should not be changed.
         function initializeLayout() {
-            const officeWidth = canvas.width / 2;
+            officeWidth = canvas.width / 2;
             const storeShiftX = officeWidth;
 
             const cellWidth = canvas.width / 5;
@@ -3071,26 +3070,31 @@
         function resizeCanvas() {
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
-            worldWidth = canvas.width + officeWidth;
             desk.y = canvas.height - 220;
+
+            initializeLayout();
+
+            worldWidth = canvas.width + officeWidth;
             desk.width = worldWidth;
             loadingDock.y = canvas.height - loadingDock.height;
             loadingDock.width = worldWidth;
-
-            scale = 1.0;
             cameraY = 0;
 
-            initializeLayout();
-            cameraX = -officeWidth;
-            targetCameraX = -officeWidth;
+            if (cameraState === 'store') {
+                 targetCameraX = -officeWidth;
+                 cameraX = -officeWidth;
+            } else {
+                 targetCameraX = 0;
+                 cameraX = 0;
+            }
         }
 
         function clampCamera() {
-            const worldWidth = (canvas.width + managersOffice.w) * scale;
-            const worldHeight = canvas.height * scale;
+            const worldWidth = canvas.width + officeWidth;
+            const worldHeight = canvas.height;
 
-            cameraX = Math.max(canvas.clientWidth - scaledWorldWidth, Math.min(0, cameraX));
-            cameraY = Math.max(canvas.clientHeight - worldHeight, Math.min(0, cameraY));
+            cameraX = Math.max(canvas.width - worldWidth, Math.min(0, cameraX));
+            cameraY = Math.max(canvas.height - worldHeight, Math.min(0, cameraY));
         }
 
         function handleCanvasClick(event) {
@@ -3117,8 +3121,8 @@
             }
 
             // Convert to world coordinates for game object clicks
-            const worldX = (x - cameraX) / scale;
-            const worldY = (y - cameraY) / scale;
+            const worldX = (x - cameraX);
+            const worldY = (y - cameraY);
 
             if (worldX > managersOffice.x && worldX < managersOffice.x + managersOffice.w && worldY > managersOffice.y && worldY < managersOffice.y + managersOffice.h) {
                 if (Math.hypot(player.x - (managersOffice.x + managersOffice.w/2), player.y - (managersOffice.y + managersOffice.h/2)) < 150) {

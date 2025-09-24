@@ -446,7 +446,7 @@
                 }
             });
 
-            const unlockedItems = new Set();
+            const unlockedItems = new Set(storageCells[0].allowedItems); // Artists are always available
             unlocks.storage.forEach((isUnlocked, index) => {
                 if (isUnlocked) {
                     storageCells[index].allowedItems.forEach(item => unlockedItems.add(item));

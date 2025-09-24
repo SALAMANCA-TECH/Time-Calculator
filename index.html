@@ -433,6 +433,8 @@
 
         const player = {
             x: 100, y: 300, width: 50, height: 50, speed: 250,
+            targetX: null,
+            targetY: null,
             currentFrame: 0, frameWidth: 90, frameHeight: 90,
             animationSpeed: 150, lastFrameTime: 0,
             state: 'idle', facing: 'right',
@@ -2139,21 +2141,49 @@
             if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
             if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
             if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+
             if (dx !== 0 || dy !== 0) {
-                const newX = player.x + dx * player.speed * deltaTime / 1000;
-                const newY = player.y + dy * player.speed * deltaTime / 1000;
+                // Keyboard movement overrides click-to-move
+                player.targetX = null;
+                player.targetY = null;
+
+                const newX = player.x + dx * player.speed * (deltaTime / 1000);
+                const newY = player.y + dy * player.speed * (deltaTime / 1000);
                 player.y = newY;
                 player.x = newX;
-            }
-            player.x = Math.max(player.frameWidth / 2, Math.min(canvas.width - player.frameWidth / 2, player.x));
-            player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
-            if (dx !== 0 || dy !== 0) {
+
                 player.state = 'walk';
                 if (dx < 0) player.facing = 'left';
                 if (dx > 0) player.facing = 'right';
+
+            } else if (player.targetX !== null && player.targetY !== null) {
+                // Click-to-move logic
+                const targetDx = player.targetX - player.x;
+                const targetDy = player.targetY - player.y;
+                const dist = Math.hypot(targetDx, targetDy);
+
+                if (dist < 5) { // Threshold to stop
+                    player.targetX = null;
+                    player.targetY = null;
+                    player.state = 'idle';
+                } else {
+                    const moveX = (targetDx / dist) * player.speed * (deltaTime / 1000);
+                    const moveY = (targetDy / dist) * player.speed * (deltaTime / 1000);
+                    player.x += moveX;
+                    player.y += moveY;
+
+                    if (Math.abs(targetDx) > Math.abs(targetDy)) {
+                        player.facing = moveX > 0 ? 'right' : 'left';
+                    }
+                    player.state = 'walk';
+                }
             } else {
                 player.state = 'idle';
             }
+
+            player.x = Math.max(player.frameWidth / 2, Math.min(canvas.width - player.frameWidth / 2, player.x));
+            player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
+
             updateCharacterAnimation(player, deltaTime);
         }
 
@@ -2704,6 +2734,10 @@
                     return;
                 }
             }
+
+            // If no specific object was clicked, set the player's target destination.
+            player.targetX = worldX;
+            player.targetY = worldY;
         }
 
         function handleInteraction() {

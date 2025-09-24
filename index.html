@@ -518,8 +518,6 @@
 
         // Camera and zoom variables
         let scale = 1.0;
-        const MIN_SCALE = 1.0;
-        const MAX_SCALE = 3.0;
         let cameraX = 0;
         let cameraY = 0;
         let targetCameraX = 0;
@@ -2465,6 +2463,7 @@
                 player.state = 'idle';
             }
 
+            const worldWidth = canvas.width + managersOffice.w;
             player.x = Math.max(player.frameWidth / 2, Math.min(worldWidth - player.frameWidth / 2, player.x));
             player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
 
@@ -2920,40 +2919,39 @@
         // The following values determine the layout of the store.
         // This layout has been finalized and should not be changed.
         function initializeLayout() {
-            const storeWidth = canvas.width;
-            const cellWidth = storeWidth / 5;
+            const officeWidth = canvas.width / 2;
+            const storeShiftX = officeWidth;
+
+            const cellWidth = canvas.width / 5;
             const cellHeight = ((desk.y - 250) / 2) * 0.8;
             const topPadding = 90;
             const cellPadding = 20;
 
-            // New order: Drawing, Painting, Models, Woodworking, Sculpture, Architectural
-            // New layout: Bottom-Left, Bottom-Mid, Bottom-Right, Top-Left, Top-Mid, Top-Right
             storageCells = [
                 // Bottom Row
-                { label: "Drawing", rect: { x: officeWidth + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
-                { label: "Painting", rect: { x: officeWidth + storeWidth / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
-                { label: "Models", rect: { x: officeWidth + storeWidth - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                { label: "Drawing", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
                 // Top Row
-                { label: "Woodworking", rect: { x: officeWidth + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
-                { label: "Sculpture", rect: { x: officeWidth + storeWidth / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
-                { label: "Architectural", rect: { x: officeWidth + storeWidth - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+                { label: "Woodworking", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
+                { label: "Sculpture", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
 
-            // --- LOCKED LAYOUT POSITIONS ---
-            // These positions for the counter and shelves are finalized.
-            cashierCounter.x = officeWidth + 141;
+            cashierCounter.x = storeShiftX + 141;
             cashierCounter.y = (desk.y - cashierCounter.h) + 141;
-            managersOffice.x = 0; // Stays on the far left
-            managersOffice.y = desk.y - managersOffice.h;
 
+            managersOffice.w = officeWidth;
+            managersOffice.h = canvas.height / 2;
+            managersOffice.x = 0;
+            managersOffice.y = (canvas.height - managersOffice.h) / 2;
             const shelfWidth = 60, shelfHeight = 120;
             const shelfY = desk.y - shelfHeight + 40;
-            // --- END LOCKED LAYOUT POSITIONS ---
 
             const numShelves = 6;
             const shelfPadding = 50;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
-            const startX = officeWidth + (storeWidth - totalShelvesWidth) / 2;
+            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2;`
             if (shelves.length === 0) {
                 for (let i = 0; i < numShelves; i++) {
                     const shelf = {
@@ -2965,7 +2963,7 @@
                             { assignedItem: null, quantity: 0 }
                         ],
                         y: shelfY + shelfHeight,
-                        draw: drawShelf // REFACTOR: Assign the single draw function
+                        draw: drawShelf
                     };
                     shelves.push(shelf);
                 }
@@ -2976,7 +2974,6 @@
                      shelves[i].y = shelfY + shelfHeight;
                  }
             }
-            // Set all worker idle/start positions behind the counter
             const startY = cashierCounter.y + cashierCounter.h / 2;
 
             cashier.idleX = cashierCounter.x - 30;
@@ -3000,14 +2997,13 @@
                 stocker.y = stocker.idleY;
             }
 
-            loader.idleX = managersOffice.x + managersOffice.w + 40;
-            loader.idleY = managersOffice.y + managersOffice.h / 2;
+            loader.idleX = storeShiftX + 40;
+            loader.idleY = loadingDock.y - 30;
             if (loader.state === 'idle' && !loader.task) {
                 loader.x = loader.idleX;
                 loader.y = loader.idleY;
             }
-
-            salesperson.idleX = worldWidth - 100;
+            salesperson.idleX = storeShiftX + canvas.width - 100;
             salesperson.idleY = 400;
             if (salesperson.state === 'idle' && !salesperson.task) {
                 salesperson.x = salesperson.idleX;
@@ -3090,17 +3086,11 @@
         }
 
         function clampCamera() {
-            const scaledWorldWidth = worldWidth * scale;
+            const worldWidth = (canvas.width + managersOffice.w) * scale;
             const worldHeight = canvas.height * scale;
 
             cameraX = Math.max(canvas.clientWidth - scaledWorldWidth, Math.min(0, cameraX));
             cameraY = Math.max(canvas.clientHeight - worldHeight, Math.min(0, cameraY));
-        }
-
-        function handleWheel(e) {
-            e.preventDefault();
-            const zoom = 1 - e.deltaY * 0.001;
-            scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * zoom));
         }
 
         function handleCanvasClick(event) {
@@ -4177,7 +4167,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             window.addEventListener('resize', resizeCanvas);
 
             canvas.addEventListener('click', handleCanvasClick);
-            canvas.addEventListener('wheel', handleWheel, { passive: false });
             pieClockCanvas.addEventListener('click', handleClockClick);
 
             document.getElementById('start-day-btn').addEventListener('click', () => {

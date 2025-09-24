@@ -2817,55 +2817,33 @@
         }
 
         function nextDay() {
-            if (!dayStarted) return; // Prevent multiple calls
-            day++;
+            if (!dayStarted) return;
             dayStarted = false;
             dayPhase = 'pre-open';
             midDayBreakTriggered = false;
             const dailyExpenses = 25;
             cash -= dailyExpenses;
-
-            // Reset visited status for all customer profiles
-            for (const type in customerProfiles) {
-                for (const name in customerProfiles[type]) {
-                    customerProfiles[type][name].visitedToday = false;
-                }
-            }
-
-            // Clear remaining customers
             customers.forEach(c => c.state = 'leaving');
-
             timeSinceLastCustomer = 0;
             document.getElementById('start-day-btn').classList.remove('hidden');
             document.getElementById('next-day-btn').classList.add('hidden');
-
             if (cash < 0) {
                 updateUI();
                 endGame();
                 return;
             }
-            Object.keys(inventory).forEach(item => {
-                if(inventory[item] < 5) inventory[item] +=1;
-            });
             updateUI();
-            saveGame();
-
-            // Show End of Day Report
             const reportPanel = document.getElementById('end-of-day-panel');
             const reportList = document.getElementById('sales-report-list');
-            reportList.innerHTML = ''; // Clear previous report
-
+            reportList.innerHTML = '';
             let grossSales = 0;
             const salesTally = {};
             const missedTally = {};
-
             dailySalesReport.forEach(report => {
                 const reportDiv = document.createElement('div');
                 reportDiv.className = 'text-sm p-2 border-b border-amber-800/20';
-
                 const patienceColor = report.patienceChange < 0 ? 'text-red-600' : 'text-green-600';
                 const patienceSign = report.patienceChange >= 0 ? '+' : '';
-
                 let purchaseSummary = '<span class="text-red-600 font-bold">Left without buying</span>';
                 if (report.purchasedItems.length > 0) {
                     const itemCosts = report.purchasedItems.map(item => items[item].cost);
@@ -2876,51 +2854,52 @@
                     }
                     grossSales += salePrice;
                     purchaseSummary = `${report.purchasedItems.join(', ')} ($${salePrice})`;
-                    if(report.discount > 0) {
+                    if (report.discount > 0) {
                         purchaseSummary += ` <span class="text-red-600 font-bold">(${report.discount * 100}% off)</span>`;
                     }
                     report.purchasedItems.forEach(item => salesTally[item] = (salesTally[item] || 0) + 1);
                 }
-
                 const missedItems = report.requestedItems.filter(item => !report.purchasedItems.includes(item));
                 missedItems.forEach(item => missedTally[item] = (missedTally[item] || 0) + 1);
-
                 const starButtonId = `star-btn-${report.name.replace(/\s+/g, '-')}`;
                 reportDiv.innerHTML = `
-                    <div class="font-bold flex justify-between items-center">${report.name} <button id="${starButtonId}" class="text-2xl">${customerProfiles[report.typeKey][report.name].isStarred ? '⭐' : '☆'}</button></div>
-                    <div>Purchased: <span class="font-handwritten">${purchaseSummary}</span></div>
-                    <div>Intended: <span class="font-handwritten">${report.requestedItems.join(', ')}</span></div>
-                    <div>Wait Time: <span class="font-handwritten">${report.waitTime}s</span> | Patience: <span class="font-handwritten ${patienceColor}">${patienceSign}${report.patienceChange}</span></div>
-                `;
+            <div class="font-bold flex justify-between items-center">${report.name} <button id="${starButtonId}" class="text-2xl">${customerProfiles[report.typeKey][report.name].isStarred ? '⭐' : '☆'}</button></div>
+            <div>Purchased: <span class="font-handwritten">${purchaseSummary}</span></div>
+            <div>Intended: <span class="font-handwritten">${report.requestedItems.join(', ')}</span></div>
+            <div>Wait Time: <span class="font-handwritten">${report.waitTime}s</span> | Patience: <span class="font-handwritten ${patienceColor}">${patienceSign}${report.patienceChange}</span></div>
+        `;
                 reportList.appendChild(reportDiv);
-
                 document.getElementById(starButtonId).addEventListener('click', (e) => {
                     const profile = customerProfiles[report.typeKey][report.name];
                     profile.isStarred = !profile.isStarred;
                     e.target.textContent = profile.isStarred ? '⭐' : '☆';
                 });
             });
-
-            const topSeller = Object.keys(salesTally).length ? Object.entries(salesTally).sort((a,b) => b[1] - a[1])[0][0] : 'None';
-            const topMiss = Object.keys(missedTally).length ? Object.entries(missedTally).sort((a,b) => b[1] - a[1])[0][0] : 'None';
-
-            // Add summary stats to the new container in the right panel
+            const topSeller = Object.keys(salesTally).length ? Object.entries(salesTally).sort((a, b) => b[1] - a[1])[0][0] : 'None';
+            const topMiss = Object.keys(missedTally).length ? Object.entries(missedTally).sort((a, b) => b[1] - a[1])[0][0] : 'None';
             const extraSummaryDiv = document.getElementById('report-summary-extra');
             extraSummaryDiv.innerHTML = `
-                <p class="border-t border-amber-800/30 pt-2 mt-2">Top Seller: <span class="font-bold">${topSeller}</span></p>
-                <p>Most Missed: <span class="font-bold">${topMiss}</span></p>
-            `;
-
-            document.getElementById('report-day').textContent = day - 1;
+        <p class="border-t border-amber-800/30 pt-2 mt-2">Top Seller: <span class="font-bold">${topSeller}</span></p>
+        <p>Most Missed: <span class="font-bold">${topMiss}</span></p>
+    `;
+            document.getElementById('report-day').textContent = day;
             document.getElementById('report-sales').textContent = `$${grossSales}`;
             document.getElementById('report-expenses').textContent = `-$${dailyExpenses}`;
             document.getElementById('report-profit').textContent = `$${grossSales - dailyExpenses}`;
-
             reportPanel.classList.remove('hidden');
-
             document.getElementById('next-day-report-btn').onclick = () => {
+                day++;
+                for (const type in customerProfiles) {
+                    for (const name in customerProfiles[type]) {
+                        customerProfiles[type][name].visitedToday = false;
+                    }
+                }
+                Object.keys(inventory).forEach(item => {
+                    if (inventory[item] < 5) inventory[item] += 1;
+                });
+                saveGame();
                 reportPanel.classList.add('hidden');
-                dailySalesReport = []; // Clear the report for the next day
+                dailySalesReport = [];
                 if (continuousMode) {
                     document.getElementById('start-day-btn').click();
                 }

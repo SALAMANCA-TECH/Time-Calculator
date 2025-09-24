@@ -508,6 +508,7 @@
         const DAY_DURATION = OPENING_DURATION + OPEN_DURATION + CLOSING_DURATION; // Total 5 minutes
         let dayTimer = DAY_DURATION;
         let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'open', 'closing'
+        let zone1PointTimer = 0;
 
         const CUSTOMER_SPAWN_INTERVAL = 8000;
         let timeSinceLastCustomer = 0;
@@ -529,6 +530,9 @@
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
         const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
         const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
+        const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
+        const officeZone2 = { x: 0, y: 0, w: 0, h: 0 };
+        const officeZone3 = { x: 0, y: 0, w: 0, h: 0 };
         const cashRegister = { x: 0, y: 0, width: 60, height: 50 };
         const clipboard = { x: 0, y: 0, width: 50, height: 60 };
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
@@ -631,20 +635,12 @@
             basket: []
         };
 
-        const breakSpots = {
-            cashier: { x: 20, y: 30 },
-            stocker: { x: 50, y: 30 },
-            loader: { x: 80, y: 30 },
-            manager: { x: 35, y: 60 },
-            salesperson: { x: 65, y: 60 }
-        };
-
-        function getBreakSpot(employeeKey) {
-            const spot = breakSpots[employeeKey];
-            return {
-                x: managersOffice.x + spot.x,
-                y: managersOffice.y + spot.y
-            };
+        function getBreakSpot() {
+            // Return a random coordinate within officeZone3
+            const padding = 10; // To keep them away from the very edge
+            const randomX = officeZone3.x + padding + (Math.random() * (officeZone3.w - padding * 2));
+            const randomY = officeZone3.y + padding + (Math.random() * (officeZone3.h - padding * 2));
+            return { x: randomX, y: randomY };
         }
 
         const animations = {
@@ -1042,6 +1038,29 @@
             ctx.fillStyle = '#8d6e63';
             ctx.fillRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
             ctx.strokeRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
+        }
+
+        function drawOfficeZones() {
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 48px "Patrick Hand"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Zone 1
+            ctx.strokeRect(officeZone1.x, officeZone1.y, officeZone1.w, officeZone1.h);
+            ctx.fillStyle = 'red';
+            ctx.fillText('1', officeZone1.x + officeZone1.w / 2, officeZone1.y + officeZone1.h / 2);
+
+            // Zone 2
+            ctx.strokeRect(officeZone2.x, officeZone2.y, officeZone2.w, officeZone2.h);
+            ctx.fillStyle = 'red';
+            ctx.fillText('2', officeZone2.x + officeZone2.w / 2, officeZone2.y + officeZone2.h / 2);
+
+            // Zone 3
+            ctx.strokeRect(officeZone3.x, officeZone3.y, officeZone3.w, officeZone3.h);
+            ctx.fillStyle = 'red';
+            ctx.fillText('3', officeZone3.x + officeZone3.w / 2, officeZone3.y + officeZone3.h / 2);
         }
 
         function drawPackage(pkg, x, y) {
@@ -1761,7 +1780,7 @@
             if (!unlocks.employees.stocker) return;
 
             if (stocker.onBreak) {
-                const breakSpot = getBreakSpot('stocker');
+                const breakSpot = getBreakSpot();
                 if (moveCharacterTowards(stocker, breakSpot.x, breakSpot.y, deltaTime)) {
                     stocker.state = 'idle';
                 } else {
@@ -1852,7 +1871,7 @@
             if (!unlocks.employees.cashier) return;
 
             if (cashier.onBreak) {
-                const breakSpot = getBreakSpot('cashier');
+                const breakSpot = getBreakSpot();
                 if (moveCharacterTowards(cashier, breakSpot.x, breakSpot.y, deltaTime)) {
                     cashier.state = 'idle';
                 } else {
@@ -1909,7 +1928,7 @@
              if (!unlocks.employees.loader) return;
 
             if (loader.onBreak) {
-                const breakSpot = getBreakSpot('loader');
+                const breakSpot = getBreakSpot();
                 if (moveCharacterTowards(loader, breakSpot.x, breakSpot.y, deltaTime)) {
                     loader.state = 'idle';
                 } else {
@@ -2001,7 +2020,7 @@
              if (!unlocks.employees.manager) return;
 
             if (manager.onBreak) {
-                const breakSpot = getBreakSpot('manager');
+                const breakSpot = getBreakSpot();
                 if (moveCharacterTowards(manager, breakSpot.x, breakSpot.y, deltaTime)) {
                     manager.state = 'idle';
                 } else {
@@ -2081,7 +2100,7 @@
             if (!unlocks.employees.salesperson) return;
 
             if (salesperson.onBreak) {
-                const breakSpot = getBreakSpot('salesperson');
+                const breakSpot = getBreakSpot();
                 if (moveCharacterTowards(salesperson, breakSpot.x, breakSpot.y, deltaTime)) {
                     salesperson.state = 'idle';
                 } else {
@@ -2638,6 +2657,20 @@
             }
 
             updatePlayer(deltaTime);
+
+            // Zone 1 point system
+            if (isPlayerInZone(officeZone1)) {
+                zone1PointTimer += deltaTime;
+                if (zone1PointTimer >= 5000) { // 5 seconds
+                    shopPoints++;
+                    zone1PointTimer -= 5000;
+                    updateUI();
+                    spawnFloatingText("+1 Point", player.x, player.y - 90, "#f59e0b");
+                }
+            } else {
+                zone1PointTimer = 0;
+            }
+
             updateStocker(deltaTime);
             updateCashier(deltaTime);
             updateLoader(deltaTime);
@@ -2701,6 +2734,7 @@
             dynamicEntities.forEach(entity => {
                 if (entity.draw) entity.draw();
             });
+            drawOfficeZones();
             drawPackages();
             updateAndDrawFloatingTexts(deltaTime);
 
@@ -2982,8 +3016,8 @@
                 cashier.y = cashier.idleY;
             }
 
-            manager.idleX = cashier.idleX - 40;
-            manager.idleY = startY;
+            manager.idleX = officeZone2.x + officeZone2.w / 2 - 20;
+            manager.idleY = officeZone2.y + officeZone2.h / 2;
             if (manager.state === 'idle' && !manager.task) {
                 manager.x = manager.idleX;
                 manager.y = manager.idleY;
@@ -2996,8 +3030,8 @@
                 stocker.y = stocker.idleY;
             }
 
-            loader.idleX = storeShiftX + 40;
-            loader.idleY = loadingDock.y - 30;
+            loader.idleX = officeZone2.x + officeZone2.w / 2 + 20;
+            loader.idleY = officeZone2.y + officeZone2.h / 2;
             if (loader.state === 'idle' && !loader.task) {
                 loader.x = loader.idleX;
                 loader.y = loader.idleY;
@@ -3013,6 +3047,27 @@
                 player.x = stocker.idleX - 40;
                 player.y = startY;
             }
+
+            // --- Office Zone Calculations ---
+            const zoneSize = 80;
+            const zonePadding = 20;
+
+            // Zone 3 (Break Room) - Inside the office
+            officeZone3.w = managersOffice.w * 0.7;
+            officeZone3.h = managersOffice.h * 0.5;
+            officeZone3.x = managersOffice.x + (managersOffice.w - officeZone3.w) / 2;
+            officeZone3.y = managersOffice.y + (managersOffice.h - officeZone3.h) / 2 + 30; // Shift down a bit
+
+            // Zone 1 & 2 (Desk & Waiting) - Below the office
+            officeZone1.w = zoneSize;
+            officeZone1.h = zoneSize;
+            officeZone1.x = managersOffice.x + zonePadding;
+            officeZone1.y = managersOffice.y + managersOffice.h + zonePadding;
+
+            officeZone2.w = zoneSize;
+            officeZone2.h = zoneSize;
+            officeZone2.x = officeZone1.x + officeZone1.w + zonePadding;
+            officeZone2.y = officeZone1.y;
         }
 
         // --- REFACTOR: Standalone Shelf Drawing Function ---
@@ -3124,11 +3179,10 @@
             const worldX = (x - cameraX);
             const worldY = (y - cameraY);
 
-            if (worldX > managersOffice.x && worldX < managersOffice.x + managersOffice.w && worldY > managersOffice.y && worldY < managersOffice.y + managersOffice.h) {
-                if (Math.hypot(player.x - (managersOffice.x + managersOffice.w/2), player.y - (managersOffice.y + managersOffice.h/2)) < 150) {
-                    openRestockPanel();
-                    return;
-                }
+            if (worldX >= officeZone1.x && worldX <= officeZone1.x + officeZone1.w &&
+                worldY >= officeZone1.y && worldY <= officeZone1.y + officeZone1.h) {
+                openRestockPanel();
+                return;
             }
 
             // Check for clicks on packages in the loading dock
@@ -3164,6 +3218,11 @@
             player.targetX = worldX;
             player.targetY = worldY;
 
+        }
+
+        function isPlayerInZone(zone) {
+            return player.x > zone.x && player.x < zone.x + zone.w &&
+                   player.y > zone.y && player.y < zone.y + zone.h;
         }
 
         function handleInteraction() {

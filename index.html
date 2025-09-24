@@ -518,8 +518,6 @@
 
         // Camera and zoom variables
         let scale = 1.0;
-        const MIN_SCALE = 1.0;
-        const MAX_SCALE = 3.0;
         let cameraX = 0;
         let cameraY = 0;
 
@@ -1025,23 +1023,21 @@
         }
 
         function drawManagersOffice() {
-            ctx.fillStyle = '#d7ccc8';
+            ctx.fillStyle = '#a1887f';
             ctx.fillRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
-
-            ctx.fillStyle = '#5d4037';
-            ctx.font = '24px "Indie Flower", cursive';
-            ctx.textAlign = 'center';
-            ctx.fillText("Manager's Office", managersOffice.x + managersOffice.w / 2, managersOffice.y + 40);
-
-            // Desk
-            const deskWidth = 120, deskHeight = 50;
-            const deskX = managersOffice.x + (managersOffice.w - deskWidth) / 2;
-            const deskY = managersOffice.y + managersOffice.h - deskHeight - 20;
-            ctx.fillStyle = '#8d6e63';
-            ctx.fillRect(deskX, deskY, deskWidth, deskHeight);
             ctx.strokeStyle = '#4e342e';
             ctx.lineWidth = 4;
-            ctx.strokeRect(deskX, deskY, deskWidth, deskHeight);
+            ctx.strokeRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '14px "Indie Flower", cursive';
+            ctx.textAlign = 'center';
+            ctx.fillText("Manager's", managersOffice.x + managersOffice.w / 2, managersOffice.y + 20);
+            ctx.fillText("Office", managersOffice.x + managersOffice.w / 2, managersOffice.y + 35);
+
+            // Desk
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
+            ctx.strokeRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
         }
 
         function drawPackage(pkg, x, y) {
@@ -1075,24 +1071,10 @@
         }
 
         function drawStoreBackground() {
-            const storeShiftX = managersOffice.w;
-            const wallX = storeShiftX;
-            const wallThickness = 10;
-            const doorwayHeight = 150;
-            const doorwayY = (canvas.height - doorwayHeight) / 2;
-
             ctx.fillStyle = '#bcaaa4';
-            ctx.fillRect(storeShiftX, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#a1887f';
-            ctx.fillRect(storeShiftX, 0, canvas.width, desk.y + desk.height);
-
-            drawManagersOffice();
-
-            ctx.fillStyle = '#a1887f';
-            ctx.fillRect(wallX - wallThickness / 2, 0, wallThickness, doorwayY);
-            ctx.fillRect(wallX - wallThickness / 2, doorwayY + doorwayHeight, wallThickness, canvas.height - (doorwayY + doorwayHeight));
-
-
+            ctx.fillRect(0, 0, canvas.width, desk.y + desk.height);
             storageCells.forEach((cell, index) => {
                 if (!unlocks.storage[index]) {
                     const r = cell.rect;
@@ -1133,6 +1115,7 @@
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
                 ctx.strokeRect(backWall.x, backWall.y, backWall.w, backWall.h);
 
+                // Capacity Bar
                 const currentFill = Object.values(cell.items).reduce((a, b) => a + b, 0);
                 const fillPercent = Math.min(1, currentFill / cell.capacity);
                 ctx.fillStyle = '#eeeeee';
@@ -1148,12 +1131,13 @@
                 ctx.fillText(cell.label, cell.rect.x + cell.rect.w / 2, cell.rect.y + cell.rect.h + 20);
             });
 
+            // Draw Cashier Counter
             ctx.fillStyle = '#8d6e63';
             ctx.fillRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
             ctx.strokeStyle = '#4e342e';
             ctx.lineWidth = 4;
             ctx.strokeRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
-            ctx.fillStyle = '#6d4c41';
+            ctx.fillStyle = '#6d4c41'; // Darker top
             ctx.fillRect(cashierCounter.x, cashierCounter.y, 10, cashierCounter.h);
 
 
@@ -1164,6 +1148,7 @@
             ctx.strokeRect(desk.x, desk.y, desk.width, desk.height);
 
             drawLoadingDock();
+            drawManagersOffice();
         }
 
         function drawStaticUI() {
@@ -3089,12 +3074,6 @@
             cameraY = Math.max(canvas.clientHeight - worldHeight, Math.min(0, cameraY));
         }
 
-        function handleWheel(e) {
-            e.preventDefault();
-            const zoom = 1 - e.deltaY * 0.001;
-            scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * zoom));
-        }
-
         function handleCanvasClick(event) {
             const rect = canvas.getBoundingClientRect();
             let x = event.clientX - rect.left;
@@ -4169,7 +4148,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             window.addEventListener('resize', resizeCanvas);
 
             canvas.addEventListener('click', handleCanvasClick);
-            canvas.addEventListener('wheel', handleWheel, { passive: false });
             pieClockCanvas.addEventListener('click', handleClockClick);
 
             document.getElementById('start-day-btn').addEventListener('click', () => {

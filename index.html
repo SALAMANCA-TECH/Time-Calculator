@@ -259,8 +259,16 @@
 
             <!-- Content for Customers -->
             <div id="clipboard-customers-content" class="hidden">
-                 <div id="customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
-                    <!-- Customer list will be populated here -->
+                <!-- Customer Sub-Tabs -->
+                <div class="flex justify-center mb-2">
+                    <button id="in-store-customers-btn" class="btn-style px-4 py-1 text-sm rounded-r-none">In Store</button>
+                    <button id="all-customers-btn" class="btn-style px-4 py-1 text-sm rounded-l-none bg-opacity-50">All Profiles</button>
+                </div>
+                <div id="in-store-customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
+                    <!-- In-store customers will be populated here -->
+                </div>
+                <div id="all-customer-list" class="hidden flex-col space-y-2 max-h-64 overflow-y-auto">
+                    <!-- All customer profiles will be populated here -->
                 </div>
             </div>
 
@@ -3143,19 +3151,21 @@
             }
         }
 
-        function showCustomersOnClipboard() {
-            const customerList = document.getElementById('customer-list');
+        function populateAllCustomers() {
+            const customerList = document.getElementById('all-customer-list');
             customerList.innerHTML = '';
 
-            document.getElementById('clipboard-title').textContent = 'Customer Profiles';
-            document.getElementById('clipboard-shelves-content').classList.add('hidden');
-            document.getElementById('clipboard-employees-content').classList.add('hidden');
-            document.getElementById('clipboard-customers-content').classList.remove('hidden');
-            document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-customers').classList.remove('bg-opacity-50');
+            const unlockedTypeKeys = ['artist'];
+            unlocks.storage.forEach((isUnlocked, index) => {
+                if (isUnlocked) {
+                    const typeKey = Object.keys(customerTypes).find(key => customerTypes[key].storageIndex === index);
+                    if (typeKey && !unlockedTypeKeys.includes(typeKey)) {
+                        unlockedTypeKeys.push(typeKey);
+                    }
+                }
+            });
 
-            for (const typeKey in customerTypes) {
+            unlockedTypeKeys.forEach(typeKey => {
                 const typeInfo = customerTypes[typeKey];
                 const profilesForType = customerProfiles[typeKey];
 
@@ -3164,7 +3174,7 @@
                 typeHeader.textContent = typeInfo.name;
                 customerList.appendChild(typeHeader);
 
-                if (!profilesForType) continue;
+                if (!profilesForType) return;
 
                 for (const name in profilesForType) {
                     const profile = profilesForType[name];
@@ -3183,7 +3193,90 @@
                     `;
                     customerList.appendChild(customerDiv);
                 }
+            });
+        }
+
+        function populateInStoreCustomers() {
+            const customerList = document.getElementById('in-store-customer-list');
+            customerList.innerHTML = '';
+
+            const activeCustomers = customers.filter(c => !c.leaving);
+
+            if (activeCustomers.length === 0) {
+                customerList.innerHTML = `<p class="text-center p-4">No customers in the shop.</p>`;
+                return;
             }
+
+            activeCustomers.forEach(customer => {
+                const customerDiv = document.createElement('div');
+                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 cursor-pointer hover:bg-amber-200/50 transition-colors';
+                customerDiv.dataset.customerId = customer.id;
+
+                let status = '';
+                if (customer.waitTimer > 60) {
+                    status = `<span class="font-bold text-yellow-600 animate-pulse">Needs Attention!</span>`;
+                } else if (customer.state === 'waitingAtCounter') {
+                    status = `<span class="font-bold text-green-600">Ready to Checkout</span>`;
+                } else {
+                    status = `<span class="text-gray-500">${customer.state}</span>`;
+                }
+
+                customerDiv.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="font-bold text-lg">${customer.name}</div>
+                        <div>${status}</div>
+                    </div>
+                    <div class="text-sm">Wait Time: ${Math.round(customer.waitTimer)}s</div>
+                `;
+
+                customerDiv.addEventListener('click', () => {
+                    const targetCustomer = customers.find(c => c.id === customer.id);
+                    if (targetCustomer) {
+                        player.targetX = targetCustomer.x;
+                        player.targetY = targetCustomer.y + 20; // Target slightly below for better pathing
+                        togglePanel('clipboard', false);
+                    }
+                });
+                customerList.appendChild(customerDiv);
+            });
+        }
+
+        function showCustomersOnClipboard() {
+            document.getElementById('clipboard-title').textContent = 'Customers';
+            document.getElementById('clipboard-shelves-content').classList.add('hidden');
+            document.getElementById('clipboard-employees-content').classList.add('hidden');
+            document.getElementById('clipboard-customers-content').classList.remove('hidden');
+            document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-customers').classList.remove('bg-opacity-50');
+
+            const inStoreBtn = document.getElementById('in-store-customers-btn');
+            const allBtn = document.getElementById('all-customers-btn');
+            const inStoreList = document.getElementById('in-store-customer-list');
+            const allList = document.getElementById('all-customer-list');
+
+            function showInStore() {
+                inStoreList.classList.remove('hidden');
+                allList.classList.add('hidden');
+                inStoreBtn.classList.remove('bg-opacity-50');
+                allBtn.classList.add('bg-opacity-50');
+                populateInStoreCustomers();
+            }
+
+            function showAll() {
+                inStoreList.classList.add('hidden');
+                allList.classList.remove('hidden');
+                allList.classList.add('flex'); // Make it a flex container
+                inStoreBtn.classList.add('bg-opacity-50');
+                allBtn.classList.remove('bg-opacity-50');
+                populateAllCustomers();
+            }
+
+            inStoreBtn.onclick = showInStore;
+            allBtn.onclick = showAll;
+
+            // Default to showing in-store customers
+            showInStore();
         }
 
         function showEmployeesOnClipboard() {

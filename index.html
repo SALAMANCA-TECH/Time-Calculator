@@ -111,8 +111,7 @@
               <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
                  Points: <span id="shop-points-display">0</span>
              </div>
-             <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl">Start Day</button>
-             <button id="next-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">End Day</button>
+             <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">Start Day</button>
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
         </div>
 
@@ -2558,6 +2557,10 @@
                 dayTimer = OPEN_DURATION + CLOSING_DURATION;
                 dayPhase = 'open'; // Manually update phase
                 spawnFloatingText('Opening Skipped!', canvas.width / 2, 120, '#facc15');
+            } else if (dayPhase === 'open') {
+                dayTimer = CLOSING_DURATION;
+                dayPhase = 'closing'; // Manually update phase
+                spawnFloatingText('Day Ended Early!', canvas.width / 2, 120, '#22c55e');
             } else if (dayPhase === 'closing') {
                 dayTimer = 1; // Set to 1ms to trigger nextDay() on the next frame
                 spawnFloatingText('Closing Skipped!', canvas.width / 2, 120, '#ef4444');
@@ -2816,8 +2819,6 @@
             cash -= dailyExpenses;
             customers.forEach(c => c.state = 'leaving');
             timeSinceLastCustomer = 0;
-            document.getElementById('start-day-btn').classList.remove('hidden');
-            document.getElementById('next-day-btn').classList.add('hidden');
             if (cash < 0) {
                 updateUI();
                 endGame();
@@ -2891,9 +2892,7 @@
                 saveGame();
                 reportPanel.classList.add('hidden');
                 dailySalesReport = [];
-                if (continuousMode) {
-                    document.getElementById('start-day-btn').click();
-                }
+                document.getElementById('start-day-btn').click();
             };
         }
 
@@ -3147,6 +3146,12 @@
             // If no specific object was clicked, set the player's target destination.
             player.targetX = worldX;
             player.targetY = worldY;
+
+            // If it's the very first day and it hasn't started, the first click starts it.
+            if (day === 1 && !dayStarted) {
+                document.getElementById('start-day-btn').click();
+                spawnFloatingText("Day 1 has begun!", canvas.width / 2, 120, '#22c55e');
+            }
         }
 
         function handleInteraction() {
@@ -4172,10 +4177,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 if (!salesperson.task) salesperson.state = 'idle';
             });
 
-            document.getElementById('next-day-btn').addEventListener('click', () => {
-                if(!dayStarted) return;
-                dayTimer = 1; // Set to 1ms to trigger nextDay() on the next frame
-            });
 
             document.getElementById('place-order-btn').addEventListener('click', placeOrder);
             document.getElementById('settings-btn').addEventListener('click', () => togglePanel('settings', true));

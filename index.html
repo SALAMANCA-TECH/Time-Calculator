@@ -310,6 +310,9 @@
                     <div id="sales-report-list" class="h-64 overflow-y-auto space-y-3 p-2 bg-white/30 rounded-md border">
                         <!-- Report items will be populated here -->
                     </div>
+                    <div id="report-summary-extra" class="mt-2 text-sm">
+                        <!-- Extra summary stats will be populated here -->
+                    </div>
                 </div>
             </div>
             <div class="text-center mt-6">
@@ -377,58 +380,58 @@
 
         let customerProfiles = {
             'artist': {
-                "Leo": { "request": "I need some basic supplies for my life drawing class.", "requestedItems": ["Pencil", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Kara": { "request": "I want to try some charcoal drawings. Got any?", "requestedItems": ["Charcoal"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Benny": { "request": "My markers have all dried out! I need a new set.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Vince": { "request": "I'm teaching a class, I need a bulk order of sketchbooks.", "requestedItems": ["Sketchbook", "Sketchbook", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Arturo": { "request": "Just a pencil for now, maybe a sketchbook if I feel inspired.", "requestedItems": ["Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Penelope": { "request": "I need a good set of colored markers for a commission piece.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Chuck": { "request": "Do you have any fine-tipped charcoal pencils?", "requestedItems": ["Charcoal", "Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+                "Leo": { "request": "I need some basic supplies for my life drawing class.", "requestedItems": ["Pencil", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Kara": { "request": "I want to try some charcoal drawings. Got any?", "requestedItems": ["Charcoal"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Benny": { "request": "My markers have all dried out! I need a new set.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Vince": { "request": "I'm teaching a class, I need a bulk order of sketchbooks.", "requestedItems": ["Sketchbook", "Sketchbook", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Arturo": { "request": "Just a pencil for now, maybe a sketchbook if I feel inspired.", "requestedItems": ["Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Penelope": { "request": "I need a good set of colored markers for a commission piece.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Chuck": { "request": "Do you have any fine-tipped charcoal pencils?", "requestedItems": ["Charcoal", "Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
             },
             'painter': {
-                "Frida": { "request": "I'm starting a new self-portrait. I'll need acrylics and a canvas.", "requestedItems": ["Acrylics", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Claude": { "request": "Just need some water colors for some light studies.", "requestedItems": ["Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Georgia": { "request": "I'm working on a large piece. I need oil paints.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Bob": { "request": "Time to paint some happy little trees. Need some oils.", "requestedItems": ["Oils"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Rembrandt": { "request": "I require the finest acrylics for my next masterpiece.", "requestedItems": ["Acrylics"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Sonia": { "request": "A small canvas and some water colors, please.", "requestedItems": ["Canvas", "Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "JMW": { "request": "I'm feeling dramatic. Give me your most vibrant oils and a large canvas.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+                "Frida": { "request": "I'm starting a new self-portrait. I'll need acrylics and a canvas.", "requestedItems": ["Acrylics", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Claude": { "request": "Just need some water colors for some light studies.", "requestedItems": ["Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Georgia": { "request": "I'm working on a large piece. I need oil paints.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Bob": { "request": "Time to paint some happy little trees. Need some oils.", "requestedItems": ["Oils"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Rembrandt": { "request": "I require the finest acrylics for my next masterpiece.", "requestedItems": ["Acrylics"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Sonia": { "request": "A small canvas and some water colors, please.", "requestedItems": ["Canvas", "Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "JMW": { "request": "I'm feeling dramatic. Give me your most vibrant oils and a large canvas.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
             },
             'hobbyist': {
-                "Wally": { "request": "I'm building a new model ship. I need glue and some razors for the small parts.", "requestedItems": ["Glue", "Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Gundam Guy": { "request": "I need to paint my latest creation. Got any mini paints?", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Tanya": { "request": "I'm ready to start a new project. A model kit, please!", "requestedItems": ["Model Kits"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Duncan": { "request": "Two thin coats of mini paints are all I need.", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Rick": { "request": "I need razors to... uh... 'customize' my models. Yeah, that's it.", "requestedItems": ["Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Mini Martha": { "request": "A little glue can fix anything!", "requestedItems": ["Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Captain Kit": { "request": "I'm on the hunt for a new model kit to assemble.", "requestedItems": ["Model Kits", "Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+                "Wally": { "request": "I'm building a new model ship. I need glue and some razors for the small parts.", "requestedItems": ["Glue", "Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Gundam Guy": { "request": "I need to paint my latest creation. Got any mini paints?", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Tanya": { "request": "I'm ready to start a new project. A model kit, please!", "requestedItems": ["Model Kits"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Duncan": { "request": "Two thin coats of mini paints are all I need.", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Rick": { "request": "I need razors to... uh... 'customize' my models. Yeah, that's it.", "requestedItems": ["Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Mini Martha": { "request": "A little glue can fix anything!", "requestedItems": ["Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Captain Kit": { "request": "I'm on the hunt for a new model kit to assemble.", "requestedItems": ["Model Kits", "Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
             },
             'woodworker': {
-                "Ron": { "request": "I need to finish a chair. Some sanding paper and stainer should do it.", "requestedItems": ["Sanding Paper", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Tammy": { "request": "I'm just starting out. Do you have any wood scraps I can practice on?", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "April": { "request": "I'm building a large table and need some lumber.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Nick": { "request": "I need some quality lumber for a custom piece.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Pat": { "request": "Just some sanding paper to smooth things over.", "requestedItems": ["Sanding Paper"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Woody": { "request": "Got any interesting wood scraps? I like a challenge.", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Cheryl": { "request": "I'm staining a deck. I'll need a lot of stainer.", "requestedItems": ["Stainer", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+                "Ron": { "request": "I need to finish a chair. Some sanding paper and stainer should do it.", "requestedItems": ["Sanding Paper", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Tammy": { "request": "I'm just starting out. Do you have any wood scraps I can practice on?", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "April": { "request": "I'm building a large table and need some lumber.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Nick": { "request": "I need some quality lumber for a custom piece.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Pat": { "request": "Just some sanding paper to smooth things over.", "requestedItems": ["Sanding Paper"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Woody": { "request": "Got any interesting wood scraps? I like a challenge.", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Cheryl": { "request": "I'm staining a deck. I'll need a lot of stainer.", "requestedItems": ["Stainer", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
             },
             'sculptor': {
-                "Michelangelo": { "request": "I have a vision! I require clay to bring it to life.", "requestedItems": ["Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Auguste": { "request": "I need to paint a ceramic piece. Do you have pottery paints?", "requestedItems": ["Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Donatello": { "request": "I am ready to work with a harder medium. A block of stone, please.", "requestedItems": ["Stone", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Henry": { "request": "I'm thinking... bigger. A block of marble.", "requestedItems": ["Marble"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Camille": { "request": "I need clay, and perhaps some pottery paints for the details.", "requestedItems": ["Clay", "Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Constantin": { "request": "Just a simple block of stone today.", "requestedItems": ["Stone"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Barbara": { "request": "I'm making a set of mugs. Clay and pottery paints, please.", "requestedItems": ["Clay", "Pottery Paints", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+                "Michelangelo": { "request": "I have a vision! I require clay to bring it to life.", "requestedItems": ["Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Auguste": { "request": "I need to paint a ceramic piece. Do you have pottery paints?", "requestedItems": ["Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Donatello": { "request": "I am ready to work with a harder medium. A block of stone, please.", "requestedItems": ["Stone", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Henry": { "request": "I'm thinking... bigger. A block of marble.", "requestedItems": ["Marble"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Camille": { "request": "I need clay, and perhaps some pottery paints for the details.", "requestedItems": ["Clay", "Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Constantin": { "request": "Just a simple block of stone today.", "requestedItems": ["Stone"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Barbara": { "request": "I'm making a set of mugs. Clay and pottery paints, please.", "requestedItems": ["Clay", "Pottery Paints", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
             },
             'architect': {
-                "Frank": { "request": "I'm drafting a new building. I need vellum and some fresh pencil lead.", "requestedItems": ["Vellum", "Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Zaha": { "request": "I need to make a model for a presentation. Do you sell tiny trees?", "requestedItems": ["Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Chris": { "request": "I'm working on some final designs and need some high-quality markers.", "requestedItems": ["Fancy Markers", "Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Renzo": { "request": "I've run out of pencil lead again.", "requestedItems": ["Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Tadao": { "request": "I require vellum for some concrete plans.", "requestedItems": ["Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Maya": { "request": "I'm designing a park. I'll take all the tiny trees you have.", "requestedItems": ["Tiny Trees", "Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
-                "Norman": { "request": "A set of your fanciest markers, if you please.", "requestedItems": ["Fancy Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
+                "Frank": { "request": "I'm drafting a new building. I need vellum and some fresh pencil lead.", "requestedItems": ["Vellum", "Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Zaha": { "request": "I need to make a model for a presentation. Do you sell tiny trees?", "requestedItems": ["Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Chris": { "request": "I'm working on some final designs and need some high-quality markers.", "requestedItems": ["Fancy Markers", "Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Renzo": { "request": "I've run out of pencil lead again.", "requestedItems": ["Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Tadao": { "request": "I require vellum for some concrete plans.", "requestedItems": ["Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Maya": { "request": "I'm designing a park. I'll take all the tiny trees you have.", "requestedItems": ["Tiny Trees", "Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
+                "Norman": { "request": "A set of your fanciest markers, if you please.", "requestedItems": ["Fancy Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
             }
         };
 
@@ -754,7 +757,8 @@
 
                 ctx.font = '20px "Indie Flower", cursive';
                 ctx.textAlign = 'center';
-                ctx.fillText(this.name, this.x, this.y - this.frameHeight);
+                const displayName = this.profile.isStarred ? `⭐ ${this.name}` : this.name;
+                ctx.fillText(displayName, this.x, this.y - this.frameHeight);
             }
 
             findNextItemTarget() {
@@ -2079,6 +2083,24 @@
             switch (salesperson.state) {
                 case 'idle':
                     if (salesperson.stateTimer <= 0) {
+                        // --- PRIORITY 1: Help Starred Customers ---
+                        const starredCustomer = customers.find(c => c.profile.isStarred && (c.behaviorType === 'needsInteraction' && !c.isInteractedWith || c.behaviorType === 'needsAssistance' && !c.needsAssistanceFulfilled) && !c.leaving);
+                        if (starredCustomer) {
+                            if (starredCustomer.behaviorType === 'needsInteraction') {
+                                salesperson.state = 'goingToInteract';
+                                salesperson.task = { customer: starredCustomer, target: { x: starredCustomer.x + 50, y: starredCustomer.y } };
+                            } else { // needsAssistance
+                                salesperson.state = 'assistingCustomer';
+                                salesperson.task = {
+                                    customer: starredCustomer,
+                                    currentItemIndex: 0,
+                                    missingItems: []
+                                };
+                            }
+                            return;
+                        }
+
+                        // --- Original Logic ---
                         const customerToAssist = customers.find(c => c.behaviorType === 'needsAssistance' && !c.needsAssistanceFulfilled && !c.leaving);
                         if (customerToAssist) {
                             salesperson.state = 'assistingCustomer';
@@ -2694,12 +2716,23 @@
         }
 
         function logCustomerToSalesReport(customer) {
+            // Find the customer's profile to get the type key for starring
+            let customerTypeKey = null;
+            for (const typeKey in customerProfiles) {
+                if (customerProfiles[typeKey][customer.name]) {
+                    customerTypeKey = typeKey;
+                    break;
+                }
+            }
+
             dailySalesReport.push({
                 name: customer.name,
+                typeKey: customerTypeKey,
                 requestedItems: customer.requestedItems,
-                purchasedItems: customer.order,
+                purchasedItems: [...customer.order],
                 waitTime: Math.round(customer.waitTimer),
-                patienceChange: customer.profile.patience - customer.initialPatience
+                patienceChange: customer.profile.patience - customer.initialPatience,
+                discount: customer.discount
             });
         }
 
@@ -2808,30 +2841,61 @@
             reportList.innerHTML = ''; // Clear previous report
 
             let grossSales = 0;
+            const salesTally = {};
+            const missedTally = {};
+
             dailySalesReport.forEach(report => {
                 const reportDiv = document.createElement('div');
                 reportDiv.className = 'text-sm p-2 border-b border-amber-800/20';
 
                 const patienceColor = report.patienceChange < 0 ? 'text-red-600' : 'text-green-600';
-                const patienceSign = report.patienceChange > 0 ? '+' : '';
+                const patienceSign = report.patienceChange >= 0 ? '+' : '';
 
-                let purchaseSummary = 'None';
+                let purchaseSummary = '<span class="text-red-600 font-bold">Left without buying</span>';
                 if (report.purchasedItems.length > 0) {
                     const itemCosts = report.purchasedItems.map(item => items[item].cost);
                     const totalCost = itemCosts.reduce((a, b) => a + b, 0);
-                    const salePrice = Math.ceil(totalCost * 1.5); // Note: this doesn't account for discounts in the report, which is a minor simplification.
+                    let salePrice = Math.ceil(totalCost * 1.5);
+                    if (report.discount > 0) {
+                        salePrice = Math.ceil(salePrice * (1 - report.discount));
+                    }
                     grossSales += salePrice;
                     purchaseSummary = `${report.purchasedItems.join(', ')} ($${salePrice})`;
+                    if(report.discount > 0) {
+                        purchaseSummary += ` <span class="text-red-600 font-bold">(${report.discount * 100}% off)</span>`;
+                    }
+                    report.purchasedItems.forEach(item => salesTally[item] = (salesTally[item] || 0) + 1);
                 }
 
+                const missedItems = report.requestedItems.filter(item => !report.purchasedItems.includes(item));
+                missedItems.forEach(item => missedTally[item] = (missedTally[item] || 0) + 1);
+
+                const starButtonId = `star-btn-${report.name.replace(/\s+/g, '-')}`;
                 reportDiv.innerHTML = `
-                    <div class="font-bold">${report.name}</div>
+                    <div class="font-bold flex justify-between items-center">${report.name} <button id="${starButtonId}" class="text-2xl">${customerProfiles[report.typeKey][report.name].isStarred ? '⭐' : '☆'}</button></div>
                     <div>Purchased: <span class="font-handwritten">${purchaseSummary}</span></div>
                     <div>Intended: <span class="font-handwritten">${report.requestedItems.join(', ')}</span></div>
                     <div>Wait Time: <span class="font-handwritten">${report.waitTime}s</span> | Patience: <span class="font-handwritten ${patienceColor}">${patienceSign}${report.patienceChange}</span></div>
                 `;
                 reportList.appendChild(reportDiv);
+
+                document.getElementById(starButtonId).addEventListener('click', (e) => {
+                    const profile = customerProfiles[report.typeKey][report.name];
+                    profile.isStarred = !profile.isStarred;
+                    e.target.textContent = profile.isStarred ? '⭐' : '☆';
+                    saveGame();
+                });
             });
+
+            const topSeller = Object.keys(salesTally).length ? Object.entries(salesTally).sort((a,b) => b[1] - a[1])[0][0] : 'None';
+            const topMiss = Object.keys(missedTally).length ? Object.entries(missedTally).sort((a,b) => b[1] - a[1])[0][0] : 'None';
+
+            // Add summary stats to the new container in the right panel
+            const extraSummaryDiv = document.getElementById('report-summary-extra');
+            extraSummaryDiv.innerHTML = `
+                <p class="border-t border-amber-800/30 pt-2 mt-2">Top Seller: <span class="font-bold">${topSeller}</span></p>
+                <p>Most Missed: <span class="font-bold">${topMiss}</span></p>
+            `;
 
             document.getElementById('report-day').textContent = day - 1;
             document.getElementById('report-sales').textContent = `$${grossSales}`;
@@ -3331,7 +3395,6 @@
                     if (targetCustomer) {
                         player.targetX = targetCustomer.x;
                         player.targetY = targetCustomer.y + 20; // Target slightly below for better pathing
-                        togglePanel('clipboard', false);
                     }
                 });
                 customerList.appendChild(customerDiv);

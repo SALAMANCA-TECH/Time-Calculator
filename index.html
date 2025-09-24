@@ -238,6 +238,15 @@
             </div>
         </div>
 
+        <!-- Clipboard Panel -->
+        <div id="clipboard-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-clipboard" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Shelf Assignments</h2>
+            <div id="clipboard-grid" class="grid grid-cols-2 gap-4">
+                <!-- Shelf buttons will be populated here -->
+            </div>
+        </div>
+
 
     </div>
 
@@ -378,7 +387,6 @@
         let lastTimestamp = 0;
         let running = true;
         let dayStarted = false;
-        let shelfAssignmentMode = false;
         let developerMode = false;
         let continuousMode = false;
 
@@ -1012,11 +1020,6 @@
             drawClipboard(clipboard.x, clipboard.y, clipboard.width, clipboard.height);
             drawLockIcon(lockIcon.x, lockIcon.y, lockIcon.width, lockIcon.height);
 
-            if (shelfAssignmentMode) {
-                ctx.strokeStyle = '#facc15'; // Bright yellow
-                ctx.lineWidth = 3;
-                ctx.strokeRect(clipboard.x - 5, clipboard.y - 5, clipboard.width + 10, clipboard.height + 10);
-            }
 
             if (player.basket.length > 0) {
                 const count = player.basket.length;
@@ -2686,7 +2689,7 @@
                  if (x >= cashRegister.x && x <= cashRegister.x + cashRegister.width && y >= cashRegister.y && y <= cashRegister.y + cashRegister.height) { togglePanel('restock'); }
                  else if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { togglePanel('basket'); }
                  else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) {
-                    toggleShelfAssignmentMode();
+                    openClipboardPanel();
                  }
                  else if (x >= lockIcon.x && x <= lockIcon.x + lockIcon.width && y >= lockIcon.y && y <= lockIcon.y + lockIcon.height) {
                     openUnlocksPanel();
@@ -2729,13 +2732,7 @@
             const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
             if (clickedShelf) {
                 if (Math.hypot(player.x - (clickedShelf.rect.x + clickedShelf.rect.w/2), player.y - (clickedShelf.rect.y + clickedShelf.rect.h/2)) < 150) {
-                     if (shelfAssignmentMode) {
-                         const slotHeight = (clickedShelf.rect.h - 10) / 4;
-                         const slotIndex = Math.floor((worldY - (clickedShelf.rect.y + 10)) / slotHeight);
-                         openAssignmentPanel(clickedShelf, slotIndex);
-                     } else {
-                         openShelfPanel(clickedShelf);
-                     }
+                    openShelfPanel(clickedShelf);
                     return;
                 }
             }
@@ -2826,10 +2823,60 @@
             }
         }
 
-        function toggleShelfAssignmentMode() {
-            shelfAssignmentMode = !shelfAssignmentMode;
-            showMessage("Shelf Assignment Mode: " + (shelfAssignmentMode ? "ON" : "OFF"));
+        function openClipboardPanel() {
+            const clipboardGrid = document.getElementById('clipboard-grid');
+            clipboardGrid.innerHTML = ''; // Clear existing buttons
+
+            shelves.forEach((shelf, index) => {
+                if (unlocks.shelves[index]) {
+                    const shelfButton = document.createElement('button');
+                    shelfButton.className = 'btn-style p-4';
+                    shelfButton.textContent = `Shelf ${index + 1}`;
+                    shelfButton.onclick = () => {
+                        showShelfSlotsForAssignment(shelf);
+                    };
+                    clipboardGrid.appendChild(shelfButton);
+                }
+            });
+
+            togglePanel('clipboard', true);
         }
+
+        function showShelfSlotsForAssignment(shelf) {
+            const clipboardGrid = document.getElementById('clipboard-grid');
+            const clipboardTitle = document.querySelector('#clipboard-panel h2');
+            clipboardGrid.innerHTML = ''; // Clear shelf buttons
+            clipboardTitle.textContent = `Assign to Shelf ${shelves.indexOf(shelf) + 1}`;
+
+            // Add a back button
+            const backButton = document.createElement('button');
+            backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600 col-span-2';
+            backButton.textContent = '← Back to Shelves';
+            backButton.onclick = () => {
+                clipboardTitle.textContent = 'Shelf Assignments';
+                openClipboardPanel();
+            };
+            clipboardGrid.appendChild(backButton);
+
+            for (let i = 0; i < 4; i++) {
+                const slot = shelf.items[i];
+                const slotButton = document.createElement('button');
+                slotButton.className = 'btn-style p-4';
+                let buttonText = `Slot ${i + 1}`;
+                if (slot.assignedItem) {
+                    buttonText += ` (${slot.assignedItem.substring(0,8)})`;
+                } else {
+                    buttonText += ` (Empty)`;
+                }
+                slotButton.textContent = buttonText;
+                slotButton.onclick = () => {
+                    openProductAssignmentForShelf(shelf, i);
+                };
+                clipboardGrid.appendChild(slotButton);
+            }
+        }
+
+
 
         function takeItemFromPackage(packageIndex) {
             if (player.basket.length >= MAX_BASKET_SIZE) {
@@ -3118,24 +3165,51 @@
             togglePanel('storage', true);
         }
 
-        function openAssignmentPanel(shelf, slotIndex) {
+function openProductAssignmentForShelf(shelf, slotIndex) {
             const assignmentGrid = document.getElementById('assignment-grid');
+            const assignmentTitle = document.getElementById('assignment-title');
             assignmentGrid.innerHTML = '';
+            assignmentTitle.textContent = `Assign to Shelf ${shelves.indexOf(shelf) + 1} - Slot ${slotIndex + 1}`;
 
             const currentSlot = shelf.items[slotIndex];
 
-            // Add clear button if an item is assigned
+            const backButton = document.createElement('button');
+            backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
+            backButton.textContent = '← Back';
+            backButton.onclick = () => {
+                togglePanel('assignment', false);
+                togglePanel('clipboard', true);
+                showShelfSlotsForAssignment(shelf);
+            };
+            assignmentGrid.appendChild(backButton);
+
             const clearButton = document.createElement('button');
             clearButton.className = 'btn-style bg-red-700/80 hover:bg-red-600';
-            clearButton.textContent = 'Clear Assignment';
-            if (currentSlot.quantity > 0) {
-                clearButton.disabled = true;
-                clearButton.title = 'Empty the slot before clearing the assignment.';
-            }
+            clearButton.textContent = 'Clear';
             clearButton.onclick = () => {
+                const itemToMove = currentSlot.assignedItem;
+                const quantityToMove = currentSlot.quantity;
+
+                if (quantityToMove > 0 && itemToMove) {
+                    const storageCell = storageCells.find(c => c.allowedItems.includes(itemToMove));
+                    if (!storageCell) {
+                        showMessage(`Error: No storage cell for ${itemToMove}. Cannot move items.`);
+                        return;
+                    }
+                    const currentFill = Object.values(storageCell.items).reduce((a, b) => a + b, 0);
+                    if (currentFill + quantityToMove > storageCell.capacity) {
+                        showMessage(`Not enough room in ${storageCell.label} storage to move ${quantityToMove} items.`);
+                        return;
+                    }
+                    storageCell.items[itemToMove] = (storageCell.items[itemToMove] || 0) + quantityToMove;
+                }
+
                 currentSlot.assignedItem = null;
+                currentSlot.quantity = 0;
                 saveGame();
                 togglePanel('assignment', false);
+                togglePanel('clipboard', true);
+                showShelfSlotsForAssignment(shelf);
             };
             assignmentGrid.appendChild(clearButton);
 
@@ -3145,16 +3219,39 @@
                 button.textContent = itemName;
                 button.dataset.item = itemName;
                 button.onclick = () => {
-                    if (currentSlot.quantity > 0 && currentSlot.assignedItem !== itemName) {
-                        showMessage("You must empty the slot before assigning a new item.");
+                    const oldItem = currentSlot.assignedItem;
+                    const oldQuantity = currentSlot.quantity;
+                    const newItem = itemName;
+
+                    if (oldItem === newItem) {
+                        togglePanel('assignment', false);
                         return;
                     }
-                    currentSlot.assignedItem = itemName;
+
+                    if (oldQuantity > 0 && oldItem) {
+                        const storageCell = storageCells.find(c => c.allowedItems.includes(oldItem));
+                        if (!storageCell) {
+                            showMessage(`Error: No storage cell for ${oldItem}. Cannot move items.`);
+                            return;
+                        }
+                        const currentFill = Object.values(storageCell.items).reduce((a, b) => a + b, 0);
+                        if (currentFill + oldQuantity > storageCell.capacity) {
+                            showMessage(`Not enough room in ${storageCell.label} storage to move ${oldQuantity} ${oldItem}.`);
+                            return;
+                        }
+                        storageCell.items[oldItem] = (storageCell.items[oldItem] || 0) + oldQuantity;
+                        currentSlot.quantity = 0;
+                    }
+
+                    currentSlot.assignedItem = newItem;
                     saveGame();
                     togglePanel('assignment', false);
+                    togglePanel('clipboard', true);
+                    showShelfSlotsForAssignment(shelf);
                 };
                 assignmentGrid.appendChild(button);
             }
+            togglePanel('clipboard', false);
             togglePanel('assignment', true);
         }
 
@@ -3351,7 +3448,7 @@
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
             // Setup close buttons for all panels
-            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings'].forEach(panelName => {
+            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'clipboard'].forEach(panelName => {
                 document.getElementById(`close-${panelName}`).addEventListener('click', () => togglePanel(panelName, false));
             });
 

@@ -621,6 +621,7 @@
             playerInitiatedBreak: false,
             canOrder: true,
             lastOrderQuarter: -1,
+                hasPlacedMorningOrder: false,
         };
 
         const salesperson = {
@@ -2051,6 +2052,23 @@
             return total;
         }
 
+        function getBackroomStock(itemName) {
+            let total = 0;
+            // Check storage cells
+            storageCells.forEach(cell => {
+                if (cell.items && cell.items[itemName]) {
+                    total += cell.items[itemName];
+                }
+            });
+            // Check loading dock packages
+            loadingDockPackages.forEach(pkg => {
+                if (pkg.itemName === itemName) {
+                    total += pkg.quantity;
+                }
+            });
+            return total;
+        }
+
         function updateManager(deltaTime) {
              if (!unlocks.employees.manager) return;
 
@@ -2078,25 +2096,75 @@
             switch(manager.state) {
                 case 'idle':
                     if (manager.stateTimer <= 0) {
-                        let urgentOrderItem = null;
-                        let requiredQuantity = 0;
+                        // --- Morning Prep Logic ---
+                        if (dayPhase === 'opening' && manager.canOrder && !manager.hasPlacedMorningOrder) {
+                            const shelfDemand = {};
+                            const shelfStock = {};
+                            shelves.forEach(shelf => {
+                                shelf.items.forEach(slot => {
+                                    if (slot.assignedItem) {
+                                        const itemName = slot.assignedItem;
+                                        shelfDemand[itemName] = (shelfDemand[itemName] || 0) + MAX_SHELF_STACK;
+                                        shelfStock[itemName] = (shelfStock[itemName] || 0) + slot.quantity;
+                                    }
+                                });
+                            });
 
-                        // Check for customers waiting for out-of-stock items
-                        const waitingCustomers = customers.filter(c => c.isWaitingForRestock);
-                        if (waitingCustomers.length > 0) {
-                            const customerDemands = {};
-
-                            for (const customer of waitingCustomers) {
-                                const waitingOnItem = customer.requestedItems[customer.currentItemIndex];
-                                if (waitingOnItem && getTotalStock(waitingOnItem) === 0) {
-                                     const isItemUnlocked = storageCells.some(cell => unlocks.storage[storageCells.indexOf(cell)] && cell.allowedItems.includes(waitingOnItem));
-                                     if (isItemUnlocked) {
-                                         customerDemands[waitingOnItem] = (customerDemands[waitingOnItem] || 0) + 1;
-                                     }
+                            const shoppingList = [];
+                            for (const itemName in shelfDemand) {
+                                const neededToFillShelves = shelfDemand[itemName] - shelfStock[itemName];
+                                const backroomStock = getBackroomStock(itemName);
+                                const neededFromSupplier = neededToFillShelves - backroomStock;
+                                if (neededFromSupplier > 0) {
+                                    shoppingList.push({ itemName, quantity: neededFromSupplier });
                                 }
                             }
 
-                            // Find the most demanded item
+                            if (shoppingList.length > 0) {
+                                shoppingList.sort((a, b) => (itemPopularity[b.itemName] || 0) - (itemPopularity[a.itemName] || 0));
+                                const finalOrderList = [];
+                                let totalCost = 0;
+                                const availableCash = cash - 30;
+
+                                for (const orderItem of shoppingList) {
+                                    const itemCost = parseFloat((items[orderItem.itemName].cost * 0.75).toFixed(2)) * orderItem.quantity;
+                                    if (totalCost + itemCost <= availableCash) {
+                                        totalCost += itemCost;
+                                        finalOrderList.push(orderItem);
+                                    }
+                                }
+
+                                if (finalOrderList.length > 0) {
+                                    manager.task = {
+                                        action: 'order_bulk',
+                                        items: finalOrderList,
+                                        totalCost: totalCost,
+                                        target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                                    };
+                                    manager.state = 'going_to_office';
+                                    manager.hasPlacedMorningOrder = true;
+                                    manager.canOrder = false;
+                                    manager.lastOrderQuarter = 0;
+                                    break; // Exit switch case to process new state
+                                }
+                            }
+                        }
+
+                        // --- Urgent Order Logic (Any Time) ---
+                        let urgentOrderItem = null;
+                        let requiredQuantity = 0;
+                        const waitingCustomers = customers.filter(c => c.isWaitingForRestock);
+                        if (waitingCustomers.length > 0) {
+                            const customerDemands = {};
+                            for (const customer of waitingCustomers) {
+                                const waitingOnItem = customer.requestedItems[customer.currentItemIndex];
+                                if (waitingOnItem && getTotalStock(waitingOnItem) === 0) {
+                                    const isItemUnlocked = storageCells.some(cell => unlocks.storage[storageCells.indexOf(cell)] && cell.allowedItems.includes(waitingOnItem));
+                                    if (isItemUnlocked) {
+                                        customerDemands[waitingOnItem] = (customerDemands[waitingOnItem] || 0) + 1;
+                                    }
+                                }
+                            }
                             let maxDemand = 0;
                             for (const item in customerDemands) {
                                 if (customerDemands[item] > maxDemand) {
@@ -2112,18 +2180,16 @@
                                 action: 'order',
                                 item: urgentOrderItem,
                                 isUrgent: true,
-                                requiredQuantity: requiredQuantity, // Pass the dynamic quantity
+                                requiredQuantity: requiredQuantity,
                                 target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
                             };
                             manager.state = 'going_to_office';
-                            manager.stateTimer = 1000; // Reset timer
-                            break; // Exit the switch case
+                            manager.stateTimer = 1000;
+                            break;
                         }
 
-
-                        // 3. Original low-stock check (periodic)
-                        if (manager.canOrder && (dayPhase === 'opening' || dayPhase === 'closing')) {
-                            // Find all low-stock items and sort them by popularity
+                        // --- Evening Low-Stock Check ---
+                        if (manager.canOrder && dayPhase === 'closing') {
                             const lowStockItems = Object.keys(items).filter(item => {
                                 const stock = getTotalStock(item);
                                 return stock < 5;
@@ -2132,11 +2198,10 @@
                             if (lowStockItems.length > 0) {
                                 lowStockItems.sort((a, b) => (itemPopularity[b] || 0) - (itemPopularity[a] || 0));
                                 const mostPopularLowItem = lowStockItems[0];
-
                                 manager.task = {
                                     action: 'order',
                                     item: mostPopularLowItem,
-                                    isUrgent: false, // Not urgent
+                                    isUrgent: false,
                                     target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
                                 };
                                 manager.state = 'going_to_office';
@@ -2149,7 +2214,7 @@
                                  }
                             }
                         } else {
-                             manager.stateTimer = 5000; // If can't place periodic order, wait before checking again
+                             manager.stateTimer = 5000;
                         }
                     }
 
@@ -2166,36 +2231,51 @@
                 case 'ordering':
                     if(manager.stateTimer <= 0) {
                         const orderTask = manager.task;
-                        const itemToOrder = orderTask.item;
-                        const quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 10;
-                        const restockPrice = parseFloat((items[itemToOrder].cost * 0.75).toFixed(2));
-                        const totalCost = restockPrice * quantityToOrder;
 
-                        if (cash - totalCost < 30) {
-                            spawnFloatingText(`Can't afford ${itemToOrder}!`, manager.x, manager.y - 90, '#ef4444');
-                            manager.state = 'idle';
-                            manager.stateTimer = 15000; // Wait longer before trying again
-                            manager.task = { target: {x: manager.idleX, y: manager.idleY} };
-                            break;
+                        if (orderTask.action === 'order_bulk') {
+                            cash -= orderTask.totalCost;
+                            updateUI();
+                            orderTask.items.forEach(orderItem => {
+                                let remainingQuantity = orderItem.quantity;
+                                while (remainingQuantity > 0) {
+                                    const quantityForPackage = Math.min(remainingQuantity, MAX_PACKAGE_SIZE);
+                                    loadingDockPackages.push({ itemName: orderItem.itemName, quantity: quantityForPackage });
+                                    remainingQuantity -= quantityForPackage;
+                                }
+                            });
+                            spawnFloatingText(`Bulk Order Placed! (-$${orderTask.totalCost.toFixed(2)})`, manager.x, manager.y - 90, '#3b82f6');
+                        } else {
+                            // Single item order logic
+                            const itemToOrder = orderTask.item;
+                            const quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 10;
+                            const restockPrice = parseFloat((items[itemToOrder].cost * 0.75).toFixed(2));
+                            const totalCost = restockPrice * quantityToOrder;
+
+                            if (cash - totalCost < 30) {
+                                spawnFloatingText(`Can't afford ${itemToOrder}!`, manager.x, manager.y - 90, '#ef4444');
+                                manager.state = 'idle';
+                                manager.stateTimer = 15000; // Wait longer before trying again
+                                manager.task = { target: {x: manager.idleX, y: manager.idleY} };
+                                break;
+                            }
+
+                            cash -= totalCost;
+                            updateUI();
+
+                            let remainingQuantity = quantityToOrder;
+                            while (remainingQuantity > 0) {
+                                const quantityForPackage = Math.min(remainingQuantity, MAX_PACKAGE_SIZE);
+                                loadingDockPackages.push({itemName: itemToOrder, quantity: quantityForPackage});
+                                remainingQuantity -= quantityForPackage;
+                            }
+                             spawnFloatingText(`${itemToOrder} Ordered! (-$${totalCost.toFixed(2)})`, manager.x, manager.y - 90, '#3b82f6');
                         }
 
-                        cash -= totalCost;
-                        updateUI();
-
-                        let remainingQuantity = quantityToOrder;
-                        while (remainingQuantity > 0) {
-                            const quantityForPackage = Math.min(remainingQuantity, MAX_PACKAGE_SIZE);
-                            loadingDockPackages.push({itemName: itemToOrder, quantity: quantityForPackage});
-                            remainingQuantity -= quantityForPackage;
-                        }
-
-                        spawnFloatingText(`${itemToOrder} Ordered! (-$${totalCost.toFixed(2)})`, manager.x, manager.y - 90, '#3b82f6');
                         manager.state = 'idle';
                         manager.stateTimer = 5000;
                         manager.task = { target: {x: manager.idleX, y: manager.idleY} };
 
-                        // Only consume the periodic order slot if it's not an urgent order
-                        if (!orderTask.isUrgent) {
+                        if (orderTask.action !== 'order_bulk' && !orderTask.isUrgent) {
                             manager.canOrder = false;
                             manager.lastOrderQuarter = currentQuarter;
                         }
@@ -2981,6 +3061,7 @@
             dayStarted = false;
             dayPhase = 'pre-open';
             midDayBreakTriggered = false;
+            manager.hasPlacedMorningOrder = false; // Reset for the next day
             const dailyExpenses = 25;
             cash -= dailyExpenses;
             customers.forEach(c => c.state = 'leaving');

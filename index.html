@@ -1483,7 +1483,7 @@
 
             // Determine animation state (idle or walking)
             let animState = 'idle';
-            if (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing'].includes(character.state)) {
+            if (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing', 'interacting'].includes(character.state)) {
                 animState = 'walk';
             }
 
@@ -1568,30 +1568,40 @@
             return false;
         }
 
+        // --- START REFACTOR: Generic NPC Logic ---
+        function updateCharacterAnimation(character, deltaTime) {
+            const animState = (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing', 'interacting'].includes(character.state)) ? 'walk' : 'idle';
+            const anim = animations[animState];
+            if (!anim) return;
+
+            character.lastFrameTime += deltaTime;
+            if (character.lastFrameTime >= character.animationSpeed) {
+                character.currentFrame = (character.currentFrame + 1) % anim.frames;
+                character.lastFrameTime = 0;
+            }
+        }
+
+        function handlePreDayState(character, deltaTime) {
+            if (!dayStarted) {
+                if (Math.hypot(character.x - character.idleX, character.y - character.idleY) > 5) {
+                    character.state = 'walk';
+                    moveCharacterTowards(character, character.idleX, character.idleY, deltaTime);
+                } else {
+                    character.state = 'idle';
+                }
+                updateCharacterAnimation(character, deltaTime);
+                return true; // Indicates the function should exit early
+            }
+            return false; // Continue with normal update logic
+        }
+        // --- END REFACTOR ---
+
         function updateStocker(deltaTime) {
             if (!unlocks.employees.stocker) return;
-            if (!dayStarted) {
-                if (Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
-                    stocker.state = 'walk';
-                    moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime);
-                } else {
-                    stocker.state = 'idle';
-                }
-                 const anim = animations[stocker.state];
-                 stocker.lastFrameTime += deltaTime;
-                 if (stocker.lastFrameTime >= stocker.animationSpeed) {
-                     stocker.currentFrame = (stocker.currentFrame + 1) % anim.frames;
-                     stocker.lastFrameTime = 0;
-                 }
-                return;
-            }
-            const animState = (stocker.state === 'idle') ? 'idle' : 'walk';
-            const anim = animations[animState];
-            stocker.lastFrameTime += deltaTime;
-            if (stocker.lastFrameTime >= stocker.animationSpeed) {
-                stocker.currentFrame = (stocker.currentFrame + 1) % anim.frames;
-                stocker.lastFrameTime = 0;
-            }
+            if (handlePreDayState(stocker, deltaTime)) return;
+
+            updateCharacterAnimation(stocker, deltaTime);
+
             stocker.stateTimer -= deltaTime;
             switch(stocker.state) {
                 case 'idle':
@@ -1667,28 +1677,10 @@
 
         function updateCashier(deltaTime) {
             if (!unlocks.employees.cashier) return;
-            if (!dayStarted) {
-                 if (Math.hypot(cashier.x - cashier.idleX, cashier.y - cashier.idleY) > 5) {
-                    cashier.state = 'walk';
-                    moveCharacterTowards(cashier, cashier.idleX, cashier.idleY, deltaTime);
-                } else {
-                    cashier.state = 'idle';
-                }
-                 const anim = animations[cashier.state];
-                 cashier.lastFrameTime += deltaTime;
-                 if (cashier.lastFrameTime >= cashier.animationSpeed) {
-                     cashier.currentFrame = (cashier.currentFrame + 1) % anim.frames;
-                     cashier.lastFrameTime = 0;
-                 }
-                return;
-            }
-            const animState = (cashier.state === 'idle' || cashier.state === 'transaction') ? 'idle' : 'walk';
-            const anim = animations[animState];
-            cashier.lastFrameTime += deltaTime;
-            if (cashier.lastFrameTime >= cashier.animationSpeed) {
-                cashier.currentFrame = (cashier.currentFrame + 1) % anim.frames;
-                cashier.lastFrameTime = 0;
-            }
+            if (handlePreDayState(cashier, deltaTime)) return;
+
+            updateCharacterAnimation(cashier, deltaTime);
+
             cashier.stateTimer -= deltaTime;
             switch (cashier.state) {
                 case 'idle':
@@ -1730,28 +1722,9 @@
 
         function updateLoader(deltaTime) {
              if (!unlocks.employees.loader) return;
-             if (!dayStarted) {
-                if (Math.hypot(loader.x - loader.idleX, loader.y - loader.idleY) > 5) {
-                    loader.state = 'walk';
-                    moveCharacterTowards(loader, loader.idleX, loader.idleY, deltaTime);
-                } else {
-                    loader.state = 'idle';
-                }
-                const anim = animations[loader.state];
-                 loader.lastFrameTime += deltaTime;
-                 if (loader.lastFrameTime >= loader.animationSpeed) {
-                     loader.currentFrame = (loader.currentFrame + 1) % anim.frames;
-                     loader.lastFrameTime = 0;
-                 }
-                return;
-            }
-            const animState = (loader.state === 'idle') ? 'idle' : 'walk';
-            const anim = animations[animState];
-            loader.lastFrameTime += deltaTime;
-            if (loader.lastFrameTime >= loader.animationSpeed) {
-                loader.currentFrame = (loader.currentFrame + 1) % anim.frames;
-                loader.lastFrameTime = 0;
-            }
+             if (handlePreDayState(loader, deltaTime)) return;
+
+            updateCharacterAnimation(loader, deltaTime);
             loader.stateTimer -= deltaTime;
 
             switch(loader.state) {
@@ -1829,40 +1802,30 @@
 
         function updateManager(deltaTime) {
              if (!unlocks.employees.manager) return;
-             if (!dayStarted) {
-                if (Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
-                    manager.state = 'walk';
-                    moveCharacterTowards(manager, manager.idleX, manager.idleY, deltaTime);
-                } else {
-                    manager.state = 'idle';
-                }
-                const anim = animations[manager.state];
-                 manager.lastFrameTime += deltaTime;
-                 if (manager.lastFrameTime >= manager.animationSpeed) {
-                     manager.currentFrame = (manager.currentFrame + 1) % anim.frames;
-                     manager.lastFrameTime = 0;
-                 }
-                return;
-            }
+             if (handlePreDayState(manager, deltaTime)) return;
 
             const currentQuarter = Math.floor(((DAY_DURATION - dayTimer) / DAY_DURATION) * 4);
             if (currentQuarter > manager.lastOrderQuarter) {
                 manager.canOrder = true;
             }
 
-            const animState = (manager.state === 'idle' || manager.state === 'ordering') ? 'idle' : 'walk';
-            const anim = animations[animState];
-            manager.lastFrameTime += deltaTime;
-            if (manager.lastFrameTime >= manager.animationSpeed) {
-                manager.currentFrame = (manager.currentFrame + 1) % anim.frames;
-                manager.lastFrameTime = 0;
-            }
+            updateCharacterAnimation(manager, deltaTime);
             manager.stateTimer -= deltaTime;
 
             switch(manager.state) {
                 case 'idle':
                     if (manager.stateTimer <= 0 && manager.canOrder) {
-                        const lowStockItem = Object.keys(inventory).find(item => inventory[item] < 5);
+                        // REFACTOR: Check actual stock from storage cells, not the unused 'inventory' object.
+                        let totalStock = {};
+                        storageCells.forEach(cell => {
+                            if (!cell.items) return;
+                            for (const item in cell.items) {
+                                totalStock[item] = (totalStock[item] || 0) + cell.items[item];
+                            }
+                        });
+
+                        const lowStockItem = Object.keys(items).find(item => (totalStock[item] || 0) < 5);
+
                         if (lowStockItem) {
                             manager.task = { action: 'order', item: lowStockItem, target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }};
                             manager.state = 'going_to_office';
@@ -1907,31 +1870,9 @@
 
         function updateSalesperson(deltaTime) {
             if (!unlocks.employees.salesperson) return;
+            if (handlePreDayState(salesperson, deltaTime)) return;
 
-            if (!dayStarted) {
-                if (Math.hypot(salesperson.x - salesperson.idleX, salesperson.y - salesperson.idleY) > 5) {
-                    salesperson.state = 'walk';
-                    moveCharacterTowards(salesperson, salesperson.idleX, salesperson.idleY, deltaTime);
-                } else {
-                    salesperson.state = 'idle';
-                }
-                const anim = animations[salesperson.state];
-                salesperson.lastFrameTime += deltaTime;
-                if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
-                    salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
-                    salesperson.lastFrameTime = 0;
-                }
-                return;
-            }
-
-            const animState = ['idle', 'interacting'].includes(salesperson.state) ? 'idle' : 'walk';
-            const anim = animations[animState];
-            salesperson.lastFrameTime += deltaTime;
-            if (salesperson.lastFrameTime >= salesperson.animationSpeed) {
-                salesperson.currentFrame = (salesperson.currentFrame + 1) % anim.frames;
-                salesperson.lastFrameTime = 0;
-            }
-
+            updateCharacterAnimation(salesperson, deltaTime);
             salesperson.stateTimer -= deltaTime;
 
             switch (salesperson.state) {
@@ -1940,7 +1881,11 @@
                         const customerToAssist = customers.find(c => c.behaviorType === 'needsAssistance' && !c.needsAssistanceFulfilled && !c.leaving);
                         if (customerToAssist) {
                             salesperson.state = 'assistingCustomer';
-                            salesperson.task = { customer: customerToAssist, currentItemIndex: 0 };
+                            salesperson.task = {
+                                customer: customerToAssist,
+                                currentItemIndex: 0,
+                                missingItems: [] // REFACTOR: Initialize missing items list
+                            };
                             return;
                         }
 
@@ -1996,7 +1941,7 @@
                     }
                     break;
 
-                case 'assistingCustomer':
+                case 'assistingCustomer': // This state now just initializes the collecting state
                     salesperson.state = 'collectingItem';
                     break;
                 case 'collectingItem':
@@ -2008,20 +1953,23 @@
                             return;
                         }
 
-                        if (!task.customer.requestedItems || !Array.isArray(task.customer.requestedItems)) {
-                            console.error("Salesperson cannot assist customer with no requested items.", task.customer);
-                            salesperson.state = 'idle';
-                            salesperson.task = null;
-                            return;
+                        // REFACTOR START: Logic to check all items before reporting.
+                        if (task.currentItemIndex >= task.customer.requestedItems.length) {
+                            // Finished checking all items.
+                            if (task.missingItems.length > 0) {
+                                salesperson.state = 'reportingToPlayer';
+                                const missingItemsString = task.missingItems.join(', ');
+                                salesperson.task.message = `We're out of ${missingItemsString} for ${task.customer.name}!`;
+                            } else {
+                                // All items collected, go deliver them.
+                                salesperson.state = 'deliveringItems';
+                                salesperson.task.target = { x: task.customer.x - 50, y: task.customer.y };
+                            }
+                            return; // Exit switch to process new state in next frame
                         }
+                        // REFACTOR END
 
                         const itemToCollect = task.customer.requestedItems[task.currentItemIndex];
-
-                        if (!itemToCollect || salesperson.basket.length >= task.customer.requestedItems.length) {
-                            salesperson.state = 'deliveringItems';
-                            salesperson.task.target = { x: task.customer.x - 50, y: task.customer.y };
-                            break;
-                        }
 
                         const targetShelf = shelves.find(s => s.items.some(i => i && i.assignedItem === itemToCollect && i.quantity > 0));
 
@@ -2032,7 +1980,7 @@
                                 if (slot) {
                                     slot.quantity--;
                                     salesperson.basket.push(itemToCollect);
-                                    task.currentItemIndex++;
+                                    task.currentItemIndex++; // Move to next item
                                 }
                             }
                             return;
@@ -2050,15 +1998,9 @@
                             return;
                         }
 
-                        const isOnLoadingDock = loadingDockPackages.some(pkg => pkg.itemName === itemToCollect);
-                        if (isOnLoadingDock) {
-                            salesperson.state = 'reportingToPlayer';
-                            salesperson.task.message = `The '${itemToCollect}' for ${task.customer.name} is on the loading dock!`;
-                            return;
-                        }
-
-                        salesperson.state = 'reportingToPlayer';
-                        salesperson.task.message = `We are all out of '${itemToCollect}' for ${task.customer.name}!`;
+                        // REFACTOR: Item is not found anywhere. Add to missing list and check next item.
+                        task.missingItems.push(itemToCollect);
+                        task.currentItemIndex++;
                     }
                     break;
 
@@ -2071,7 +2013,7 @@
                             salesperson.basket.push(item);
                             salesperson.task.currentItemIndex++;
                         }
-                        salesperson.state = 'collectingItem';
+                        salesperson.state = 'collectingItem'; // Go back to check for the next item
                         salesperson.task.target = null;
                     }
                     break;
@@ -2081,9 +2023,9 @@
                     if (moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
                         spawnFloatingText(salesperson.task.message, salesperson.x, salesperson.y - 90, '#8b5cf6');
 
-                        salesperson.task.currentItemIndex++;
-                        salesperson.state = 'collectingItem';
-                        salesperson.task.target = null;
+                        // After reporting, go deliver whatever was found
+                        salesperson.state = 'deliveringItems';
+                        salesperson.task.target = { x: salesperson.task.customer.x - 50, y: salesperson.task.customer.y };
                         salesperson.task.message = null;
                     }
                     break;
@@ -2094,12 +2036,15 @@
                          return;
                     }
                     if (moveCharacterTowards(salesperson, salesperson.task.target.x, salesperson.task.target.y, deltaTime)) {
-                        salesperson.task.customer.order.push(...salesperson.basket);
-                        salesperson.basket = [];
+                        if(salesperson.basket.length > 0) {
+                            salesperson.task.customer.order.push(...salesperson.basket);
+                            salesperson.basket = [];
+                            spawnFloatingText("Here's what I found!", salesperson.x, salesperson.y - 90, '#22c55e');
+                        }
                         salesperson.task.customer.needsAssistanceFulfilled = true;
                         salesperson.task.customer.state = 'queuing';
                         salesperson.task.customer.request = "Thank you so much for your help!";
-                        spawnFloatingText("Here you go!", salesperson.x, salesperson.y - 90, '#22c55e');
+
 
                         salesperson.state = 'idle';
                         salesperson.task = null;
@@ -2119,6 +2064,33 @@
         }
 
         function findRestockingTask() {
+             // --- REFACTOR START: Deadlock Prevention ---
+            const fullCell = storageCells.find(c => {
+                if (!c.items) return false;
+                const currentFill = Object.values(c.items).reduce((a, b) => a + b, 0);
+                return currentFill >= c.capacity;
+            });
+
+            if (fullCell && loader.state === 'idle' && loadingDockPackages.length > 0) {
+                // A cell is full and the loader is waiting. Prioritize emptying that cell.
+                for (const item in fullCell.items) {
+                    if (fullCell.items[item] > 0) {
+                        const shelfWithSpace = findShelfForStocking(item);
+                        if (shelfWithSpace) {
+                            // Create a high-priority task to move this item out of the full cell.
+                            return {
+                                action: 'fetch',
+                                item: item,
+                                target: { x: fullCell.rect.x + fullCell.rect.w / 2, y: fullCell.rect.y + fullCell.rect.h + 10 },
+                                priority: 'deadlock_break'
+                            };
+                        }
+                    }
+                }
+            }
+            // --- REFACTOR END ---
+
+
             let neededItems = [];
             // Prioritize assigned but understocked shelves
             for(let i = 0; i < shelves.length; i++) {
@@ -2133,23 +2105,16 @@
                     }
                 }
             }
-            // Part 2: If there are empty slots, decide what new item to stock based on demand.
-            const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
-            if (hasEmptySlot) {
-                const assignedItems = new Set();
-                shelves.forEach(s => s.items.forEach(i => {
-                    if(i.assignedItem) assignedItems.add(i.assignedItem);
-                }));
-
-                const sortedDemand = Object.entries(customerDemand).sort(([,a],[,b]) => b-a).map(([name]) => name);
-
-                for (const demandedItem of sortedDemand) {
-                    if (assignedItems.has(demandedItem)) continue;
-
-                    const storageCell = storageCells.find(c => c.allowedItems.includes(demandedItem));
-                    if (storageCell && storageCell.items[demandedItem] > 0) {
-                        neededItems.push(demandedItem);
-                        break;
+            // Then check for unassigned items that have stock
+            for(const item in inventory){
+                const stock = Object.values(storageCells.find(c => c.allowedItems.includes(item))?.items || {}).reduce((a,b)=>a+b, 0) || 0;
+                if (stock > 0) {
+                    const isAssigned = shelves.some(s => s.items.some(i => i.assignedItem === item));
+                    if(!isAssigned && !neededItems.includes(item)) {
+                        const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
+                        if (hasEmptySlot) {
+                            neededItems.push(item);
+                        }
                     }
                 }
             }
@@ -2189,12 +2154,7 @@
             } else {
                 player.state = 'idle';
             }
-            const anim = animations[player.state];
-            player.lastFrameTime += deltaTime;
-            if (player.lastFrameTime >= player.animationSpeed) {
-                player.currentFrame = (player.currentFrame + 1) % anim.frames;
-                player.lastFrameTime = 0;
-            }
+            updateCharacterAnimation(player, deltaTime);
         }
 
         function spawnFloatingText(text, x, y, color = 'green', duration = 1500) {
@@ -2315,12 +2275,6 @@
                 } else {
                     dayPhase = 'pre-open';
                     nextDay();
-                    return;
-                }
-
-                if (dayTimer <= 0) {
-                    nextDay();
-                    return;
                 }
             }
 
@@ -2372,9 +2326,6 @@
         async function spawnNewCustomer() {
             const customerData = await generateCustomerRequest();
             if (customerData && customerData.requestedItems) {
-                customerData.requestedItems.forEach(item => {
-                    customerDemand[item] = (customerDemand[item] || 0) + 1;
-                });
                 const newCustomer = new Customer(
                     customerData.name, customerData.request, customerData.requestedItems, customerData.customerType
                 );
@@ -2553,50 +2504,7 @@
                             { assignedItem: null, quantity: 0 }
                         ],
                         y: shelfY + shelfHeight,
-                        draw: function() {
-                            if (!unlocks.shelves[i]) {
-                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                                drawLockIcon(this.rect.x + this.rect.w/2 - 25, this.rect.y + this.rect.h/2-25, 50, 50);
-                                return;
-                            }
-                            ctx.fillStyle = '#8d6e63';
-                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                            ctx.strokeStyle = '#4e342e';
-                            ctx.lineWidth = 4;
-                            ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                            ctx.fillStyle = '#6d4c41';
-                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, 10);
-                            ctx.strokeStyle = '#6d4c41';
-                            ctx.lineWidth = 2;
-                            const slotHeight = (this.rect.h - 10) / 3;
-                            ctx.beginPath();
-                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight);
-                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight);
-                            ctx.stroke();
-                            ctx.beginPath();
-                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 2);
-                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 2);
-                            ctx.stroke();
-                            const itemWidth = this.rect.w - 20;
-                            const itemHeight = (this.rect.h - 40) / 3;
-                            for (let i = 0; i < this.items.length; i++) {
-                                if (this.items[i] && this.items[i].assignedItem) {
-                                    const item = this.items[i];
-                                    const stackX = this.rect.x + 10;
-                                    const stackY = this.rect.y + 15 + i * (itemHeight + 5);
-                                    ctx.fillStyle = '#f5f5f5';
-                                    ctx.fillRect(stackX, stackY, itemWidth * (item.quantity / MAX_SHELF_STACK), itemHeight);
-                                    ctx.strokeStyle = '#5d4037';
-                                    ctx.strokeRect(stackX, stackY, itemWidth, itemHeight);
-                                    ctx.fillStyle = '#5d4037';
-                                    ctx.font = '12px "Patrick Hand", cursive';
-                                    ctx.textAlign = 'center';
-                                    ctx.textBaseline = 'middle';
-                                    ctx.fillText(item.assignedItem.substring(0,8), stackX + itemWidth / 2, stackY + itemHeight / 2);
-                                }
-                            }
-                        }
+                        draw: drawShelf // REFACTOR: Assign the single draw function
                     };
                     shelves.push(shelf);
                 }
@@ -2650,6 +2558,54 @@
                 player.y = startY;
             }
         }
+
+        // --- REFACTOR: Standalone Shelf Drawing Function ---
+        function drawShelf() {
+            const shelfIndex = shelves.indexOf(this);
+             if (!unlocks.shelves[shelfIndex]) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                drawLockIcon(this.rect.x + this.rect.w / 2 - 25, this.rect.y + this.rect.h / 2 - 25, 50, 50);
+                return;
+            }
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            ctx.fillStyle = '#6d4c41';
+            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, 10);
+            ctx.strokeStyle = '#6d4c41';
+            ctx.lineWidth = 2;
+            const slotHeight = (this.rect.h - 10) / 3;
+            ctx.beginPath();
+            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight);
+            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 2);
+            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 2);
+            ctx.stroke();
+            const itemWidth = this.rect.w - 20;
+            const itemHeight = (this.rect.h - 40) / 3;
+            for (let i = 0; i < this.items.length; i++) {
+                if (this.items[i] && this.items[i].assignedItem) {
+                    const item = this.items[i];
+                    const stackX = this.rect.x + 10;
+                    const stackY = this.rect.y + 15 + i * (itemHeight + 5);
+                    ctx.fillStyle = '#f5f5f5';
+                    ctx.fillRect(stackX, stackY, itemWidth * (item.quantity / MAX_SHELF_STACK), itemHeight);
+                    ctx.strokeStyle = '#5d4037';
+                    ctx.strokeRect(stackX, stackY, itemWidth, itemHeight);
+                    ctx.fillStyle = '#5d4037';
+                    ctx.font = '12px "Patrick Hand", cursive';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(item.assignedItem.substring(0, 8), stackX + itemWidth / 2, stackY + itemHeight / 2);
+                }
+            }
+        }
+
 
         function resizeCanvas() {
             canvas.width = canvas.clientWidth;
@@ -3285,8 +3241,7 @@
             const gameState = {
                 cash, day, shopPoints,
                 inventory, storageCells, shelves,
-                unlocks, loadingDockPackages,
-                customerDemand
+                unlocks, loadingDockPackages, customerDemand
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -3308,50 +3263,7 @@
 
                     // Re-attach draw methods to shelves as they are lost in JSON.
                     shelves.forEach(shelf => {
-                         shelf.draw = function() {
-                            if (!unlocks.shelves[shelves.indexOf(this)]) {
-                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                                drawLockIcon(this.rect.x + this.rect.w/2 - 25, this.rect.y + this.rect.h/2-25, 50, 50);
-                                return;
-                            }
-                            ctx.fillStyle = '#8d6e63';
-                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                            ctx.strokeStyle = '#4e342e';
-                            ctx.lineWidth = 4;
-                            ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                            ctx.fillStyle = '#6d4c41';
-                            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, 10);
-                            ctx.strokeStyle = '#6d4c41';
-                            ctx.lineWidth = 2;
-                            const slotHeight = (this.rect.h - 10) / 3;
-                            ctx.beginPath();
-                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight);
-                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight);
-                            ctx.stroke();
-                            ctx.beginPath();
-                            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 2);
-                            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 2);
-                            ctx.stroke();
-                            const itemWidth = this.rect.w - 20;
-                            const itemHeight = (this.rect.h - 40) / 3;
-                            for (let i = 0; i < this.items.length; i++) {
-                                if (this.items[i] && this.items[i].assignedItem) {
-                                    const item = this.items[i];
-                                    const stackX = this.rect.x + 10;
-                                    const stackY = this.rect.y + 15 + i * (itemHeight + 5);
-                                    ctx.fillStyle = '#f5f5f5';
-                                    ctx.fillRect(stackX, stackY, itemWidth * (item.quantity / MAX_SHELF_STACK), itemHeight);
-                                    ctx.strokeStyle = '#5d4037';
-                                    ctx.strokeRect(stackX, stackY, itemWidth, itemHeight);
-                                    ctx.fillStyle = '#5d4037';
-                                    ctx.font = '12px "Patrick Hand", cursive';
-                                    ctx.textAlign = 'center';
-                                    ctx.textBaseline = 'middle';
-                                    ctx.fillText(item.assignedItem.substring(0,8), stackX + itemWidth / 2, stackY + itemHeight / 2);
-                                }
-                            }
-                        }
+                         shelf.draw = drawShelf; // REFACTOR: Assign the single draw function
                     });
 
                 } catch (e) {

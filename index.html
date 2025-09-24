@@ -2070,30 +2070,30 @@
                 case 'idle':
                     if (manager.stateTimer <= 0) {
                         let urgentOrderItem = null;
+                        let requiredQuantity = 0;
 
-                        // 1. Check for empty, assigned shelves that are not being restocked
-                        for (const shelf of shelves) {
-                            for (const slot of shelf.items) {
-                                if (slot.assignedItem && slot.quantity === 0 && getTotalStock(slot.assignedItem) === 0) {
-                                    urgentOrderItem = slot.assignedItem;
-                                    break;
+                        // Check for customers waiting for out-of-stock items
+                        const waitingCustomers = customers.filter(c => c.isWaitingForRestock);
+                        if (waitingCustomers.length > 0) {
+                            const customerDemands = {};
+
+                            for (const customer of waitingCustomers) {
+                                const waitingOnItem = customer.requestedItems[customer.currentItemIndex];
+                                if (waitingOnItem && getTotalStock(waitingOnItem) === 0) {
+                                     const isItemUnlocked = storageCells.some(cell => unlocks.storage[storageCells.indexOf(cell)] && cell.allowedItems.includes(waitingOnItem));
+                                     if (isItemUnlocked) {
+                                         customerDemands[waitingOnItem] = (customerDemands[waitingOnItem] || 0) + 1;
+                                     }
                                 }
                             }
-                            if (urgentOrderItem) break;
-                        }
 
-                        // 2. Check for customers waiting for out-of-stock items
-                        if (!urgentOrderItem) {
-                            for (const customer of customers) {
-                                // Check if customer is waiting for an item that is unlocked but unavailable
-                                if (customer.isWaitingForRestock) {
-                                    const waitingOnItem = customer.requestedItems[customer.currentItemIndex];
-                                    const isItemUnlocked = storageCells.some(cell => unlocks.storage[storageCells.indexOf(cell)] && cell.allowedItems.includes(waitingOnItem));
-
-                                    if (waitingOnItem && isItemUnlocked && getTotalStock(waitingOnItem) === 0) {
-                                        urgentOrderItem = waitingOnItem;
-                                        break;
-                                    }
+                            // Find the most demanded item
+                            let maxDemand = 0;
+                            for (const item in customerDemands) {
+                                if (customerDemands[item] > maxDemand) {
+                                    maxDemand = customerDemands[item];
+                                    urgentOrderItem = item;
+                                    requiredQuantity = customerDemands[item];
                                 }
                             }
                         }
@@ -2102,7 +2102,8 @@
                             manager.task = {
                                 action: 'order',
                                 item: urgentOrderItem,
-                                isUrgent: true, // Mark as urgent
+                                isUrgent: true,
+                                requiredQuantity: requiredQuantity, // Pass the dynamic quantity
                                 target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
                             };
                             manager.state = 'going_to_office';
@@ -2112,7 +2113,7 @@
 
 
                         // 3. Original low-stock check (periodic)
-                        if (manager.canOrder) {
+                        if (manager.canOrder && (dayPhase === 'opening' || dayPhase === 'closing')) {
                             // This check is for items that are low in stock, but not necessarily empty.
                             const lowStockItem = Object.keys(items).find(item => {
                                 const stock = getTotalStock(item);
@@ -2154,7 +2155,9 @@
                     if(manager.stateTimer <= 0) {
                         const orderTask = manager.task;
                         const itemToOrder = orderTask.item;
-                        let quantityToOrder = 10; // Order in batches of 10
+                        // Use dynamic quantity for urgent orders, otherwise default to 10
+                        let quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 10;
+
                         while (quantityToOrder > 0) {
                             const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
                             loadingDockPackages.push({itemName: itemToOrder, quantity: quantityForPackage});

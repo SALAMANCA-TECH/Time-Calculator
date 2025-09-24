@@ -2025,6 +2025,23 @@
             }
         }
 
+        function getTotalStock(itemName) {
+            let total = 0;
+            // Check storage cells
+            storageCells.forEach(cell => {
+                if (cell.items && cell.items[itemName]) {
+                    total += cell.items[itemName];
+                }
+            });
+            // Check loading dock packages
+            loadingDockPackages.forEach(pkg => {
+                if (pkg.itemName === itemName) {
+                    total += pkg.quantity;
+                }
+            });
+            return total;
+        }
+
         function updateManager(deltaTime) {
              if (!unlocks.employees.manager) return;
 
@@ -2051,30 +2068,78 @@
 
             switch(manager.state) {
                 case 'idle':
-                    if (manager.stateTimer <= 0 && manager.canOrder) {
-                        // REFACTOR: Check actual stock from storage cells, not the unused 'inventory' object.
-                        let totalStock = {};
-                        storageCells.forEach(cell => {
-                            if (!cell.items) return;
-                            for (const item in cell.items) {
-                                totalStock[item] = (totalStock[item] || 0) + cell.items[item];
+                    if (manager.stateTimer <= 0) {
+                        let urgentOrderItem = null;
+
+                        // 1. Check for empty, assigned shelves that are not being restocked
+                        for (const shelf of shelves) {
+                            for (const slot of shelf.items) {
+                                if (slot.assignedItem && slot.quantity === 0 && getTotalStock(slot.assignedItem) === 0) {
+                                    urgentOrderItem = slot.assignedItem;
+                                    break;
+                                }
                             }
-                        });
+                            if (urgentOrderItem) break;
+                        }
 
-                        const lowStockItem = Object.keys(items).find(item => (totalStock[item] || 0) < 5);
+                        // 2. Check for customers waiting for out-of-stock items
+                        if (!urgentOrderItem) {
+                            for (const customer of customers) {
+                                // Check if customer is waiting for an item that is unlocked but unavailable
+                                if (customer.isWaitingForRestock) {
+                                    const waitingOnItem = customer.requestedItems[customer.currentItemIndex];
+                                    const isItemUnlocked = storageCells.some(cell => unlocks.storage[storageCells.indexOf(cell)] && cell.allowedItems.includes(waitingOnItem));
 
-                        if (lowStockItem) {
-                            manager.task = { action: 'order', item: lowStockItem, target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }};
+                                    if (waitingOnItem && isItemUnlocked && getTotalStock(waitingOnItem) === 0) {
+                                        urgentOrderItem = waitingOnItem;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (urgentOrderItem) {
+                            manager.task = {
+                                action: 'order',
+                                item: urgentOrderItem,
+                                isUrgent: true, // Mark as urgent
+                                target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                            };
                             manager.state = 'going_to_office';
+                            manager.stateTimer = 1000; // Reset timer
+                            break; // Exit the switch case
+                        }
+
+
+                        // 3. Original low-stock check (periodic)
+                        if (manager.canOrder) {
+                            // This check is for items that are low in stock, but not necessarily empty.
+                            const lowStockItem = Object.keys(items).find(item => {
+                                const stock = getTotalStock(item);
+                                return stock > 0 && stock < 5;
+                            });
+
+                            if (lowStockItem) {
+                                manager.task = {
+                                    action: 'order',
+                                    item: lowStockItem,
+                                    isUrgent: false, // Not urgent
+                                    target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                                };
+                                manager.state = 'going_to_office';
+                            } else {
+                                manager.stateTimer = 10000;
+                                if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
+                                     manager.task = { target: {x: manager.idleX, y: manager.idleY} };
+                                 } else {
+                                     manager.task = null;
+                                 }
+                            }
                         } else {
-                            manager.stateTimer = 10000;
-                             if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
-                                 manager.task = { target: {x: manager.idleX, y: manager.idleY} };
-                             } else {
-                                 manager.task = null;
-                             }
+                             manager.stateTimer = 5000; // If can't place periodic order, wait before checking again
                         }
                     }
+
                      if(manager.task && manager.task.target) {
                          moveCharacterTowards(manager, manager.task.target.x, manager.task.target.y, deltaTime);
                     }
@@ -2087,7 +2152,8 @@
                     break;
                 case 'ordering':
                     if(manager.stateTimer <= 0) {
-                        const itemToOrder = manager.task.item;
+                        const orderTask = manager.task;
+                        const itemToOrder = orderTask.item;
                         let quantityToOrder = 10; // Order in batches of 10
                         while (quantityToOrder > 0) {
                             const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
@@ -2098,8 +2164,12 @@
                         manager.state = 'idle';
                         manager.stateTimer = 5000;
                         manager.task = { target: {x: manager.idleX, y: manager.idleY} };
-                        manager.canOrder = false;
-                        manager.lastOrderQuarter = currentQuarter;
+
+                        // Only consume the periodic order slot if it's not an urgent order
+                        if (!orderTask.isUrgent) {
+                            manager.canOrder = false;
+                            manager.lastOrderQuarter = currentQuarter;
+                        }
                     }
                     break;
             }

@@ -520,11 +520,6 @@
         let scale = 1.0;
         let cameraX = 0;
         let cameraY = 0;
-        let targetCameraX = 0;
-        let cameraState = 'store'; // 'store' or 'office'
-        const officeWidth = 400;
-        let worldWidth;
-
 
         const desk = { x: 0, y: 0, width: 0, height: 30 };
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
@@ -967,7 +962,7 @@
                         break;
                     }
                     case 'leaving':
-            this.targetX = worldWidth + 100;
+                        this.targetX = canvas.width + 100;
                         this.targetY = desk.y + 75;
                         this.moveTowardsTarget(deltaTime);
                         break;
@@ -1077,9 +1072,9 @@
 
         function drawStoreBackground() {
             ctx.fillStyle = '#bcaaa4';
-            ctx.fillRect(0, 0, worldWidth, canvas.height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#a1887f';
-            ctx.fillRect(0, 0, worldWidth, desk.y + desk.height);
+            ctx.fillRect(0, 0, canvas.width, desk.y + desk.height);
             storageCells.forEach((cell, index) => {
                 if (!unlocks.storage[index]) {
                     const r = cell.rect;
@@ -2467,16 +2462,6 @@
             player.x = Math.max(player.frameWidth / 2, Math.min(worldWidth - player.frameWidth / 2, player.x));
             player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
 
-            // Camera control logic
-            const officeThreshold = officeWidth + 50; // 50px into the store
-            if (player.x < officeThreshold && cameraState !== 'office') {
-                cameraState = 'office';
-                targetCameraX = 0;
-            } else if (player.x >= officeThreshold && cameraState !== 'store') {
-                cameraState = 'store';
-                targetCameraX = -officeWidth;
-            }
-
             updateCharacterAnimation(player, deltaTime);
         }
 
@@ -2685,12 +2670,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             ctx.save();
-
-            // Smooth camera movement
-            const cameraSpeed = 0.05;
-            cameraX += (targetCameraX - cameraX) * cameraSpeed;
-
-            // cameraX = canvas.width / 2 - player.x * scale;
+            cameraX = canvas.width / 2 - player.x * scale;
             cameraY = canvas.height / 2 - player.y * scale;
             clampCamera();
             ctx.translate(cameraX, cameraY);
@@ -2945,13 +2925,15 @@
             managersOffice.h = canvas.height / 2;
             managersOffice.x = 0;
             managersOffice.y = (canvas.height - managersOffice.h) / 2;
+
+
             const shelfWidth = 60, shelfHeight = 120;
             const shelfY = desk.y - shelfHeight + 40;
 
             const numShelves = 6;
             const shelfPadding = 50;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
-            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2;`
+            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2;
             if (shelves.length === 0) {
                 for (let i = 0; i < numShelves; i++) {
                     const shelf = {
@@ -3003,6 +2985,7 @@
                 loader.x = loader.idleX;
                 loader.y = loader.idleY;
             }
+
             salesperson.idleX = storeShiftX + canvas.width - 100;
             salesperson.idleY = 400;
             if (salesperson.state === 'idle' && !salesperson.task) {
@@ -3071,25 +3054,23 @@
         function resizeCanvas() {
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
-            worldWidth = canvas.width + officeWidth;
             desk.y = canvas.height - 220;
-            desk.width = worldWidth;
+            desk.width = canvas.width;
             loadingDock.y = canvas.height - loadingDock.height;
-            loadingDock.width = worldWidth;
+            loadingDock.width = canvas.width;
 
             scale = 1.0;
+            cameraX = 0;
             cameraY = 0;
 
             initializeLayout();
-            cameraX = -officeWidth;
-            targetCameraX = -officeWidth;
         }
 
         function clampCamera() {
             const worldWidth = (canvas.width + managersOffice.w) * scale;
             const worldHeight = canvas.height * scale;
 
-            cameraX = Math.max(canvas.clientWidth - scaledWorldWidth, Math.min(0, cameraX));
+            cameraX = Math.max(canvas.clientWidth - worldWidth, Math.min(0, cameraX));
             cameraY = Math.max(canvas.clientHeight - worldHeight, Math.min(0, cameraY));
         }
 

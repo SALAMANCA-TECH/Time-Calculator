@@ -224,13 +224,6 @@
                         <label for="developer-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                 </div>
-                 <div class="flex items-center justify-between">
-                    <span class="text-lg">Continuous Day Cycle</span>
-                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="continuous-toggle" id="continuous-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                        <label for="continuous-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                    </div>
-                </div>
                 <div class="border-t-2 border-amber-900/20 pt-4 mt-4">
                     <button id="new-game-btn" class="btn-style w-full bg-red-700/80 hover:bg-red-600">Start New Game</button>
                 </div>
@@ -2819,6 +2812,7 @@
             cash -= dailyExpenses;
             customers.forEach(c => c.state = 'leaving');
             timeSinceLastCustomer = 0;
+            document.getElementById('next-day-btn').classList.add('hidden');
             if (cash < 0) {
                 updateUI();
                 endGame();
@@ -2879,20 +2873,24 @@
             document.getElementById('report-expenses').textContent = `-$${dailyExpenses}`;
             document.getElementById('report-profit').textContent = `$${grossSales - dailyExpenses}`;
             reportPanel.classList.remove('hidden');
+
+            // Reset visited flags as soon as the day ends to prevent save/load issues.
+            for (const type in customerProfiles) {
+                for (const name in customerProfiles[type]) {
+                    customerProfiles[type][name].visitedToday = false;
+                }
+            }
+            saveGame(); // Persist the reset state immediately.
+
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;
-                for (const type in customerProfiles) {
-                    for (const name in customerProfiles[type]) {
-                        customerProfiles[type][name].visitedToday = false;
-                    }
-                }
                 Object.keys(inventory).forEach(item => {
                     if (inventory[item] < 5) inventory[item] += 1;
                 });
                 saveGame();
                 reportPanel.classList.add('hidden');
                 dailySalesReport = [];
-                document.getElementById('start-day-btn').click();
+                startDay(); // Immediately start the next day
             };
         }
 
@@ -4162,7 +4160,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             canvas.addEventListener('wheel', handleWheel, { passive: false });
             pieClockCanvas.addEventListener('click', handleClockClick);
 
-            document.getElementById('start-day-btn').addEventListener('click', () => {
+            function startDay() {
                 if(dayStarted) return;
                 dayStarted = true;
                 dayTimer = DAY_DURATION;
@@ -4175,7 +4173,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 if (!loader.task) loader.state = 'idle';
                 if (!manager.task) manager.state = 'idle';
                 if (!salesperson.task) salesperson.state = 'idle';
-            });
+            }
+
+            document.getElementById('start-day-btn').addEventListener('click', startDay);
 
 
             document.getElementById('place-order-btn').addEventListener('click', placeOrder);
@@ -4198,11 +4198,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             devToggle.addEventListener('change', (e) => {
                 developerMode = e.target.checked;
                 updateUI();
-            });
-            const continuousToggle = document.getElementById('continuous-toggle');
-            continuousToggle.checked = continuousMode;
-            continuousToggle.addEventListener('change', (e) => {
-                continuousMode = e.target.checked;
             });
 
             loadSpriteSheet(); // Generate and load player spritesheet

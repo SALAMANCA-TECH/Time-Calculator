@@ -247,6 +247,7 @@
             <div class="flex border-b-2 border-amber-900/50 mb-4">
                 <button id="clipboard-tab-shelves" class="btn-style flex-1 rounded-b-none rounded-t-lg">Shelf Assignments</button>
                 <button id="clipboard-tab-customers" class="btn-style flex-1 rounded-b-none rounded-t-lg bg-opacity-50">Customers</button>
+                <button id="clipboard-tab-employees" class="btn-style flex-1 rounded-b-none rounded-t-lg bg-opacity-50">Employees</button>
             </div>
 
             <!-- Content for Shelf Assignments -->
@@ -260,6 +261,13 @@
             <div id="clipboard-customers-content" class="hidden">
                  <div id="customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
                     <!-- Customer list will be populated here -->
+                </div>
+            </div>
+
+            <!-- Content for Employees -->
+            <div id="clipboard-employees-content" class="hidden">
+                 <div id="employee-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
+                    <!-- Employee list will be populated here -->
                 </div>
             </div>
         </div>
@@ -474,7 +482,8 @@
             basket: [],
             task: null,
             stateTimer: 0,
-            idleX: 0, idleY: 0
+            idleX: 0, idleY: 0,
+            onBreak: false
         };
 
         const cashier = {
@@ -485,6 +494,7 @@
             task: null,
             stateTimer: 0,
             idleX: 0, idleY: 0,
+            onBreak: false,
             basket: []
         };
 
@@ -496,7 +506,8 @@
             basket: [],
             task: null,
             stateTimer: 0,
-            idleX: 0, idleY: 0
+            idleX: 0, idleY: 0,
+            onBreak: false
         };
         const manager = {
             x: 200, y: 300, width: 50, height: 50, speed: 150,
@@ -506,6 +517,7 @@
             task: null,
             stateTimer: 5000,
             idleX: 0, idleY: 0,
+            onBreak: false,
             canOrder: true,
             lastOrderQuarter: -1,
         };
@@ -518,8 +530,25 @@
             task: null,
             stateTimer: 0,
             idleX: 0, idleY: 0,
+            onBreak: false,
             basket: []
         };
+
+        const breakSpots = {
+            cashier: { x: 20, y: 30 },
+            stocker: { x: 50, y: 30 },
+            loader: { x: 80, y: 30 },
+            manager: { x: 35, y: 60 },
+            salesperson: { x: 65, y: 60 }
+        };
+
+        function getBreakSpot(employeeKey) {
+            const spot = breakSpots[employeeKey];
+            return {
+                x: managersOffice.x + spot.x,
+                y: managersOffice.y + spot.y
+            };
+        }
 
         const animations = {
             'idle': { startFrame: 0, frames: 3, cols: 3 },
@@ -1620,6 +1649,18 @@
 
         function updateStocker(deltaTime) {
             if (!unlocks.employees.stocker) return;
+
+            if (stocker.onBreak) {
+                const breakSpot = getBreakSpot('stocker');
+                if (moveCharacterTowards(stocker, breakSpot.x, breakSpot.y, deltaTime)) {
+                    stocker.state = 'idle';
+                } else {
+                    stocker.state = 'walk';
+                }
+                updateCharacterAnimation(stocker, deltaTime);
+                return;
+            }
+
             if (handlePreDayState(stocker, deltaTime)) return;
 
             updateCharacterAnimation(stocker, deltaTime);
@@ -1699,6 +1740,18 @@
 
         function updateCashier(deltaTime) {
             if (!unlocks.employees.cashier) return;
+
+            if (cashier.onBreak) {
+                const breakSpot = getBreakSpot('cashier');
+                if (moveCharacterTowards(cashier, breakSpot.x, breakSpot.y, deltaTime)) {
+                    cashier.state = 'idle';
+                } else {
+                    cashier.state = 'walk';
+                }
+                updateCharacterAnimation(cashier, deltaTime);
+                return;
+            }
+
             if (handlePreDayState(cashier, deltaTime)) return;
 
             updateCharacterAnimation(cashier, deltaTime);
@@ -1744,6 +1797,18 @@
 
         function updateLoader(deltaTime) {
              if (!unlocks.employees.loader) return;
+
+            if (loader.onBreak) {
+                const breakSpot = getBreakSpot('loader');
+                if (moveCharacterTowards(loader, breakSpot.x, breakSpot.y, deltaTime)) {
+                    loader.state = 'idle';
+                } else {
+                    loader.state = 'walk';
+                }
+                updateCharacterAnimation(loader, deltaTime);
+                return;
+            }
+
              if (handlePreDayState(loader, deltaTime)) return;
 
             updateCharacterAnimation(loader, deltaTime);
@@ -1824,6 +1889,18 @@
 
         function updateManager(deltaTime) {
              if (!unlocks.employees.manager) return;
+
+            if (manager.onBreak) {
+                const breakSpot = getBreakSpot('manager');
+                if (moveCharacterTowards(manager, breakSpot.x, breakSpot.y, deltaTime)) {
+                    manager.state = 'idle';
+                } else {
+                    manager.state = 'walk';
+                }
+                updateCharacterAnimation(manager, deltaTime);
+                return;
+            }
+
              if (handlePreDayState(manager, deltaTime)) return;
 
             const currentQuarter = Math.floor(((DAY_DURATION - dayTimer) / DAY_DURATION) * 4);
@@ -1892,6 +1969,18 @@
 
         function updateSalesperson(deltaTime) {
             if (!unlocks.employees.salesperson) return;
+
+            if (salesperson.onBreak) {
+                const breakSpot = getBreakSpot('salesperson');
+                if (moveCharacterTowards(salesperson, breakSpot.x, breakSpot.y, deltaTime)) {
+                    salesperson.state = 'idle';
+                } else {
+                    salesperson.state = 'walk';
+                }
+                updateCharacterAnimation(salesperson, deltaTime);
+                return;
+            }
+
             if (handlePreDayState(salesperson, deltaTime)) return;
 
             updateCharacterAnimation(salesperson, deltaTime);
@@ -2862,8 +2951,10 @@
 
             document.getElementById('clipboard-title').textContent = 'Customers';
             document.getElementById('clipboard-shelves-content').classList.add('hidden');
+            document.getElementById('clipboard-employees-content').classList.add('hidden');
             document.getElementById('clipboard-customers-content').classList.remove('hidden');
             document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
             document.getElementById('clipboard-tab-customers').classList.remove('bg-opacity-50');
 
             if (customers.filter(c => !c.leaving).length === 0) {
@@ -2881,6 +2972,51 @@
                 `;
                 customerList.appendChild(customerDiv);
             });
+        }
+
+        function showEmployeesOnClipboard() {
+            const employeeList = document.getElementById('employee-list');
+            employeeList.innerHTML = '';
+
+            document.getElementById('clipboard-title').textContent = 'Employee Status';
+            document.getElementById('clipboard-shelves-content').classList.add('hidden');
+            document.getElementById('clipboard-customers-content').classList.add('hidden');
+            document.getElementById('clipboard-employees-content').classList.remove('hidden');
+            document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-customers').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-employees').classList.remove('bg-opacity-50');
+
+            const employees = { cashier, stocker, loader, manager, salesperson };
+
+            let anyUnlocked = false;
+            for (const empKey in unlocks.employees) {
+                if (unlocks.employees[empKey]) {
+                    anyUnlocked = true;
+                    const employee = employees[empKey];
+                    const empDiv = document.createElement('div');
+                    empDiv.className = 'flex items-center justify-between p-3 border-2 border-amber-800/50 rounded-lg bg-white/50';
+                    empDiv.innerHTML = `
+                        <span class="text-lg">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</span>
+                        <div class="flex items-center">
+                            <span class="mr-2 text-sm">${employee.onBreak ? 'On Break' : 'Active'}</span>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="${empKey}-toggle" id="${empKey}-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${employee.onBreak ? 'checked' : ''}/>
+                                <label for="${empKey}-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    `;
+                    employeeList.appendChild(empDiv);
+                    empDiv.querySelector(`#${empKey}-toggle`).addEventListener('change', (e) => {
+                        employee.onBreak = e.target.checked;
+                        showEmployeesOnClipboard();
+                        saveGame();
+                    });
+                }
+            }
+
+            if (!anyUnlocked) {
+                employeeList.innerHTML = `<p class="text-center p-4">No employees hired yet.</p>`;
+            }
         }
 
         function openBasketPanel() {
@@ -2915,8 +3051,10 @@
 
             document.getElementById('clipboard-title').textContent = 'Shelf Assignments';
             document.getElementById('clipboard-customers-content').classList.add('hidden');
+            document.getElementById('clipboard-employees-content').classList.add('hidden');
             document.getElementById('clipboard-shelves-content').classList.remove('hidden');
             document.getElementById('clipboard-tab-customers').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
             document.getElementById('clipboard-tab-shelves').classList.remove('bg-opacity-50');
 
             shelves.forEach((shelf, index) => {
@@ -3554,6 +3692,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             // Clipboard Tabs
             document.getElementById('clipboard-tab-shelves').addEventListener('click', openClipboardPanel);
             document.getElementById('clipboard-tab-customers').addEventListener('click', showCustomersOnClipboard);
+            document.getElementById('clipboard-tab-employees').addEventListener('click', showEmployeesOnClipboard);
 
             // Settings Toggles
             const devToggle = document.getElementById('developer-toggle');

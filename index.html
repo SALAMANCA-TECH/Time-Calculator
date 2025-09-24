@@ -1025,21 +1025,23 @@
         }
 
         function drawManagersOffice() {
-            ctx.fillStyle = '#a1887f';
+            ctx.fillStyle = '#d7ccc8';
             ctx.fillRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
-            ctx.strokeStyle = '#4e342e';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
+
             ctx.fillStyle = '#5d4037';
-            ctx.font = '14px "Indie Flower", cursive';
+            ctx.font = '24px "Indie Flower", cursive';
             ctx.textAlign = 'center';
-            ctx.fillText("Manager's", managersOffice.x + managersOffice.w / 2, managersOffice.y + 20);
-            ctx.fillText("Office", managersOffice.x + managersOffice.w / 2, managersOffice.y + 35);
+            ctx.fillText("Manager's Office", managersOffice.x + managersOffice.w / 2, managersOffice.y + 40);
 
             // Desk
+            const deskWidth = 120, deskHeight = 50;
+            const deskX = managersOffice.x + (managersOffice.w - deskWidth) / 2;
+            const deskY = managersOffice.y + managersOffice.h - deskHeight - 20;
             ctx.fillStyle = '#8d6e63';
-            ctx.fillRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
-            ctx.strokeRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
+            ctx.fillRect(deskX, deskY, deskWidth, deskHeight);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(deskX, deskY, deskWidth, deskHeight);
         }
 
         function drawPackage(pkg, x, y) {
@@ -1073,10 +1075,24 @@
         }
 
         function drawStoreBackground() {
+            const storeShiftX = managersOffice.w;
+            const wallX = storeShiftX;
+            const wallThickness = 10;
+            const doorwayHeight = 150;
+            const doorwayY = (canvas.height - doorwayHeight) / 2;
+
             ctx.fillStyle = '#bcaaa4';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(storeShiftX, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#a1887f';
-            ctx.fillRect(0, 0, canvas.width, desk.y + desk.height);
+            ctx.fillRect(storeShiftX, 0, canvas.width, desk.y + desk.height);
+
+            drawManagersOffice();
+
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(wallX - wallThickness / 2, 0, wallThickness, doorwayY);
+            ctx.fillRect(wallX - wallThickness / 2, doorwayY + doorwayHeight, wallThickness, canvas.height - (doorwayY + doorwayHeight));
+
+
             storageCells.forEach((cell, index) => {
                 if (!unlocks.storage[index]) {
                     const r = cell.rect;
@@ -1117,7 +1133,6 @@
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
                 ctx.strokeRect(backWall.x, backWall.y, backWall.w, backWall.h);
 
-                // Capacity Bar
                 const currentFill = Object.values(cell.items).reduce((a, b) => a + b, 0);
                 const fillPercent = Math.min(1, currentFill / cell.capacity);
                 ctx.fillStyle = '#eeeeee';
@@ -1133,13 +1148,12 @@
                 ctx.fillText(cell.label, cell.rect.x + cell.rect.w / 2, cell.rect.y + cell.rect.h + 20);
             });
 
-            // Draw Cashier Counter
             ctx.fillStyle = '#8d6e63';
             ctx.fillRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
             ctx.strokeStyle = '#4e342e';
             ctx.lineWidth = 4;
             ctx.strokeRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
-            ctx.fillStyle = '#6d4c41'; // Darker top
+            ctx.fillStyle = '#6d4c41';
             ctx.fillRect(cashierCounter.x, cashierCounter.y, 10, cashierCounter.h);
 
 
@@ -1150,7 +1164,6 @@
             ctx.strokeRect(desk.x, desk.y, desk.width, desk.height);
 
             drawLoadingDock();
-            drawManagersOffice();
         }
 
         function drawStaticUI() {
@@ -2460,7 +2473,8 @@
                 player.state = 'idle';
             }
 
-            player.x = Math.max(player.frameWidth / 2, Math.min(canvas.width - player.frameWidth / 2, player.x));
+            const worldWidth = canvas.width + managersOffice.w;
+            player.x = Math.max(player.frameWidth / 2, Math.min(worldWidth - player.frameWidth / 2, player.x));
             player.y = Math.max(player.frameHeight, Math.min(canvas.height, player.y));
 
             updateCharacterAnimation(player, deltaTime);
@@ -2900,39 +2914,41 @@
         // The following values determine the layout of the store.
         // This layout has been finalized and should not be changed.
         function initializeLayout() {
+            const officeWidth = canvas.width / 2;
+            const storeShiftX = officeWidth;
+
             const cellWidth = canvas.width / 5;
             const cellHeight = ((desk.y - 250) / 2) * 0.8;
             const topPadding = 90;
             const cellPadding = 20;
 
-            // New order: Drawing, Painting, Models, Woodworking, Sculpture, Architectural
-            // New layout: Bottom-Left, Bottom-Mid, Bottom-Right, Top-Left, Top-Mid, Top-Right
             storageCells = [
                 // Bottom Row
-                { label: "Drawing", rect: { x: cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
-                { label: "Painting", rect: { x: canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
-                { label: "Models", rect: { x: canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                { label: "Drawing", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
                 // Top Row
-                { label: "Woodworking", rect: { x: cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
-                { label: "Sculpture", rect: { x: canvas.width / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
-                { label: "Architectural", rect: { x: canvas.width - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+                { label: "Woodworking", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
+                { label: "Sculpture", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
 
-            // --- LOCKED LAYOUT POSITIONS ---
-            // These positions for the counter and shelves are finalized.
-            cashierCounter.x = 141;
+            cashierCounter.x = storeShiftX + 141;
             cashierCounter.y = (desk.y - cashierCounter.h) + 141;
+
+            managersOffice.w = officeWidth;
+            managersOffice.h = canvas.height / 2;
             managersOffice.x = 0;
-            managersOffice.y = desk.y - managersOffice.h;
+            managersOffice.y = (canvas.height - managersOffice.h) / 2;
+
 
             const shelfWidth = 60, shelfHeight = 120;
             const shelfY = desk.y - shelfHeight + 40;
-            // --- END LOCKED LAYOUT POSITIONS ---
 
             const numShelves = 6;
             const shelfPadding = 50;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
-            const startX = (canvas.width - totalShelvesWidth) / 2;
+            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2;
             if (shelves.length === 0) {
                 for (let i = 0; i < numShelves; i++) {
                     const shelf = {
@@ -2944,7 +2960,7 @@
                             { assignedItem: null, quantity: 0 }
                         ],
                         y: shelfY + shelfHeight,
-                        draw: drawShelf // REFACTOR: Assign the single draw function
+                        draw: drawShelf
                     };
                     shelves.push(shelf);
                 }
@@ -2955,7 +2971,6 @@
                      shelves[i].y = shelfY + shelfHeight;
                  }
             }
-            // Set all worker idle/start positions behind the counter
             const startY = cashierCounter.y + cashierCounter.h / 2;
 
             cashier.idleX = cashierCounter.x - 30;
@@ -2979,14 +2994,14 @@
                 stocker.y = stocker.idleY;
             }
 
-            loader.idleX = managersOffice.x + managersOffice.w + 40;
-            loader.idleY = managersOffice.y + managersOffice.h / 2;
+            loader.idleX = storeShiftX + 40;
+            loader.idleY = loadingDock.y - 30;
             if (loader.state === 'idle' && !loader.task) {
                 loader.x = loader.idleX;
                 loader.y = loader.idleY;
             }
 
-            salesperson.idleX = canvas.width - 100;
+            salesperson.idleX = storeShiftX + canvas.width - 100;
             salesperson.idleY = 400;
             if (salesperson.state === 'idle' && !salesperson.task) {
                 salesperson.x = salesperson.idleX;
@@ -3067,7 +3082,7 @@
         }
 
         function clampCamera() {
-            const worldWidth = canvas.width * scale;
+            const worldWidth = (canvas.width + managersOffice.w) * scale;
             const worldHeight = canvas.height * scale;
 
             cameraX = Math.max(canvas.clientWidth - worldWidth, Math.min(0, cameraX));

@@ -241,9 +241,26 @@
         <!-- Clipboard Panel -->
         <div id="clipboard-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
             <button id="close-clipboard" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Shelf Assignments</h2>
-            <div id="clipboard-grid" class="grid grid-cols-2 gap-4">
-                <!-- Shelf buttons will be populated here -->
+            <h2 id="clipboard-title" class="text-2xl font-handwritten mb-4 text-center">Clipboard</h2>
+
+            <!-- Tab buttons -->
+            <div class="flex border-b-2 border-amber-900/50 mb-4">
+                <button id="clipboard-tab-shelves" class="btn-style flex-1 rounded-b-none rounded-t-lg">Shelf Assignments</button>
+                <button id="clipboard-tab-customers" class="btn-style flex-1 rounded-b-none rounded-t-lg bg-opacity-50">Customers</button>
+            </div>
+
+            <!-- Content for Shelf Assignments -->
+            <div id="clipboard-shelves-content">
+                <div id="clipboard-grid" class="grid grid-cols-2 gap-4">
+                    <!-- Shelf buttons will be populated here -->
+                </div>
+            </div>
+
+            <!-- Content for Customers -->
+            <div id="clipboard-customers-content" class="hidden">
+                 <div id="customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
+                    <!-- Customer list will be populated here -->
+                </div>
             </div>
         </div>
 
@@ -2357,6 +2374,7 @@
         }
 
         async function spawnNewCustomer() {
+            if (customers.length >= 7) return;
             const customerData = await generateCustomerRequest();
             if (customerData && customerData.requestedItems) {
                 const newCustomer = new Customer(
@@ -2823,9 +2841,42 @@
             }
         }
 
+        function showCustomersOnClipboard() {
+            const customerList = document.getElementById('customer-list');
+            customerList.innerHTML = '';
+
+            document.getElementById('clipboard-title').textContent = 'Customers';
+            document.getElementById('clipboard-shelves-content').classList.add('hidden');
+            document.getElementById('clipboard-customers-content').classList.remove('hidden');
+            document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-customers').classList.remove('bg-opacity-50');
+
+            if (customers.filter(c => !c.leaving).length === 0) {
+                customerList.innerHTML = `<p class="text-center p-4">No customers in the shop.</p>`;
+                return;
+            }
+
+            customers.filter(c => !c.leaving).forEach(customer => {
+                const customerDiv = document.createElement('div');
+                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50';
+                customerDiv.innerHTML = `
+                    <div class="font-bold text-lg">${customer.name}</div>
+                    <div>Needs: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
+                    <div>Patience: <span class="font-handwritten">${Math.round(customer.patience)}</span></div>
+                `;
+                customerList.appendChild(customerDiv);
+            });
+        }
+
         function openClipboardPanel() {
             const clipboardGrid = document.getElementById('clipboard-grid');
             clipboardGrid.innerHTML = ''; // Clear existing buttons
+
+            document.getElementById('clipboard-title').textContent = 'Shelf Assignments';
+            document.getElementById('clipboard-customers-content').classList.add('hidden');
+            document.getElementById('clipboard-shelves-content').classList.remove('hidden');
+            document.getElementById('clipboard-tab-customers').classList.add('bg-opacity-50');
+            document.getElementById('clipboard-tab-shelves').classList.remove('bg-opacity-50');
 
             shelves.forEach((shelf, index) => {
                 if (unlocks.shelves[index]) {
@@ -2852,10 +2903,7 @@
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600 col-span-2';
             backButton.textContent = '← Back to Shelves';
-            backButton.onclick = () => {
-                clipboardTitle.textContent = 'Shelf Assignments';
-                openClipboardPanel();
-            };
+            backButton.onclick = openClipboardPanel;
             clipboardGrid.appendChild(backButton);
 
             for (let i = 0; i < 4; i++) {
@@ -3451,6 +3499,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'clipboard'].forEach(panelName => {
                 document.getElementById(`close-${panelName}`).addEventListener('click', () => togglePanel(panelName, false));
             });
+
+            // Clipboard Tabs
+            document.getElementById('clipboard-tab-shelves').addEventListener('click', openClipboardPanel);
+            document.getElementById('clipboard-tab-customers').addEventListener('click', showCustomersOnClipboard);
 
             // Settings Toggles
             const devToggle = document.getElementById('developer-toggle');

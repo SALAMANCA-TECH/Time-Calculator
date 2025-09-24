@@ -535,7 +535,7 @@
             if (e.code === 'KeyF') {
                 togglePanel('orders');
             } else if (e.code === 'KeyG') {
-                togglePanel('basket');
+                openBasketPanel();
             } else if (e.code === 'KeyT') {
                 openUnlocksPanel();
             } else if (e.code === 'KeyE') {
@@ -2335,6 +2335,21 @@
             updateManager(deltaTime);
             updateSalesperson(deltaTime);
 
+            if (activeShelf) {
+                const shelf = activeShelf;
+                const dist = Math.hypot(player.x - (shelf.rect.x + shelf.rect.w/2), player.y - (shelf.rect.y + shelf.rect.h/2));
+                if (dist > 200) {
+                    togglePanel('shelf', false);
+                }
+            }
+            if (activeStorageCell) {
+                const cell = activeStorageCell;
+                const dist = Math.hypot(player.x - (cell.rect.x + cell.rect.w/2), player.y - (cell.rect.y + cell.rect.h/2));
+                if (dist > 200) {
+                    togglePanel('storage', false);
+                }
+            }
+
             if (dayPhase === 'open') {
                 timeSinceLastCustomer += deltaTime;
                 if (timeSinceLastCustomer >= CUSTOMER_SPAWN_INTERVAL) {
@@ -2705,7 +2720,7 @@
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
                  if (x >= cashRegister.x && x <= cashRegister.x + cashRegister.width && y >= cashRegister.y && y <= cashRegister.y + cashRegister.height) { togglePanel('restock'); }
-                 else if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { togglePanel('basket'); }
+                 else if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { openBasketPanel(); }
                  else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) {
                     openClipboardPanel();
                  }
@@ -2866,6 +2881,32 @@
                 `;
                 customerList.appendChild(customerDiv);
             });
+        }
+
+        function openBasketPanel() {
+            const basketGrid = document.getElementById('basket-grid');
+            basketGrid.innerHTML = '';
+
+            if (player.basket.length === 0) {
+                basketGrid.innerHTML = `<p class="text-center p-4">Your basket is empty.</p>`;
+            } else {
+                const itemCounts = player.basket.reduce((acc, item) => {
+                    acc[item] = (acc[item] || 0) + 1;
+                    return acc;
+                }, {});
+
+                for (const item in itemCounts) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'p-2 border-b border-amber-800/20 flex justify-between items-center';
+                    itemDiv.innerHTML = `
+                        <span class="text-lg">${item}</span>
+                        <span class="font-handwritten text-xl">x${itemCounts[item]}</span>
+                    `;
+                    basketGrid.appendChild(itemDiv);
+                }
+            }
+
+            togglePanel('basket', true);
         }
 
         function openClipboardPanel() {
@@ -3178,6 +3219,7 @@
         }
 
         function openStorageCell(cell) {
+            activeStorageCell = cell;
             const storageGrid = document.getElementById('storage-grid');
             document.getElementById('storage-title').textContent = cell.label;
             storageGrid.innerHTML = '';
@@ -3304,6 +3346,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function openShelfPanel(shelf) {
+            activeShelf = shelf;
             const shelfGrid = document.getElementById('shelf-grid');
             shelfGrid.innerHTML = '';
             for (let i = 0; i < 4; i++) {
@@ -3383,8 +3426,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
 
         let activePanel = null;
+        let activeShelf = null;
+        let activeStorageCell = null;
         function togglePanel(panelName, forceOpen = false) {
-            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel'];
+            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'clipboard-panel'];
             const targetPanel = document.getElementById(`${panelName}-panel`);
 
             if (forceOpen) {
@@ -3403,6 +3448,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 // Close the current panel
                 targetPanel.classList.add('hidden');
                 activePanel = null;
+                if (panelName === 'shelf') {
+                    activeShelf = null;
+                }
+                if (panelName === 'storage') {
+                    activeStorageCell = null;
+                }
             } else {
                  // Close the previously active panel
                 if (activePanel) {

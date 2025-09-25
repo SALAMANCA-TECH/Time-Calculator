@@ -2657,9 +2657,9 @@
         }
 
         function findRestockingTask() {
-             // --- REFACTOR START: Deadlock Prevention ---
-            const fullCell = storageCells.find(c => {
-                if (!c.items) return false;
+            // --- REFACTOR START: Deadlock Prevention ---
+            const fullCell = storageCells.find((c, i) => {
+                if (!unlocks.storage[i] || !c.items) return false;
                 const currentFill = Object.values(c.items).reduce((a, b) => a + b, 0);
                 return currentFill >= c.capacity;
             });
@@ -2683,44 +2683,69 @@
             }
             // --- REFACTOR END ---
 
+            // Build a map of available stock from all unlocked storage cells.
+            const availableStock = new Map();
+            storageCells.forEach((cell, index) => {
+                if (unlocks.storage[index] && cell.items) {
+                    for (const itemName in cell.items) {
+                        if (cell.items[itemName] > 0) {
+                            const currentStock = availableStock.get(itemName) || 0;
+                            availableStock.set(itemName, currentStock + cell.items[itemName]);
+                        }
+                    }
+                }
+            });
 
-            let neededItems = [];
-            // Prioritize assigned but understocked shelves
-            for(let i = 0; i < shelves.length; i++) {
+            if (availableStock.size === 0) {
+                return null; // No items in storage to restock.
+            }
+
+            const assignedNeeded = new Set();
+            const unassignedAvailable = new Set();
+
+            // 1. Check for understocked, assigned items.
+            shelves.forEach((shelf, i) => {
                 if (unlocks.shelves[i]) {
-                    for(const slot of shelves[i].items) {
-                        const stock = getStorageStock(slot.assignedItem);
-                        if (slot.assignedItem && slot.quantity < MAX_SHELF_STACK && stock > 0) {
-                             if(!neededItems.includes(slot.assignedItem)) neededItems.push(slot.assignedItem);
+                    shelf.items.forEach(slot => {
+                        if (slot.assignedItem && slot.quantity < MAX_SHELF_STACK && availableStock.has(slot.assignedItem)) {
+                            assignedNeeded.add(slot.assignedItem);
                         }
+                    });
+                }
+            });
+
+            // 2. Check for unassigned items that have stock and an empty slot.
+            const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
+            if (hasEmptySlot) {
+                for (const [itemName, stock] of availableStock.entries()) {
+                    const isAssigned = shelves.some(s => s.items.some(i => i.assignedItem === itemName));
+                    if (!isAssigned) {
+                        unassignedAvailable.add(itemName);
                     }
                 }
             }
-            // Then check for unassigned items that have stock
-            for (const item in items) {
-                const stock = getStorageStock(item);
-                if (stock > 0) {
-                    const isAssigned = shelves.some(s => s.items.some(i => i.assignedItem === item));
-                    if (!isAssigned && !neededItems.includes(item)) {
-                        const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
-                        if (hasEmptySlot) {
-                            neededItems.push(item);
-                        }
-                    }
-                }
-            }
+
+            // Prioritize assigned items, then unassigned.
+            const neededItems = [...assignedNeeded, ...unassignedAvailable];
 
             if (neededItems.length > 0) {
                 const itemToFetch = neededItems[0];
-                const storageCell = storageCells.find((c,i) => unlocks.storage[i] && c.allowedItems.includes(itemToFetch));
-                if (storageCell) {
+                // Find a specific storage cell that actually has the item.
+                const storageCellWithItem = storageCells.find((c, i) =>
+                    unlocks.storage[i] &&
+                    c.allowedItems.includes(itemToFetch) &&
+                    c.items[itemToFetch] > 0
+                );
+
+                if (storageCellWithItem) {
                     return {
                         action: 'fetch',
                         item: itemToFetch,
-                        target: { x: storageCell.rect.x + storageCell.rect.w / 2, y: storageCell.rect.y + storageCell.rect.h + 10 }
+                        target: { x: storageCellWithItem.rect.x + storageCellWithItem.rect.w / 2, y: storageCellWithItem.rect.y + storageCellWithItem.rect.h + 10 }
                     };
                 }
             }
+
             return null;
         }
 
@@ -4744,7 +4769,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 dayTimer = DAY_DURATION;
                 timeSinceLastCustomer = 0;
                 document.getElementById('start-day-btn').classList.add('hidden');
-                document.getElementById('next-day-btn').classList.remove('hidden');
                 // Ensure all idle states are correct before starting
                 if (!stocker.task) stocker.state = 'idle';
                 if (!cashier.task) cashier.state = 'idle';

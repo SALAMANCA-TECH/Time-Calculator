@@ -284,6 +284,11 @@
                         <p>Day Ended: <span id="report-day" class="font-bold"></span></p>
                         <p>Gross Sales: <span id="report-sales" class="font-bold"></span></p>
                         <p>Daily Expenses: <span id="report-expenses" class="font-bold"></span></p>
+                    <div class="pl-4 text-base border-l-2 border-amber-800/30 ml-2 space-y-1 my-1">
+                        <p>Rent: <span id="report-rent-cost" class="font-bold"></span></p>
+                        <p>Labor: <span id="report-labor-cost" class="font-bold"></span></p>
+                        <p>Storage: <span id="report-storage-cost" class="font-bold"></span></p>
+                    </div>
                         <p class="border-t border-amber-800/30 pt-2">Net Profit: <span id="report-profit" class="font-bold"></span></p>
                     </div>
                 </div>
@@ -3228,6 +3233,10 @@
             document.getElementById('report-day').textContent = day;
             document.getElementById('report-sales').textContent = `$${grossSales.toFixed(2)}`;
             document.getElementById('report-expenses').textContent = `-$${dailyExpenses.toFixed(2)}`;
+            // Populate the cost breakdown
+            document.getElementById('report-rent-cost').textContent = `-$${dailyOperatingCosts.rent.toFixed(2)}`;
+            document.getElementById('report-labor-cost').textContent = `-$${dailyLaborCost.toFixed(2)}`;
+            document.getElementById('report-storage-cost').textContent = `-$${dailyStorageCost.toFixed(2)}`;
             document.getElementById('report-profit').textContent = `$${(grossSales - dailyExpenses).toFixed(2)}`;
             reportPanel.classList.remove('hidden');
             document.getElementById('next-day-report-btn').onclick = () => {

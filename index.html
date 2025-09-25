@@ -1164,7 +1164,7 @@
 
         function drawPackages() {
             loadingDockPackages.forEach((pkg, index) => {
-                const x = 10 + index * (PACKAGE_WIDTH + 10);
+                const x = loadingDock.x + 10 + index * (PACKAGE_WIDTH + 10);
                 const y = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
                 drawPackage(pkg, x, y);
             });
@@ -3141,9 +3141,10 @@
             saveGame();
         }
 
-        function endGame() {
+        function endGame(reason) {
             running = false;
-            showMessage(`Game Over! You ran out of money. You survived for ${day} days and ended with $${Math.round(cash)}.`, null);
+            const defaultMessage = `Game Over! You ran out of money. You survived for ${day} days and ended with $${Math.round(cash)}.`;
+            showMessage(reason || defaultMessage, null);
         }
 
         function nextDay() {
@@ -3167,11 +3168,13 @@
             cash -= dailyExpenses;
             customers.forEach(c => c.state = 'leaving');
             timeSinceLastCustomer = 0;
-            if (cash < 0) {
+
+            if (day > 0 && day % 7 === 0 && cash < 0) {
                 updateUI();
-                endGame();
+                endGame(`Game Over! You couldn't pay your weekly bills and ended with a debt of $${Math.abs(cash).toFixed(2)}.`);
                 return;
             }
+
             updateUI();
             const reportPanel = document.getElementById('end-of-day-panel');
             const reportList = document.getElementById('sales-report-list');

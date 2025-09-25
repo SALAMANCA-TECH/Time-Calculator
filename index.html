@@ -1241,7 +1241,7 @@
 
         function drawStaticUI() {
             const boxWidth = 70, boxHeight = 70;
-            const boxX = (canvas.width - boxWidth) / 2, boxY = 20;
+            const boxX = canvas.width - boxWidth - 20, boxY = 20;
 
             ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
             ctx.strokeStyle = "#4e342e";
@@ -2967,7 +2967,7 @@
 
             customers.forEach(customer => customer.update(deltaTime));
             customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
-            updateCustomerUI();
+            populateInStoreCustomers();
 
             // Real-time clipboard updates
             clipboardUpdateTimer += deltaTime;
@@ -2994,10 +2994,26 @@
             ctx.translate(cameraX, cameraY);
 
             drawStoreBackground();
-            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, { draw: drawPlayer, y: player.y }, { draw: drawStocker, y: stocker.y }, { draw: drawCashier, y: cashier.y }, { draw: drawLoader, y: loader.y }, { draw: drawManager, y: manager.y }, { draw: drawSalesperson, y: salesperson.y }];
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, loader, manager, salesperson];
             dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
             dynamicEntities.forEach(entity => {
-                if (entity.draw) entity.draw();
+                if (entity instanceof Customer) {
+                    entity.draw();
+                } else if (entity === player) {
+                    drawPlayer();
+                } else if (entity === stocker) {
+                    drawStocker();
+                } else if (entity === cashier) {
+                    drawCashier();
+                } else if (entity === loader) {
+                    drawLoader();
+                } else if (entity === manager) {
+                    drawManager();
+                } else if (entity === salesperson) {
+                    drawSalesperson();
+                } else if (entity.rect) { // It's a shelf
+                    entity.draw();
+                }
             });
             drawOfficeZones();
             drawPackages();
@@ -3024,7 +3040,7 @@
                 );
                 customers.push(newCustomer);
                 generateAndLoadCustomerSprite(newCustomer);
-                updateCustomerUI();
+                populateInStoreCustomers();
             }
         }
 
@@ -3034,21 +3050,6 @@
             document.getElementById('shop-points-display').textContent = shopPoints;
         }
 
-        function updateCustomerUI() {
-            const customerOrdersDiv = document.getElementById('customer-orders');
-            customerOrdersDiv.innerHTML = '';
-            customers.filter(c => !c.leaving && !c.isServed).forEach(customer => {
-                const customerDiv = document.createElement('div');
-                const isReady = customer.state === 'waitingAtCounter';
-                customerDiv.className = `p-4 border-2 rounded-lg bg-white shadow-sm ${isReady ? 'border-green-500 border-4' : 'border-amber-900'}`;
-                customerDiv.dataset.customerId = customer.id;
-                customerDiv.innerHTML = `<h3 class="font-handwritten text-lg">${customer.name}</h3><p class="text-sm">Wants: ${customer.request}</p>`;
-                if (isReady) {
-                    customerDiv.innerHTML += `<p class="text-sm font-bold mt-1 text-green-700">Ready to Checkout!</p>`;
-                }
-                customerOrdersDiv.appendChild(customerDiv);
-            });
-        }
 
         function logCustomerToSalesReport(customer) {
             dailySalesReport.push({
@@ -3124,7 +3125,7 @@
             }
             logCustomerToSalesReport(customer);
             updateUI();
-            updateCustomerUI();
+            populateInStoreCustomers();
             saveGame();
         }
 
@@ -3433,13 +3434,12 @@
             let x = event.clientX - rect.left;
             let y = event.clientY - rect.top;
 
-            const panelWidth = 70;
-            const panelX = (canvas.width - panelWidth) / 2;
-            const panelY = 20;
-            const panelHeight = 70;
+            const boxWidth = 70, boxHeight = 70;
+            const boxX = canvas.width - boxWidth - 20, boxY = 20;
+
 
             // Check for static UI clicks FIRST, before transforming coordinates
-            if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
+            if (x >= boxX && x <= boxX + boxWidth && y >= boxY && y <= boxY + boxHeight) {
                  if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openClipboardPanel(); }
                 return;
             }
@@ -3843,6 +3843,7 @@
 
             showAppScreen('shelf-assignment-panel');
         }
+
         function populateInStoreCustomers() {
             const customerList = document.getElementById('in-store-customer-list');
             if (!customerList) return; // Exit if the panel isn't open/doesn't exist
@@ -4337,7 +4338,7 @@
                 }
                 updateUI();
                 saveGame();
-                togglePanel(panelId, false);
+                closeClipboard();
                 showMessage(`Order placed for $${totalCost.toFixed(2)}! The supplies have been delivered to the loading dock.`);
             } else {
                 showMessage(`You can't afford this order! You need $${totalCost.toFixed(2)} but only have $${cash.toFixed(2)}.`);
@@ -4392,11 +4393,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
             backButton.textContent = '← Back';
-            backButton.onclick = () => {
-                togglePanel('assignment', false);
-                togglePanel('shelf-assignment', true);
-                showShelfSlotsForAssignment(shelf);
-            };
+            backButton.onclick = () => showShelfSlotsForAssignment(shelf);
             assignmentGrid.appendChild(backButton);
 
             const clearButton = document.createElement('button');
@@ -4467,8 +4464,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 };
                 assignmentGrid.appendChild(button);
             }
-            togglePanel('shelf-assignment', false);
-            togglePanel('assignment', true);
+            showAppScreen('assignment-panel');
         }
 
         function openShelfPanel(shelf) {
@@ -4705,8 +4701,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('place-favorites-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
-            // Setup close buttons for all panels
-            document.getElementById('close-phone').addEventListener('click', closePhone);
+            // Phone Navigation
+            document.getElementById('close-phone').addEventListener('click', closeClipboard);
             document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
 
             // Settings Toggles

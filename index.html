@@ -115,13 +115,6 @@
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
         </div>
 
-        <!-- Settings Button -->
-        <div class="absolute top-4 right-4 z-10">
-            <button id="settings-btn" class="p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-900"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2.4l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-        </div>
-
         <!-- Canvas for the game -->
         <canvas id="game-canvas" class="rounded-lg shadow-xl w-full h-full"></canvas>
 
@@ -237,60 +230,78 @@
             </div>
         </div>
 
-        <!-- Clipboard Panel -->
-        <div id="clipboard-panel" class="fixed top-4 right-0 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm transition-transform duration-300 ease-in-out translate-x-full">
-            <button id="close-clipboard" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 id="clipboard-title" class="text-2xl font-handwritten mb-4 text-center">Clipboard</h2>
-
-            <!-- Tab buttons -->
-            <div class="flex border-b-2 border-amber-900/50 mb-4">
-                <button id="clipboard-tab-shelves" class="btn-style flex-1 rounded-b-none rounded-t-lg">Shelf Assignments</button>
-                <button id="clipboard-tab-customers" class="btn-style flex-1 rounded-b-none rounded-t-lg bg-opacity-50">Customers</button>
-                <button id="clipboard-tab-employees" class="btn-style flex-1 rounded-b-none rounded-t-lg bg-opacity-50">Employees</button>
+        <!-- Shelf Assignment Panel -->
+        <div id="shelf-assignment-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-shelf-assignment" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 id="shelf-assignment-title" class="text-2xl font-handwritten mb-4 text-center">Shelf Assignments</h2>
+            <div id="shelf-assignment-grid" class="grid grid-cols-2 gap-4">
+                <!-- Shelf buttons will be populated here -->
             </div>
+        </div>
 
-            <!-- Content for Shelf Assignments -->
-            <div id="clipboard-shelves-content">
-                <div id="clipboard-grid" class="grid grid-cols-2 gap-4">
-                    <!-- Shelf buttons will be populated here -->
-                </div>
+        <!-- Employees Panel -->
+        <div id="employees-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-employees" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Employee Status</h2>
+            <div id="employee-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
+                <!-- Employee list will be populated here -->
             </div>
+        </div>
 
-            <!-- Content for Customers -->
-            <div id="clipboard-customers-content" class="hidden">
-                <!-- Customer Sub-Tabs -->
-                <div class="flex justify-center mb-2">
-                    <button id="in-store-customers-btn" class="btn-style px-4 py-1 text-sm rounded-r-none">In Store</button>
-                    <button id="all-customers-btn" class="btn-style px-4 py-1 text-sm rounded-l-none bg-opacity-50">All Profiles</button>
-                </div>
-                <div id="in-store-customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
-                    <!-- In-store customers will be populated here -->
-                </div>
-                <div id="all-customer-list" class="hidden flex-col space-y-2 max-h-64 overflow-y-auto">
-                    <!-- All customer profiles will be populated here -->
-                </div>
+        <!-- Customers Panel -->
+        <div id="customers-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
+            <button id="close-customers" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Customers</h2>
+            <!-- Customer Sub-Tabs -->
+            <div class="flex justify-center mb-2">
+                <button id="in-store-customers-btn" class="btn-style px-4 py-1 text-sm rounded-r-none">In Store</button>
+                <button id="all-customers-btn" class="btn-style px-4 py-1 text-sm rounded-l-none bg-opacity-50">All Profiles</button>
             </div>
-
-            <!-- Content for Employees -->
-            <div id="clipboard-employees-content" class="hidden">
-                 <div id="employee-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
-                    <!-- Employee list will be populated here -->
-                </div>
+            <div id="in-store-customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
+                <!-- In-store customers will be populated here -->
+            </div>
+            <div id="all-customer-list" class="hidden flex-col space-y-2 max-h-64 overflow-y-auto">
+                <!-- All customer profiles will be populated here -->
             </div>
         </div>
 
         <!-- Phone Panel -->
-        <div id="phone-panel" class="fixed top-4 right-0 w-full max-w-sm p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-30 backdrop-blur-sm transition-transform duration-300 ease-in-out translate-x-full">
-            <button id="close-phone" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Quick Order</h2>
-            <div id="phone-grid-container" class="h-[400px] overflow-y-auto p-2 bg-white/50 rounded-md">
-                <div id="phone-grid" class="grid grid-cols-1 gap-2">
+        <div id="phone-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-6 border-4 border-amber-900 rounded-2xl bg-amber-100/95 shadow-xl z-30 backdrop-blur-sm">
+             <div id="phone-screen" class="bg-gray-800 rounded-lg p-2 h-[550px] flex flex-col">
+                <!-- Phone Header -->
+                <div class="flex justify-between items-center pb-2 border-b border-gray-600 px-2">
+                    <span class="text-sm text-gray-300">9:41 AM</span>
+                    <div class="w-20 h-4 bg-black rounded-full"></div>
+                    <div class="flex items-center space-x-1">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M12 20h.01"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/></svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="text-gray-300"><path d="M2 2h20v20H2z"/></svg>
+                    </div>
+                </div>
+
+                <!-- Apps Grid -->
+                <div id="phone-apps-grid" class="grid grid-cols-4 gap-x-2 gap-y-4 p-4 flex-grow overflow-y-auto">
+                    <!-- App icons will be populated here by JS -->
+                </div>
+
+                <!-- Phone Footer / Close Button -->
+                <div class="pt-4 mt-auto text-center">
+                     <button id="close-phone" class="w-24 h-1.5 bg-gray-500 rounded-full hover:bg-gray-400 transition-colors"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorites Panel (formerly Quick Order) -->
+        <div id="favorites-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-40 backdrop-blur-sm">
+            <button id="close-favorites" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Favorites</h2>
+            <div id="favorites-grid-container" class="h-[400px] overflow-y-auto p-2 bg-white/50 rounded-md">
+                <div id="favorites-grid" class="grid grid-cols-1 gap-2">
                     <!-- Starred items will be populated here -->
                 </div>
             </div>
             <div class="text-right mt-4 p-2 border-t-2 border-amber-900/50 flex justify-end items-center">
-                <span class="text-xl mr-4">Total: $<span id="phone-total">0.00</span></span>
-                <button id="place-phone-order-btn" class="btn-style px-6 py-2 rounded-lg text-lg">Place Order</button>
+                <span class="text-xl mr-4">Total: $<span id="favorites-total">0.00</span></span>
+                <button id="place-favorites-order-btn" class="btn-style px-6 py-2 rounded-lg text-lg">Place Order</button>
             </div>
         </div>
 
@@ -1254,7 +1265,7 @@
         }
 
         function drawStaticUI() {
-            const boxWidth = 280, boxHeight = 70;
+            const boxWidth = 70, boxHeight = 70;
             const boxX = (canvas.width - boxWidth) / 2, boxY = 20;
 
             ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
@@ -1264,31 +1275,9 @@
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
             const iconY = boxY + 10;
-            shoppingBasket.x = boxX + 14; shoppingBasket.y = iconY;
-            clipboard.x = boxX + 88; clipboard.y = iconY;
-            phoneIcon.x = boxX + 152; phoneIcon.y = iconY;
-            lockIcon.x = boxX + 216; lockIcon.y = iconY;
+            phoneIcon.x = boxX + 10; phoneIcon.y = iconY;
 
-            drawShoppingBasket(shoppingBasket.x, shoppingBasket.y, shoppingBasket.width, shoppingBasket.height);
-            drawClipboard(clipboard.x, clipboard.y, clipboard.width, clipboard.height);
             drawPhoneIcon(phoneIcon.x, phoneIcon.y, phoneIcon.width, phoneIcon.height);
-            drawLockIcon(lockIcon.x, lockIcon.y, lockIcon.width, lockIcon.height);
-
-
-            if (player.basket.length > 0) {
-                const count = player.basket.length;
-                const countX = shoppingBasket.x + shoppingBasket.width - 10;
-                const countY = shoppingBasket.y + 15;
-                ctx.fillStyle = '#dc2626';
-                ctx.beginPath();
-                ctx.arc(countX, countY, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#f7e7d8';
-                ctx.font = '16px "Patrick Hand", cursive';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(count, countX, countY);
-            }
         }
 
         function drawCashRegister(x, y, w, h) {
@@ -2925,8 +2914,8 @@
                         }
                     }
 
-                    if (activePanel === 'clipboard') {
-                        showEmployeesOnClipboard();
+                    if (activePanel === 'employees') {
+                        openEmployeesPanel();
                     }
 
                     setTimeout(() => {
@@ -2938,8 +2927,8 @@
                                 }
                             }
                         }
-                        if (activePanel === 'clipboard') {
-                            showEmployeesOnClipboard();
+                        if (activePanel === 'employees') {
+                            openEmployeesPanel();
                         }
                         spawnFloatingText("Break's over!", canvas.width / 2, 120, '#22c55e');
                     }, 20000);
@@ -3007,7 +2996,7 @@
 
             // Real-time clipboard updates
             clipboardUpdateTimer += deltaTime;
-            if (activePanel === 'clipboard' && clipboardUpdateTimer >= CLIPBOARD_UPDATE_INTERVAL) {
+            if (activePanel === 'customers' && clipboardUpdateTimer >= CLIPBOARD_UPDATE_INTERVAL) {
                 const inStoreList = document.getElementById('in-store-customer-list');
                 // Only update if the "In Store" tab is visible
                 if (inStoreList && inStoreList.offsetParent !== null) {
@@ -3469,29 +3458,20 @@
             let x = event.clientX - rect.left;
             let y = event.clientY - rect.top;
 
-            const panelWidth = 290;
+            const panelWidth = 70;
             const panelX = (canvas.width - panelWidth) / 2;
             const panelY = 20;
             const panelHeight = 70;
 
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
-                 if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { openBasketPanel(); }
-                 else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) { openClipboardPanel(); }
-                 else if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openPhonePanel(); }
-                 else if (x >= lockIcon.x && x <= lockIcon.x + lockIcon.width && y >= lockIcon.y && y <= lockIcon.y + lockIcon.height) { openUnlocksPanel(); }
+                 if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openPhonePanel(); }
                 return;
             }
 
             // Convert to world coordinates for game object clicks
             const worldX = (x - cameraX);
             const worldY = (y - cameraY);
-
-            if (worldX >= officeZone1.x && worldX <= officeZone1.x + officeZone1.w &&
-                worldY >= officeZone1.y && worldY <= officeZone1.y + officeZone1.h) {
-                openRestockPanel();
-                return;
-            }
 
             // Check for clicks on packages in the loading dock
             if (worldY >= loadingDock.y) {
@@ -3770,15 +3750,7 @@
             });
         }
 
-        function showCustomersOnClipboard() {
-            document.getElementById('clipboard-title').textContent = 'Customers';
-            document.getElementById('clipboard-shelves-content').classList.add('hidden');
-            document.getElementById('clipboard-employees-content').classList.add('hidden');
-            document.getElementById('clipboard-customers-content').classList.remove('hidden');
-            document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-customers').classList.remove('bg-opacity-50');
-
+        function openCustomersPanel() {
             const inStoreBtn = document.getElementById('in-store-customers-btn');
             const allBtn = document.getElementById('all-customers-btn');
             const inStoreList = document.getElementById('in-store-customer-list');
@@ -3804,21 +3776,13 @@
             inStoreBtn.onclick = showInStore;
             allBtn.onclick = showAll;
 
-            // Default to showing in-store customers
             showInStore();
+            togglePanel('customers', true);
         }
 
-        function showEmployeesOnClipboard() {
+        function openEmployeesPanel() {
             const employeeList = document.getElementById('employee-list');
             employeeList.innerHTML = '';
-
-            document.getElementById('clipboard-title').textContent = 'Employee Status';
-            document.getElementById('clipboard-shelves-content').classList.add('hidden');
-            document.getElementById('clipboard-customers-content').classList.add('hidden');
-            document.getElementById('clipboard-employees-content').classList.remove('hidden');
-            document.getElementById('clipboard-tab-shelves').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-customers').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-employees').classList.remove('bg-opacity-50');
 
             const employees = { cashier, stocker, loader, manager, salesperson };
 
@@ -3844,7 +3808,7 @@
                     toggle.addEventListener('change', (e) => {
                         employee.onBreak = e.target.checked;
                         employee.playerInitiatedBreak = e.target.checked;
-                        showEmployeesOnClipboard();
+                        openEmployeesPanel();
                         saveGame();
                     });
 
@@ -3857,6 +3821,7 @@
             if (!anyUnlocked) {
                 employeeList.innerHTML = `<p class="text-center p-4">No employees hired yet.</p>`;
             }
+            togglePanel('employees', true);
         }
 
         function openBasketPanel() {
@@ -3885,17 +3850,9 @@
             togglePanel('basket', true);
         }
 
-        function openClipboardPanel() {
-            const clipboardGrid = document.getElementById('clipboard-grid');
-            clipboardGrid.innerHTML = ''; // Clear existing buttons
-
-            document.getElementById('clipboard-title').textContent = 'Shelf Assignments';
-            document.getElementById('clipboard-customers-content').classList.add('hidden');
-            document.getElementById('clipboard-employees-content').classList.add('hidden');
-            document.getElementById('clipboard-shelves-content').classList.remove('hidden');
-            document.getElementById('clipboard-tab-customers').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-employees').classList.add('bg-opacity-50');
-            document.getElementById('clipboard-tab-shelves').classList.remove('bg-opacity-50');
+        function openShelfAssignmentPanel() {
+            const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
+            shelfAssignmentGrid.innerHTML = ''; // Clear existing buttons
 
             shelves.forEach((shelf, index) => {
                 if (unlocks.shelves[index]) {
@@ -3905,25 +3862,25 @@
                     shelfButton.onclick = () => {
                         showShelfSlotsForAssignment(shelf);
                     };
-                    clipboardGrid.appendChild(shelfButton);
+                    shelfAssignmentGrid.appendChild(shelfButton);
                 }
             });
 
-            togglePanel('clipboard', true);
+            togglePanel('shelf-assignment', true);
         }
 
         function showShelfSlotsForAssignment(shelf) {
-            const clipboardGrid = document.getElementById('clipboard-grid');
-            const clipboardTitle = document.querySelector('#clipboard-panel h2');
-            clipboardGrid.innerHTML = ''; // Clear shelf buttons
-            clipboardTitle.textContent = `Assign to Shelf ${shelves.indexOf(shelf) + 1}`;
+            const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
+            const shelfAssignmentTitle = document.getElementById('shelf-assignment-title');
+            shelfAssignmentGrid.innerHTML = ''; // Clear shelf buttons
+            shelfAssignmentTitle.textContent = `Assign to Shelf ${shelves.indexOf(shelf) + 1}`;
 
             // Add a back button
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600 col-span-2';
             backButton.textContent = '← Back to Shelves';
-            backButton.onclick = openClipboardPanel;
-            clipboardGrid.appendChild(backButton);
+            backButton.onclick = openShelfAssignmentPanel;
+            shelfAssignmentGrid.appendChild(backButton);
 
             for (let i = 0; i < 4; i++) {
                 const slot = shelf.items[i];
@@ -3939,8 +3896,9 @@
                 slotButton.onclick = () => {
                     openProductAssignmentForShelf(shelf, i);
                 };
-                clipboardGrid.appendChild(slotButton);
+                shelfAssignmentGrid.appendChild(slotButton);
             }
+             togglePanel('shelf-assignment', true);
         }
 
 
@@ -3962,20 +3920,53 @@
 
 
         let currentRestockOrder = {};
-        let currentPhoneOrder = {};
+        let currentFavoritesOrder = {};
 
         function openPhonePanel() {
-            const phoneGrid = document.getElementById('phone-grid');
-            phoneGrid.innerHTML = '';
-            updatePhoneTotal();
+            const appsGrid = document.getElementById('phone-apps-grid');
+            appsGrid.innerHTML = ''; // Clear previous app icons
+
+            const apps = [
+                { name: 'Favorites', icon: '⭐', action: openFavoritesPanel },
+                { name: 'Order', icon: '📦', action: openRestockPanel },
+                { name: 'Basket', icon: '🧺', action: openBasketPanel },
+                { name: 'Shelves', icon: '📚', action: openShelfAssignmentPanel },
+                { name: 'Employees', icon: '👥', action: openEmployeesPanel },
+                { name: 'Customers', icon: '👤', action: openCustomersPanel },
+                { name: 'Unlocks', icon: '🔑', action: openUnlocksPanel },
+                { name: 'Reports', icon: '📈', action: () => showMessage("Daily reports coming soon!") },
+                { name: 'Settings', icon: '⚙️', action: () => togglePanel('settings', true) },
+            ];
+
+            apps.forEach(app => {
+                const appButton = document.createElement('button');
+                appButton.className = 'flex flex-col items-center justify-center space-y-1 text-white hover:bg-gray-700 rounded-lg p-2 transition-colors';
+                appButton.innerHTML = `
+                    <div class="text-4xl">${app.icon}</div>
+                    <span class="text-xs font-medium">${app.name}</span>
+                `;
+                appButton.onclick = () => {
+                    togglePanel('phone', false); // Close the phone
+                    app.action(); // Open the selected app panel
+                };
+                appsGrid.appendChild(appButton);
+            });
+
+            togglePanel('phone', true);
+        }
+
+        function openFavoritesPanel() {
+            const favoritesGrid = document.getElementById('favorites-grid');
+            favoritesGrid.innerHTML = '';
+            updateFavoritesTotal();
 
             if (starredItems.length === 0) {
-                phoneGrid.innerHTML = `<p class="text-center p-4">No items have been starred yet. Star items from the main order screen.</p>`;
-                togglePanel('phone', true);
+                favoritesGrid.innerHTML = `<p class="text-center p-4">No items have been starred yet. Star items from the main order screen.</p>`;
+                togglePanel('favorites', true);
                 return;
             }
 
-            phoneGrid.innerHTML += `
+            favoritesGrid.innerHTML += `
                 <div class="grid grid-cols-4 gap-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
                     <span class="font-bold col-span-2">Item</span>
                     <span class="text-right font-bold">Cost</span>
@@ -3986,7 +3977,7 @@
             for (const itemName of starredItems) {
                 const itemData = items[itemName];
                 const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
-                const orderQty = currentPhoneOrder[itemName] || 0;
+                const orderQty = currentFavoritesOrder[itemName] || 0;
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'grid grid-cols-4 gap-2 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
@@ -3997,30 +3988,30 @@
                         <button class="btn-style qty-btn-phone text-sm px-2 py-1" data-item="${itemName}" data-amount="5">+5</button>
                     </div>
                 `;
-                phoneGrid.appendChild(itemDiv);
+                favoritesGrid.appendChild(itemDiv);
             }
 
-            phoneGrid.querySelectorAll('.qty-btn-phone').forEach(button => {
+            favoritesGrid.querySelectorAll('.qty-btn-phone').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.item;
                     const amount = parseInt(e.target.dataset.amount, 10);
-                    currentPhoneOrder[itemName] = (currentPhoneOrder[itemName] || 0) + amount;
-                    openPhonePanel(); // Re-open to refresh quantities
+                    currentFavoritesOrder[itemName] = (currentFavoritesOrder[itemName] || 0) + amount;
+                    openFavoritesPanel(); // Re-open to refresh quantities
                 });
             });
 
-            togglePanel('phone', true);
+            togglePanel('favorites', true);
         }
 
-        function updatePhoneTotal() {
+        function updateFavoritesTotal() {
             let total = 0;
-            for (const itemName in currentPhoneOrder) {
-                const quantity = currentPhoneOrder[itemName];
+            for (const itemName in currentFavoritesOrder) {
+                const quantity = currentFavoritesOrder[itemName];
                 const itemData = items[itemName];
                 const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
                 total += restockPrice * quantity;
             }
-            document.getElementById('phone-total').textContent = total.toFixed(2);
+            document.getElementById('favorites-total').textContent = total.toFixed(2);
         }
 
         function openRestockPanel() {
@@ -4269,8 +4260,8 @@
         }
 
         function placeOrder(isPhoneOrder = false) {
-            const orderSource = isPhoneOrder ? currentPhoneOrder : currentRestockOrder;
-            const panelId = isPhoneOrder ? 'phone' : 'restock';
+            const orderSource = isPhoneOrder ? currentFavoritesOrder : currentRestockOrder;
+            const panelId = isPhoneOrder ? 'favorites' : 'restock';
             const MAX_DOCK_PACKAGES = 5;
 
             let totalCost = 0;
@@ -4310,7 +4301,7 @@
                     }
                 }
                 if (isPhoneOrder) {
-                    currentPhoneOrder = {};
+                currentFavoritesOrder = {};
                 } else {
                     currentRestockOrder = {};
                 }
@@ -4373,7 +4364,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             backButton.textContent = '← Back';
             backButton.onclick = () => {
                 togglePanel('assignment', false);
-                togglePanel('clipboard', true);
+                togglePanel('shelf-assignment', true);
                 showShelfSlotsForAssignment(shelf);
             };
             assignmentGrid.appendChild(backButton);
@@ -4403,7 +4394,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 currentSlot.quantity = 0;
                 saveGame();
                 togglePanel('assignment', false);
-                togglePanel('clipboard', true);
+                togglePanel('shelf-assignment', true);
                 showShelfSlotsForAssignment(shelf);
             };
             assignmentGrid.appendChild(clearButton);
@@ -4441,12 +4432,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     currentSlot.assignedItem = newItem;
                     saveGame();
                     togglePanel('assignment', false);
-                    togglePanel('clipboard', true);
+                    togglePanel('shelf-assignment', true);
                     showShelfSlotsForAssignment(shelf);
                 };
                 assignmentGrid.appendChild(button);
             }
-            togglePanel('clipboard', false);
+            togglePanel('shelf-assignment', false);
             togglePanel('assignment', true);
         }
 
@@ -4534,78 +4525,36 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         let activeShelf = null;
         let activeStorageCell = null;
         function togglePanel(panelName, forceOpen = false) {
-            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'clipboard-panel', 'phone-panel'];
+            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'phone-panel', 'favorites-panel', 'shelf-assignment-panel', 'employees-panel', 'customers-panel'];
             const targetPanel = document.getElementById(`${panelName}-panel`);
-
-            // Special handling for animated side panels
-            if (panelName === 'clipboard' || panelName === 'phone') {
-                const isClipboard = panelName === 'clipboard';
-                const otherPanelName = isClipboard ? 'phone' : 'clipboard';
-                const otherPanel = document.getElementById(`${otherPanelName}-panel`);
-
-                // Close all non-animated panels
-                allPanels.forEach(pId => {
-                    const p = document.getElementById(pId);
-                    if (p !== targetPanel && p !== otherPanel) {
-                        p.classList.add('hidden');
-                    }
-                });
-
-                // Ensure the other animated panel is closed before opening the new one
-                if (!otherPanel.classList.contains('translate-x-full')) {
-                    otherPanel.classList.add('translate-x-full');
-                }
-
-                if (forceOpen) {
-                    targetPanel.classList.remove('translate-x-full');
-                    activePanel = panelName;
-                } else {
-                    const isOpen = !targetPanel.classList.contains('translate-x-full');
-                    if (isOpen) {
-                        targetPanel.classList.add('translate-x-full');
-                        activePanel = null;
-                    } else {
-                        targetPanel.classList.remove('translate-x-full');
-                        activePanel = panelName;
-                    }
-                }
-                // Reset other active items
-                activeShelf = null;
-                activeStorageCell = null;
-                return;
-            }
-
 
             if (forceOpen) {
                 // Close all other panels
-                allPanels.forEach(p => {
-                    if (`${panelName}-panel` !== p) {
-                         const panel = document.getElementById(p);
-                        if (p === 'clipboard-panel') panel.classList.add('translate-x-full');
-                        else panel.classList.add('hidden');
+                allPanels.forEach(pId => {
+                    const p = document.getElementById(pId);
+                    if (p && p.id !== `${panelName}-panel`) {
+                        p.classList.add('hidden');
                     }
                 });
-                targetPanel.classList.remove('hidden');
+                if (targetPanel) targetPanel.classList.remove('hidden');
                 activePanel = panelName;
                 return;
             }
 
             if (activePanel === panelName) {
                 // Close the current panel
-                targetPanel.classList.add('hidden');
+                if (targetPanel) targetPanel.classList.add('hidden');
                 activePanel = null;
                 if (panelName === 'shelf') activeShelf = null;
                 if (panelName === 'storage') activeStorageCell = null;
-
             } else {
                  // Close the previously active panel
                 if (activePanel) {
                     const oldPanel = document.getElementById(`${activePanel}-panel`);
-                    if (activePanel === 'clipboard') oldPanel.classList.add('translate-x-full');
-                    else oldPanel.classList.add('hidden');
+                    if (oldPanel) oldPanel.classList.add('hidden');
                 }
                 // Open the new panel
-                targetPanel.classList.remove('hidden');
+                if (targetPanel) targetPanel.classList.remove('hidden');
                 activePanel = panelName;
             }
         }
@@ -4707,19 +4656,16 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
 
             document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
-            document.getElementById('place-phone-order-btn').addEventListener('click', () => placeOrder(true));
-            document.getElementById('settings-btn').addEventListener('click', () => togglePanel('settings', true));
+            document.getElementById('place-favorites-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
             // Setup close buttons for all panels
-            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'clipboard', 'phone'].forEach(panelName => {
-                document.getElementById(`close-${panelName}`).addEventListener('click', () => togglePanel(panelName, false));
+            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'phone', 'favorites', 'shelf-assignment', 'employees', 'customers'].forEach(panelName => {
+                const closeButton = document.getElementById(`close-${panelName}`);
+                if (closeButton) {
+                    closeButton.addEventListener('click', () => togglePanel(panelName, false));
+                }
             });
-
-            // Clipboard Tabs
-            document.getElementById('clipboard-tab-shelves').addEventListener('click', openClipboardPanel);
-            document.getElementById('clipboard-tab-customers').addEventListener('click', showCustomersOnClipboard);
-            document.getElementById('clipboard-tab-employees').addEventListener('click', showEmployeesOnClipboard);
 
             // Settings Toggles
             const devToggle = document.getElementById('developer-toggle');

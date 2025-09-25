@@ -2029,7 +2029,7 @@
                     if (loader.stateTimer <= 0) {
                         if (loadingDockPackages.length > 0) {
                             loader.state = 'fetching_dock';
-                            const firstPackageX = 10 + PACKAGE_WIDTH / 2;
+                            const firstPackageX = loadingDock.x + 10 + PACKAGE_WIDTH / 2;
                             loader.task = { target: { x: firstPackageX, y: loadingDock.y - 30 } };
                         } else {
                             loader.stateTimer = 2000; // Check again in 2 seconds
@@ -3502,7 +3502,7 @@
                  if (Math.hypot(player.x - worldX, player.y - worldY) < 150) {
                      for(let i = 0; i < loadingDockPackages.length; i++) {
                          const pkg = loadingDockPackages[i];
-                         const pkgX = 10 + i * (PACKAGE_WIDTH + 10);
+                         const pkgX = loadingDock.x + 10 + i * (PACKAGE_WIDTH + 10);
                          const pkgY = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
                          if(worldX > pkgX && worldX < pkgX + PACKAGE_WIDTH && worldY > pkgY && worldY < pkgY + PACKAGE_HEIGHT) {
                              takeItemFromPackage(i);

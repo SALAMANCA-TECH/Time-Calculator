@@ -2967,7 +2967,7 @@
 
             customers.forEach(customer => customer.update(deltaTime));
             customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
-            populateInStoreCustomers();
+            updateCustomerUI();
 
             // Real-time clipboard updates
             clipboardUpdateTimer += deltaTime;
@@ -3024,7 +3024,7 @@
                 );
                 customers.push(newCustomer);
                 generateAndLoadCustomerSprite(newCustomer);
-                populateInStoreCustomers();
+                updateCustomerUI();
             }
         }
 
@@ -3034,6 +3034,21 @@
             document.getElementById('shop-points-display').textContent = shopPoints;
         }
 
+        function updateCustomerUI() {
+            const customerOrdersDiv = document.getElementById('customer-orders');
+            customerOrdersDiv.innerHTML = '';
+            customers.filter(c => !c.leaving && !c.isServed).forEach(customer => {
+                const customerDiv = document.createElement('div');
+                const isReady = customer.state === 'waitingAtCounter';
+                customerDiv.className = `p-4 border-2 rounded-lg bg-white shadow-sm ${isReady ? 'border-green-500 border-4' : 'border-amber-900'}`;
+                customerDiv.dataset.customerId = customer.id;
+                customerDiv.innerHTML = `<h3 class="font-handwritten text-lg">${customer.name}</h3><p class="text-sm">Wants: ${customer.request}</p>`;
+                if (isReady) {
+                    customerDiv.innerHTML += `<p class="text-sm font-bold mt-1 text-green-700">Ready to Checkout!</p>`;
+                }
+                customerOrdersDiv.appendChild(customerDiv);
+            });
+        }
 
         function logCustomerToSalesReport(customer) {
             dailySalesReport.push({
@@ -3109,7 +3124,7 @@
             }
             logCustomerToSalesReport(customer);
             updateUI();
-            populateInStoreCustomers();
+            updateCustomerUI();
             saveGame();
         }
 
@@ -3828,7 +3843,6 @@
 
             showAppScreen('shelf-assignment-panel');
         }
-
         function populateInStoreCustomers() {
             const customerList = document.getElementById('in-store-customer-list');
             if (!customerList) return; // Exit if the panel isn't open/doesn't exist
@@ -4323,7 +4337,7 @@
                 }
                 updateUI();
                 saveGame();
-                closeClipboard();
+                togglePanel(panelId, false);
                 showMessage(`Order placed for $${totalCost.toFixed(2)}! The supplies have been delivered to the loading dock.`);
             } else {
                 showMessage(`You can't afford this order! You need $${totalCost.toFixed(2)} but only have $${cash.toFixed(2)}.`);
@@ -4378,7 +4392,11 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
             backButton.textContent = '← Back';
-            backButton.onclick = () => showShelfSlotsForAssignment(shelf);
+            backButton.onclick = () => {
+                togglePanel('assignment', false);
+                togglePanel('shelf-assignment', true);
+                showShelfSlotsForAssignment(shelf);
+            };
             assignmentGrid.appendChild(backButton);
 
             const clearButton = document.createElement('button');
@@ -4449,7 +4467,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 };
                 assignmentGrid.appendChild(button);
             }
-            showAppScreen('assignment-panel');
+            togglePanel('shelf-assignment', false);
+            togglePanel('assignment', true);
         }
 
         function openShelfPanel(shelf) {
@@ -4686,8 +4705,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('place-favorites-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
-            // Phone Navigation
-            document.getElementById('close-phone').addEventListener('click', closeClipboard);
+            // Setup close buttons for all panels
+            document.getElementById('close-phone').addEventListener('click', closePhone);
             document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
 
             // Settings Toggles

@@ -225,6 +225,12 @@
                         <div id="shelf-assignment-grid" class="grid grid-cols-2 gap-2"></div>
                     </div>
 
+                    <!-- Shelf Panel -->
+                    <div id="shelf-panel" class="phone-app-screen hidden">
+                        <h2 id="shelf-title" class="text-3xl font-handwritten mb-4">Manage Shelf</h2>
+                        <div id="shelf-grid" class="grid grid-cols-1 gap-4"></div>
+                    </div>
+
                     <!-- Assignment Panel -->
                     <div id="assignment-panel" class="phone-app-screen hidden">
                         <h2 id="assignment-title" class="text-2xl font-handwritten mb-4">Assign Item</h2>
@@ -1882,27 +1888,43 @@
                         const task = findRestockingTask();
                         if (task) {
                             stocker.task = task;
-                            stocker.state = 'fetching';
+                            stocker.state = task.action;
                         } else {
-                           stocker.stateTimer = 3000;
-                           if(Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
-                               stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
-                           } else {
-                               stocker.task = null;
-                           }
+                            stocker.stateTimer = 3000;
+                            if(Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
+                                stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                                moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime);
+                            } else {
+                                stocker.task = null;
+                            }
                         }
-                    }
-                    if(stocker.task && stocker.task.target) {
-                        moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime);
                     }
                     break;
                 case 'fetching':
                     if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
                         const itemToTake = stocker.task.item;
-                        const cell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToTake));
-                        while(stocker.basket.length < STOCKER_BASKET_SIZE && cell && cell.items[itemToTake] > 0) {
-                            stocker.basket.push(itemToTake);
-                            cell.items[itemToTake]--;
+                        const cell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToTake) && c.items[itemToTake] > 0);
+                        if(cell) {
+                            while(stocker.basket.length < STOCKER_BASKET_SIZE && cell.items[itemToTake] > 0) {
+                                stocker.basket.push(itemToTake);
+                                cell.items[itemToTake]--;
+                            }
+                        }
+                        stocker.state = 'stocking';
+                        stocker.task = null;
+                    }
+                    break;
+                case 'fetching_dock':
+                    if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                        const pkg = loadingDockPackages[stocker.task.packageIndex];
+                        if (pkg && pkg.itemName === stocker.task.item) {
+                            while(stocker.basket.length < STOCKER_BASKET_SIZE && pkg.quantity > 0) {
+                                stocker.basket.push(pkg.itemName);
+                                pkg.quantity--;
+                            }
+                            if (pkg.quantity <= 0) {
+                                loadingDockPackages.splice(stocker.task.packageIndex, 1);
+                            }
                         }
                         stocker.state = 'stocking';
                         stocker.task = null;
@@ -2657,7 +2679,6 @@
         }
 
         function findRestockingTask() {
-            // --- REFACTOR START: Deadlock Prevention ---
             const fullCell = storageCells.find((c, i) => {
                 if (!unlocks.storage[i] || !c.items) return false;
                 const currentFill = Object.values(c.items).reduce((a, b) => a + b, 0);
@@ -2665,14 +2686,12 @@
             });
 
             if (fullCell && loader.state === 'idle' && loadingDockPackages.length > 0) {
-                // A cell is full and the loader is waiting. Prioritize emptying that cell.
                 for (const item in fullCell.items) {
                     if (fullCell.items[item] > 0) {
                         const shelfWithSpace = findShelfForStocking(item);
                         if (shelfWithSpace) {
-                            // Create a high-priority task to move this item out of the full cell.
                             return {
-                                action: 'fetch',
+                                action: 'fetching',
                                 item: item,
                                 target: { x: fullCell.rect.x + fullCell.rect.w / 2, y: fullCell.rect.y + fullCell.rect.h + 10 },
                                 priority: 'deadlock_break'
@@ -2681,29 +2700,31 @@
                     }
                 }
             }
-            // --- REFACTOR END ---
-
-            // Build a map of available stock from all unlocked storage cells.
             const availableStock = new Map();
             storageCells.forEach((cell, index) => {
                 if (unlocks.storage[index] && cell.items) {
                     for (const itemName in cell.items) {
                         if (cell.items[itemName] > 0) {
-                            const currentStock = availableStock.get(itemName) || 0;
-                            availableStock.set(itemName, currentStock + cell.items[itemName]);
+                            const currentStock = availableStock.get(itemName) || { fromStorage: 0, fromDock: 0 };
+                            currentStock.fromStorage += cell.items[itemName];
+                            availableStock.set(itemName, currentStock);
                         }
                     }
                 }
             });
+            loadingDockPackages.forEach(pkg => {
+                const currentStock = availableStock.get(pkg.itemName) || { fromStorage: 0, fromDock: 0 };
+                currentStock.fromDock += pkg.quantity;
+                availableStock.set(pkg.itemName, currentStock);
+            });
 
             if (availableStock.size === 0) {
-                return null; // No items in storage to restock.
+                return null;
             }
 
             const assignedNeeded = new Set();
             const unassignedAvailable = new Set();
 
-            // 1. Check for understocked, assigned items.
             shelves.forEach((shelf, i) => {
                 if (unlocks.shelves[i]) {
                     shelf.items.forEach(slot => {
@@ -2714,7 +2735,6 @@
                 }
             });
 
-            // 2. Check for unassigned items that have stock and an empty slot.
             const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
             if (hasEmptySlot) {
                 for (const [itemName, stock] of availableStock.entries()) {
@@ -2725,24 +2745,38 @@
                 }
             }
 
-            // Prioritize assigned items, then unassigned.
             const neededItems = [...assignedNeeded, ...unassignedAvailable];
 
             if (neededItems.length > 0) {
                 const itemToFetch = neededItems[0];
-                // Find a specific storage cell that actually has the item.
-                const storageCellWithItem = storageCells.find((c, i) =>
-                    unlocks.storage[i] &&
-                    c.allowedItems.includes(itemToFetch) &&
-                    c.items[itemToFetch] > 0
-                );
+                const stockLocation = availableStock.get(itemToFetch);
 
-                if (storageCellWithItem) {
-                    return {
-                        action: 'fetch',
-                        item: itemToFetch,
-                        target: { x: storageCellWithItem.rect.x + storageCellWithItem.rect.w / 2, y: storageCellWithItem.rect.y + storageCellWithItem.rect.h + 10 }
-                    };
+                if (stockLocation.fromStorage > 0) {
+                    const storageCellWithItem = storageCells.find((c, i) =>
+                        unlocks.storage[i] &&
+                        c.allowedItems.includes(itemToFetch) &&
+                        c.items[itemToFetch] > 0
+                    );
+                    if (storageCellWithItem) {
+                        return {
+                            action: 'fetching',
+                            item: itemToFetch,
+                            target: { x: storageCellWithItem.rect.x + storageCellWithItem.rect.w / 2, y: storageCellWithItem.rect.y + storageCellWithItem.rect.h + 10 }
+                        };
+                    }
+                }
+
+                if (stockLocation.fromDock > 0) {
+                    const packageIndex = loadingDockPackages.findIndex(p => p.itemName === itemToFetch);
+                    if (packageIndex !== -1) {
+                        const packageX = loadingDock.x + 10 + packageIndex * (PACKAGE_WIDTH + 10) + PACKAGE_WIDTH / 2;
+                        return {
+                            action: 'fetching_dock',
+                            item: itemToFetch,
+                            packageIndex: packageIndex,
+                            target: { x: packageX, y: loadingDock.y - 40 }
+                        };
+                    }
                 }
             }
 
@@ -4552,6 +4586,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         function openShelfPanel(shelf) {
             activeShelf = shelf;
             const shelfGrid = document.getElementById('shelf-grid');
+            document.getElementById('shelf-title').textContent = `Manage Shelf ${shelves.indexOf(shelf) + 1}`;
             shelfGrid.innerHTML = '';
             for (let i = 0; i < 4; i++) {
                 const slot = shelf.items[i];
@@ -4601,7 +4636,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 });
             });
 
-            showAppScreen('shelf-panel');
+            togglePanel('shelf', true);
         }
 
         function takeItemFromStorage(itemName, cell) {

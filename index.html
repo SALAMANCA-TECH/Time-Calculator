@@ -638,11 +638,11 @@
         };
 
         const breakSpots = {
-            cashier: { x: 30, y: 20 },      // Top chair
-            stocker: { x: 60, y: 50 },      // Bottom chair
-            loader: { x: 10, y: 40 },       // Left side of table
-            manager: { x: 80, y: 40 },      // Right side of table
-            salesperson: { x: 45, y: 65 }   // Below the bottom chair
+            cashier:     { x: 30, y: 15 }, // Top chair
+            stocker:     { x: 60, y: 65 }, // Bottom chair
+            loader:      { x: 10, y: 40 }, // Left of table
+            manager:     { x: 85, y: 40 }, // Right of table
+            salesperson: { x: 45, y: 40 }  // Center of table
         };
 
         function getBreakSpot(employeeKey) {
@@ -1052,10 +1052,10 @@
         }
 
         function drawOfficeZones() {
-            // Player's Desk Area (Zone 1)
-            const deskWidth = officeZone1.w * 0.8;
-            const deskHeight = 15;
-            const deskX = officeZone1.x + officeZone1.w - deskWidth;
+            // Player's Desk Area (Zone 1) - Rotated Desk
+            const deskWidth = 15;
+            const deskHeight = officeZone1.h * 0.8;
+            const deskX = officeZone1.x + officeZone1.w - deskWidth - 5; // Move slightly left
             const deskY = officeZone1.y + (officeZone1.h - deskHeight) / 2;
 
             // Desk
@@ -1066,27 +1066,27 @@
             ctx.strokeRect(deskX, deskY, deskWidth, deskHeight);
 
             // Computer
-            const pcWidth = 30;
-            const pcHeight = 25;
-            const pcX = deskX + (deskWidth - pcWidth) / 2;
-            const pcY = deskY - pcHeight;
+            const pcWidth = 25;
+            const pcHeight = 30;
+            const pcX = deskX - pcWidth + 5; // Positioned to the left of the desk
+            const pcY = deskY + (deskHeight - pcHeight) / 2;
             ctx.fillStyle = '#333';
             ctx.fillRect(pcX, pcY, pcWidth, pcHeight);
             ctx.fillStyle = '#555'; // Screen
-            ctx.fillRect(pcX + 3, pcY + 3, pcWidth - 6, pcHeight - 8);
+            ctx.fillRect(pcX + 3, pcY + 3, pcWidth - 8, pcHeight - 6);
 
 
-            // Lounge Area (Zone 2)
-            const couchWidth = officeZone2.w * 0.9;
-            const couchHeight = officeZone2.h * 0.4;
-            const couchX = officeZone2.x + (officeZone2.w - couchWidth) / 2;
-            const couchY = officeZone2.y + (officeZone2.h - couchHeight) / 2;
+            // Lounge Area (Zone 2) - Rotated Couch
+            const couchWidth = officeZone2.h * 0.9; // Swapped w/h for rotation
+            const couchHeight = officeZone2.w * 0.4;
+            const couchX = officeZone2.x + (officeZone2.w - couchHeight) / 2;
+            const couchY = officeZone2.y + (officeZone2.h - couchWidth) / 2;
             ctx.fillStyle = '#a1887f'; // Lighter brown for couch
-            ctx.fillRect(couchX, couchY, couchWidth, couchHeight);
+            ctx.fillRect(couchX, couchY, couchHeight, couchWidth);
             ctx.fillStyle = '#795548'; // Darker brown for details
-            ctx.fillRect(couchX, couchY + couchHeight - 8, couchWidth, 8); // Base
-            ctx.fillRect(couchX, couchY, 8, couchHeight); // Left arm
-            ctx.fillRect(couchX + couchWidth - 8, couchY, 8, couchHeight); // Right arm
+            ctx.fillRect(couchX, couchY, couchHeight, 8); // Top arm (was base)
+            ctx.fillRect(couchX, couchY, 8, couchWidth); // Left arm (was left arm)
+            ctx.fillRect(couchX + couchHeight - 8, couchY, 8, couchWidth); // Right arm
 
 
             // Break Room (Zone 3)
@@ -3232,8 +3232,7 @@
 
             officeZone2.w = zoneSize;
             officeZone2.h = zoneSize;
-            // The office lounge is now just inside the store, past the manager's office door
-            officeZone2.x = storeShiftX + zonePadding;
+            officeZone2.x = officeZone1.x + officeZone1.w + zonePadding;
             officeZone2.y = officeZone1.y;
 
             const shelfWidth = 60, shelfHeight = 120;

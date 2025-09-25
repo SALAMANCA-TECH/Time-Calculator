@@ -2968,7 +2968,7 @@
 
             customers.forEach(customer => customer.update(deltaTime));
             customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
-            updateCustomerUI();
+            populateInStoreCustomers();
 
             // Real-time clipboard updates
             clipboardUpdateTimer += deltaTime;
@@ -3025,7 +3025,7 @@
                 );
                 customers.push(newCustomer);
                 generateAndLoadCustomerSprite(newCustomer);
-                updateCustomerUI();
+                populateInStoreCustomers();
             }
         }
 
@@ -3035,21 +3035,6 @@
             document.getElementById('shop-points-display').textContent = shopPoints;
         }
 
-        function updateCustomerUI() {
-            const customerOrdersDiv = document.getElementById('customer-orders');
-            customerOrdersDiv.innerHTML = '';
-            customers.filter(c => !c.leaving && !c.isServed).forEach(customer => {
-                const customerDiv = document.createElement('div');
-                const isReady = customer.state === 'waitingAtCounter';
-                customerDiv.className = `p-4 border-2 rounded-lg bg-white shadow-sm ${isReady ? 'border-green-500 border-4' : 'border-amber-900'}`;
-                customerDiv.dataset.customerId = customer.id;
-                customerDiv.innerHTML = `<h3 class="font-handwritten text-lg">${customer.name}</h3><p class="text-sm">Wants: ${customer.request}</p>`;
-                if (isReady) {
-                    customerDiv.innerHTML += `<p class="text-sm font-bold mt-1 text-green-700">Ready to Checkout!</p>`;
-                }
-                customerOrdersDiv.appendChild(customerDiv);
-            });
-        }
 
         function logCustomerToSalesReport(customer) {
             dailySalesReport.push({
@@ -3125,7 +3110,7 @@
             }
             logCustomerToSalesReport(customer);
             updateUI();
-            updateCustomerUI();
+            populateInStoreCustomers();
             saveGame();
         }
 
@@ -3845,6 +3830,53 @@
             showAppScreen('shelf-assignment-panel');
         }
 
+        function populateInStoreCustomers() {
+            const customerList = document.getElementById('in-store-customer-list');
+            if (!customerList) return; // Exit if the panel isn't open/doesn't exist
+            customerList.innerHTML = '';
+
+            const activeCustomers = customers.filter(c => !c.leaving);
+
+            if (activeCustomers.length === 0) {
+                customerList.innerHTML = `<p class="text-center p-4">No customers in the shop.</p>`;
+                return;
+            }
+
+            activeCustomers.forEach(customer => {
+                const customerDiv = document.createElement('div');
+                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 cursor-pointer hover:bg-amber-200/50 transition-colors';
+                customerDiv.dataset.customerId = customer.id;
+
+                let status = '';
+                if (customer.waitTimer > 60) {
+                    status = `<span class="font-bold text-yellow-600 animate-pulse">Needs Attention!</span>`;
+                } else if (customer.state === 'waitingAtCounter') {
+                    status = `<span class="font-bold text-green-600">Ready to Checkout</span>`;
+                } else {
+                    status = `<span class="text-gray-500">${customer.state}</span>`;
+                }
+
+                customerDiv.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="font-bold text-lg">${customer.name}</div>
+                        <div>${status}</div>
+                    </div>
+                    <div class="text-sm">Wait Time: ${Math.round(customer.waitTimer)}s</div>
+                    <div class="text-xs mt-1">Looking for: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
+                `;
+
+                customerDiv.addEventListener('click', () => {
+                    const targetCustomer = customers.find(c => c.id === customer.id);
+                    if (targetCustomer) {
+                        // When a customer is clicked, pan the camera to them
+                        targetCameraX = -targetCustomer.x + canvas.width / 2;
+                        closePhone();
+                    }
+                });
+                customerList.appendChild(customerDiv);
+            });
+        }
+
         function showShelfSlotsForAssignment(shelf) {
             const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
             const shelfAssignmentTitle = document.getElementById('shelf-assignment-title');
@@ -4288,7 +4320,7 @@
                 }
                 updateUI();
                 saveGame();
-                togglePanel(panelId, false);
+                closePhone();
                 showMessage(`Order placed for $${totalCost.toFixed(2)}! The supplies have been delivered to the loading dock.`);
             } else {
                 showMessage(`You can't afford this order! You need $${totalCost.toFixed(2)} but only have $${cash.toFixed(2)}.`);
@@ -4343,11 +4375,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
             backButton.textContent = '← Back';
-            backButton.onclick = () => {
-                togglePanel('assignment', false);
-                togglePanel('shelf-assignment', true);
-                showShelfSlotsForAssignment(shelf);
-            };
+            backButton.onclick = () => showShelfSlotsForAssignment(shelf);
             assignmentGrid.appendChild(backButton);
 
             const clearButton = document.createElement('button');
@@ -4418,8 +4446,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 };
                 assignmentGrid.appendChild(button);
             }
-            togglePanel('shelf-assignment', false);
-            togglePanel('assignment', true);
+            showAppScreen('assignment-panel');
         }
 
         function openShelfPanel(shelf) {
@@ -4656,7 +4683,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('place-favorites-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
-            // Setup close buttons for all panels
+            // Phone Navigation
             document.getElementById('close-phone').addEventListener('click', closePhone);
             document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
 

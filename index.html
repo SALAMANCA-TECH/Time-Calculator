@@ -547,6 +547,18 @@
             storage: [10, 20, 30, 40, 50, 60]
         };
 
+        const dailyOperatingCosts = {
+            rent: 50,
+            storageUnitWeeklyRate: 70,
+            salaries: {
+                cashier: 20,
+                stocker: 25,
+                loader: 30,
+                manager: 50,
+                salesperson: 40
+            }
+        };
+
         const player = {
             x: 100, y: 300, width: 50, height: 50, speed: 250,
             targetX: null,
@@ -3140,7 +3152,18 @@
             dayPhase = 'pre-open';
             midDayBreakTriggered = false;
             manager.hasPlacedMorningOrder = false; // Reset for the next day
-            const dailyExpenses = 25;
+
+            let dailyLaborCost = 0;
+            for (const employee in unlocks.employees) {
+                if (unlocks.employees[employee]) {
+                    dailyLaborCost += dailyOperatingCosts.salaries[employee];
+                }
+            }
+
+            const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
+            const dailyStorageCost = (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
+
+            const dailyExpenses = dailyOperatingCosts.rent + dailyLaborCost + dailyStorageCost;
             cash -= dailyExpenses;
             customers.forEach(c => c.state = 'leaving');
             timeSinceLastCustomer = 0;
@@ -3200,9 +3223,9 @@
         <p>Most Missed: <span class="font-bold">${topMiss}</span></p>
     `;
             document.getElementById('report-day').textContent = day;
-            document.getElementById('report-sales').textContent = `$${grossSales}`;
-            document.getElementById('report-expenses').textContent = `-$${dailyExpenses}`;
-            document.getElementById('report-profit').textContent = `$${grossSales - dailyExpenses}`;
+            document.getElementById('report-sales').textContent = `$${grossSales.toFixed(2)}`;
+            document.getElementById('report-expenses').textContent = `-$${dailyExpenses.toFixed(2)}`;
+            document.getElementById('report-profit').textContent = `$${(grossSales - dailyExpenses).toFixed(2)}`;
             reportPanel.classList.remove('hidden');
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;

@@ -1899,7 +1899,7 @@
                 case 'fetching':
                     if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
                         const itemToTake = stocker.task.item;
-                        const cell = storageCells.find(c => c.allowedItems.includes(itemToTake));
+                        const cell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToTake));
                         while(stocker.basket.length < STOCKER_BASKET_SIZE && cell && cell.items[itemToTake] > 0) {
                             stocker.basket.push(itemToTake);
                             cell.items[itemToTake]--;
@@ -2030,7 +2030,7 @@
                         if (loadingDockPackages.length > 0) {
                             loader.state = 'fetching_dock';
                             const firstPackageX = loadingDock.x + 10 + PACKAGE_WIDTH / 2;
-                            loader.task = { target: { x: firstPackageX, y: loadingDock.y - 30 } };
+                            loader.task = { target: { x: firstPackageX, y: loadingDock.y - 40 } };
                         } else {
                             loader.stateTimer = 2000; // Check again in 2 seconds
                              if(Math.hypot(loader.x - loader.idleX, loader.y - loader.idleY) > 5) {
@@ -2068,7 +2068,7 @@
                             break;
                         }
                         const itemToDeliver = loader.basket[0];
-                        const targetCell = storageCells.find(c => c.allowedItems.includes(itemToDeliver));
+                        const targetCell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToDeliver));
                          if(targetCell) {
                              const currentFill = Object.values(targetCell.items).reduce((a, b) => a + b, 0);
                              if (currentFill < targetCell.capacity) {

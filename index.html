@@ -638,11 +638,11 @@
         };
 
         const breakSpots = {
-            cashier: { x: 20, y: 30 },
-            stocker: { x: 50, y: 30 },
-            loader: { x: 80, y: 30 },
-            manager: { x: 35, y: 60 },
-            salesperson: { x: 65, y: 60 }
+            cashier: { x: 30, y: 20 },      // Top chair
+            stocker: { x: 60, y: 50 },      // Bottom chair
+            loader: { x: 10, y: 40 },       // Left side of table
+            manager: { x: 80, y: 40 },      // Right side of table
+            salesperson: { x: 45, y: 65 }   // Below the bottom chair
         };
 
         function getBreakSpot(employeeKey) {
@@ -1052,26 +1052,66 @@
         }
 
         function drawOfficeZones() {
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 3;
-            ctx.font = 'bold 48px "Patrick Hand"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            // Player's Desk Area (Zone 1)
+            const deskWidth = officeZone1.w * 0.8;
+            const deskHeight = 15;
+            const deskX = officeZone1.x + officeZone1.w - deskWidth;
+            const deskY = officeZone1.y + (officeZone1.h - deskHeight) / 2;
 
-            // Zone 1
-            ctx.strokeRect(officeZone1.x, officeZone1.y, officeZone1.w, officeZone1.h);
-            ctx.fillStyle = 'red';
-            ctx.fillText('1', officeZone1.x + officeZone1.w / 2, officeZone1.y + officeZone1.h / 2);
+            // Desk
+            ctx.fillStyle = '#8d6e63'; // Brown color
+            ctx.fillRect(deskX, deskY, deskWidth, deskHeight);
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(deskX, deskY, deskWidth, deskHeight);
 
-            // Zone 2
-            ctx.strokeRect(officeZone2.x, officeZone2.y, officeZone2.w, officeZone2.h);
-            ctx.fillStyle = 'red';
-            ctx.fillText('2', officeZone2.x + officeZone2.w / 2, officeZone2.y + officeZone2.h / 2);
+            // Computer
+            const pcWidth = 30;
+            const pcHeight = 25;
+            const pcX = deskX + (deskWidth - pcWidth) / 2;
+            const pcY = deskY - pcHeight;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(pcX, pcY, pcWidth, pcHeight);
+            ctx.fillStyle = '#555'; // Screen
+            ctx.fillRect(pcX + 3, pcY + 3, pcWidth - 6, pcHeight - 8);
 
-            // Zone 3
-            ctx.strokeRect(officeZone3.x, officeZone3.y, officeZone3.w, officeZone3.h);
-            ctx.fillStyle = 'red';
-            ctx.fillText('3', officeZone3.x + officeZone3.w / 2, officeZone3.y + officeZone3.h / 2);
+
+            // Lounge Area (Zone 2)
+            const couchWidth = officeZone2.w * 0.9;
+            const couchHeight = officeZone2.h * 0.4;
+            const couchX = officeZone2.x + (officeZone2.w - couchWidth) / 2;
+            const couchY = officeZone2.y + (officeZone2.h - couchHeight) / 2;
+            ctx.fillStyle = '#a1887f'; // Lighter brown for couch
+            ctx.fillRect(couchX, couchY, couchWidth, couchHeight);
+            ctx.fillStyle = '#795548'; // Darker brown for details
+            ctx.fillRect(couchX, couchY + couchHeight - 8, couchWidth, 8); // Base
+            ctx.fillRect(couchX, couchY, 8, couchHeight); // Left arm
+            ctx.fillRect(couchX + couchWidth - 8, couchY, 8, couchHeight); // Right arm
+
+
+            // Break Room (Zone 3)
+            const tableWidth = officeZone3.w * 0.6;
+            const tableHeight = 10;
+            const tableX = officeZone3.x + (officeZone3.w - tableWidth) / 2;
+            const tableY = officeZone3.y + (officeZone3.h - tableHeight) / 2;
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(tableX, tableY, tableWidth, tableHeight);
+            ctx.strokeRect(tableX, tableY, tableWidth, tableHeight);
+
+            // Chairs
+            const chairWidth = 15;
+            const chairHeight = 18;
+            // Chair 1 (Top)
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(tableX + 10, tableY - chairHeight + 5, chairWidth, chairHeight);
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(tableX + 10, tableY - chairHeight + 5, chairWidth, 4); // Backrest
+            // Chair 2 (Bottom)
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(tableX + tableWidth - 25, tableY + tableHeight - 5, chairWidth, chairHeight);
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(tableX + tableWidth - 25, tableY + tableHeight + chairHeight - 9, chairWidth, 4); // Backrest
+
         }
 
         function drawPackage(pkg, x, y) {
@@ -3192,7 +3232,8 @@
 
             officeZone2.w = zoneSize;
             officeZone2.h = zoneSize;
-            officeZone2.x = officeZone1.x + officeZone1.w + zonePadding;
+            // The office lounge is now just inside the store, past the manager's office door
+            officeZone2.x = storeShiftX + zonePadding;
             officeZone2.y = officeZone1.y;
 
             const shelfWidth = 60, shelfHeight = 120;

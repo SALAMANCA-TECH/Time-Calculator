@@ -1243,7 +1243,7 @@
         }
 
         function drawStaticUI() {
-            const boxWidth = 350, boxHeight = 70;
+            const boxWidth = 280, boxHeight = 70;
             const boxX = (canvas.width - boxWidth) / 2, boxY = 20;
 
             ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
@@ -1253,14 +1253,11 @@
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
             const iconY = boxY + 10;
-            cashRegister.x = boxX + 15; cashRegister.y = iconY;
-            shoppingBasket.x = boxX + 80; shoppingBasket.y = iconY;
-            clipboard.x = boxX + 145; clipboard.y = iconY;
-            phoneIcon.x = boxX + 210; phoneIcon.y = iconY;
-            lockIcon.x = boxX + 275; lockIcon.y = iconY;
+            shoppingBasket.x = boxX + 14; shoppingBasket.y = iconY;
+            clipboard.x = boxX + 88; clipboard.y = iconY;
+            phoneIcon.x = boxX + 152; phoneIcon.y = iconY;
+            lockIcon.x = boxX + 216; lockIcon.y = iconY;
 
-
-            drawCashRegister(cashRegister.x, cashRegister.y, cashRegister.width, cashRegister.height);
             drawShoppingBasket(shoppingBasket.x, shoppingBasket.y, shoppingBasket.width, shoppingBasket.height);
             drawClipboard(clipboard.x, clipboard.y, clipboard.width, clipboard.height);
             drawPhoneIcon(phoneIcon.x, phoneIcon.y, phoneIcon.width, phoneIcon.height);
@@ -3444,8 +3441,7 @@
 
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
-                 if (x >= cashRegister.x && x <= cashRegister.x + cashRegister.width && y >= cashRegister.y && y <= cashRegister.y + cashRegister.height) { openRestockPanel(); }
-                 else if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { openBasketPanel(); }
+                 if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { openBasketPanel(); }
                  else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) { openClipboardPanel(); }
                  else if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openPhonePanel(); }
                  else if (x >= lockIcon.x && x <= lockIcon.x + lockIcon.width && y >= lockIcon.y && y <= lockIcon.y + lockIcon.height) { openUnlocksPanel(); }
@@ -3948,32 +3944,33 @@
                 <div class="grid grid-cols-4 gap-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
                     <span class="font-bold col-span-2">Item</span>
                     <span class="text-right font-bold">Cost</span>
-                    <span class="text-center font-bold">Qty</span>
+                    <span class="text-center font-bold">Order Qty</span>
                 </div>
             `;
 
             for (const itemName of starredItems) {
                 const itemData = items[itemName];
                 const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                const orderQty = currentPhoneOrder[itemName] || 0;
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'grid grid-cols-4 gap-2 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
                     <span class="text-lg col-span-2">${itemName}</span>
                     <span class="text-right text-lg">$${restockPrice.toFixed(2)}</span>
-                    <div class="flex items-center justify-center space-x-1">
+                    <div class="flex items-center justify-center space-x-2">
+                        <span class="font-handwritten text-xl w-8 text-center">${orderQty}</span>
                         <button class="btn-style qty-btn-phone text-sm px-2 py-1" data-item="${itemName}" data-amount="5">+5</button>
                     </div>
                 `;
                 phoneGrid.appendChild(itemDiv);
             }
 
-             phoneGrid.querySelectorAll('.qty-btn-phone').forEach(button => {
+            phoneGrid.querySelectorAll('.qty-btn-phone').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.item;
                     const amount = parseInt(e.target.dataset.amount, 10);
                     currentPhoneOrder[itemName] = (currentPhoneOrder[itemName] || 0) + amount;
-                    updatePhoneTotal();
-                    // Maybe add a visual confirmation? For now, just update total.
+                    openPhonePanel(); // Re-open to refresh quantities
                 });
             });
 
@@ -4243,7 +4240,7 @@
             let totalCost = 0;
             let itemsToOrder = 0;
             for (const itemName in orderSource) {
-                const quantity = currentRestockOrder[itemName];
+                const quantity = orderSource[itemName];
                 if (quantity > 0) {
                     const itemData = items[itemName];
                     const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));

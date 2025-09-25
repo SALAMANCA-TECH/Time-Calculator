@@ -81,9 +81,20 @@
             background-color: #fcf6e7;
             border: 2px solid #5d4037;
             padding: 2rem;
-            z-index: 1000;
+            z-index: 2000;
             box-shadow: 8px 8px 0px 0px #5d4037;
             text-align: center;
+        }
+
+        #phone-panel {
+            max-width: 420px; /* Increased width */
+            height: 90vh; /* Increased height */
+            max-height: 800px;
+        }
+
+        .phone-app-screen {
+            color: #5d4037;
+            background-color: #f7e7d8;
         }
 
         /* Toggle Switch Styles */
@@ -121,160 +132,16 @@
         <!-- Hidden canvas for generating the sprite sheet -->
         <canvas id="spriteSheetCanvas" width="270" height="270" style="display:none;"></canvas>
 
-        <!-- UI for viewing items in a storage cell -->
-        <div id="storage-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-storage" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 id="storage-title" class="text-2xl font-handwritten mb-2 text-center">Storage</h2>
-            <div id="storage-grid" class="grid grid-cols-4 gap-4">
-                <!-- Storage items will be populated here -->
-            </div>
-        </div>
-
-        <!-- UI for viewing items on a shelf -->
-        <div id="shelf-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-shelf" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 id="shelf-title" class="text-2xl font-handwritten mb-2 text-center">Display Shelf</h2>
-            <div id="shelf-grid" class="grid grid-cols-4 gap-4">
-                <!-- Shelf items will be populated here -->
-            </div>
-        </div>
-
-        <!-- UI for assigning items to shelves -->
-        <div id="assignment-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-assignment" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 id="assignment-title" class="text-2xl font-handwritten mb-2 text-center">Assign Item to Slot</h2>
-            <div id="assignment-grid" class="grid grid-cols-3 gap-2 overflow-y-auto max-h-64 p-2 bg-white/50 rounded-md">
-                <!-- Item buttons will be populated here -->
-            </div>
-        </div>
-
-        <!-- UI for placing an item from the basket -->
-        <div id="place-item-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-place-item" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 id="place-item-title" class="text-2xl font-handwritten mb-2 text-center">Place Item from Basket</h2>
-            <div id="place-item-grid" class="grid grid-cols-3 gap-2 overflow-y-auto max-h-64 p-2 bg-white/50 rounded-md">
-                <!-- Item buttons from basket will be populated here -->
-            </div>
-        </div>
-
-        <div id="orders-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-orders" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-2 text-center">Customer Orders</h2>
-            <div id="customer-orders" class="flex flex-col space-y-4 max-h-64 overflow-y-auto">
-                <!-- Customer orders will be populated here -->
-            </div>
-        </div>
-
-        <div id="basket-panel" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-basket" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-2 text-center">Your Basket</h2>
-            <div id="basket-grid" class="flex flex-col space-y-2">
-                <!-- Basket items will be populated here -->
-            </div>
-        </div>
-
-        <!-- Restock Panel -->
-        <div id="restock-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-restock" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Order Supplies</h2>
-            <div id="restock-grid-container" class="h-[500px] overflow-y-auto p-2 bg-white/50 rounded-md">
-                <div id="restock-grid" class="grid grid-cols-1 gap-2">
-                    <!-- Items will be populated here -->
-                </div>
-            </div>
-            <div class="text-right mt-4 p-2 border-t-2 border-amber-900/50 flex justify-end items-center">
-                <span class="text-xl mr-4">Total: $<span id="restock-total">0.00</span></span>
-                <button id="place-order-btn" class="btn-style px-6 py-2 rounded-lg text-lg">Place Order</button>
-            </div>
-        </div>
-
-        <!-- Unlocks Panel -->
-        <div id="unlocks-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-unlocks" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Shop Unlocks</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <h3 class="text-lg font-handwritten border-b-2 border-amber-900/50 mb-2">Employees</h3>
-                    <div id="unlocks-employees" class="space-y-2"></div>
-                </div>
-                <div>
-                    <h3 class="text-lg font-handwritten border-b-2 border-amber-900/50 mb-2">Shelves & Storage</h3>
-                    <div id="unlocks-shelves" class="space-y-2"></div>
-                    <div id="unlocks-storage" class="space-y-2 mt-4"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Settings Panel -->
-        <div id="settings-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-settings" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Settings</h2>
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <span class="text-lg">Developer Mode</span>
-                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="developer-toggle" id="developer-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                        <label for="developer-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                    </div>
-                </div>
-                 <div class="flex items-center justify-between">
-                    <span class="text-lg">Continuous Day Cycle</span>
-                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="continuous-toggle" id="continuous-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                        <label for="continuous-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                    </div>
-                </div>
-                <div class="border-t-2 border-amber-900/20 pt-4 mt-4">
-                    <button id="new-game-btn" class="btn-style w-full bg-red-700/80 hover:bg-red-600">Start New Game</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Shelf Assignment Panel -->
-        <div id="shelf-assignment-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-shelf-assignment" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 id="shelf-assignment-title" class="text-2xl font-handwritten mb-4 text-center">Shelf Assignments</h2>
-            <div id="shelf-assignment-grid" class="grid grid-cols-2 gap-4">
-                <!-- Shelf buttons will be populated here -->
-            </div>
-        </div>
-
-        <!-- Employees Panel -->
-        <div id="employees-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-employees" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Employee Status</h2>
-            <div id="employee-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
-                <!-- Employee list will be populated here -->
-            </div>
-        </div>
-
-        <!-- Customers Panel -->
-        <div id="customers-panel" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-20 backdrop-blur-sm">
-            <button id="close-customers" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Customers</h2>
-            <!-- Customer Sub-Tabs -->
-            <div class="flex justify-center mb-2">
-                <button id="in-store-customers-btn" class="btn-style px-4 py-1 text-sm rounded-r-none">In Store</button>
-                <button id="all-customers-btn" class="btn-style px-4 py-1 text-sm rounded-l-none bg-opacity-50">All Profiles</button>
-            </div>
-            <div id="in-store-customer-list" class="flex flex-col space-y-2 max-h-64 overflow-y-auto">
-                <!-- In-store customers will be populated here -->
-            </div>
-            <div id="all-customer-list" class="hidden flex-col space-y-2 max-h-64 overflow-y-auto">
-                <!-- All customer profiles will be populated here -->
-            </div>
-        </div>
-
         <!-- Phone Panel -->
-        <div id="phone-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-6 border-4 border-amber-900 rounded-2xl bg-amber-100/95 shadow-xl z-30 backdrop-blur-sm">
-             <div id="phone-screen" class="bg-gray-800 rounded-lg p-2 h-[550px] flex flex-col">
+        <div id="phone-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full p-2 border-4 border-amber-900 rounded-2xl bg-amber-100/95 shadow-xl z-30 backdrop-blur-sm">
+             <div id="phone-screen" class="bg-gray-800 rounded-lg h-full flex flex-col overflow-hidden">
                 <!-- Phone Header -->
-                <div class="flex justify-between items-center pb-2 border-b border-gray-600 px-2">
-                    <span class="text-sm text-gray-300">9:41 AM</span>
-                    <div class="w-20 h-4 bg-black rounded-full"></div>
-                    <div class="flex items-center space-x-1">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M12 20h.01"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/></svg>
-                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="text-gray-300"><path d="M2 2h20v20H2z"/></svg>
+                <div class="flex-shrink-0 flex justify-between items-center pb-2 border-b border-gray-600 px-4 pt-2">
+                    <span id="phone-time" class="text-sm font-bold text-gray-300">9:41 AM</span>
+                    <div class="w-24 h-5 bg-black rounded-full"></div>
+                    <div class="flex items-center space-x-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M12 20h.01"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/></svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-gray-300"><path d="M2 2h20v20H2z"/></svg>
                     </div>
                 </div>
 
@@ -283,8 +150,114 @@
                     <!-- App icons will be populated here by JS -->
                 </div>
 
+                <!-- Nested App Screens -->
+                <div id="phone-app-screens" class="flex-grow overflow-y-auto hidden p-4 space-y-4">
+                    <!-- Settings Panel -->
+                    <div id="settings-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Settings</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                                <label for="developer-toggle" class="text-lg">Developer Mode</label>
+                                <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" name="developer-toggle" id="developer-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                    <label for="developer-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                                <label for="continuous-toggle" class="text-lg">Continuous Day</label>
+                                <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" name="continuous-toggle" id="continuous-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                    <label for="continuous-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                </div>
+                            </div>
+                            <button id="new-game-btn" class="btn-style w-full py-2">Start New Game</button>
+                        </div>
+                    </div>
+
+                    <!-- Unlocks Panel -->
+                    <div id="unlocks-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Unlocks</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Employees</h3>
+                                <div id="unlocks-employees" class="space-y-2"></div>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Shelves</h3>
+                                <div id="unlocks-shelves" class="space-y-2"></div>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Storage</h3>
+                                <div id="unlocks-storage" class="space-y-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Restock Panel -->
+                    <div id="restock-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Order Supplies</h2>
+                        <div id="restock-grid" class="space-y-2"></div>
+                        <div class="mt-4 pt-2 border-t-2 border-amber-800/30 flex justify-between items-center">
+                            <span class="text-xl">Total: $<span id="restock-total">0.00</span></span>
+                            <button id="place-order-btn" class="btn-style px-4 py-2">Place Order</button>
+                        </div>
+                    </div>
+
+                    <!-- Favorites Panel -->
+                    <div id="favorites-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Favorites</h2>
+                        <div id="favorites-grid" class="space-y-2"></div>
+                         <div class="mt-4 pt-2 border-t-2 border-amber-800/30 flex justify-between items-center">
+                            <span class="text-xl">Total: $<span id="favorites-total">0.00</span></span>
+                            <button id="place-favorites-order-btn" class="btn-style px-4 py-2">Order All</button>
+                        </div>
+                    </div>
+
+                    <!-- Basket Panel -->
+                    <div id="basket-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Your Basket</h2>
+                        <div id="basket-grid" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Shelf Assignment Panel -->
+                    <div id="shelf-assignment-panel" class="phone-app-screen hidden">
+                        <h2 id="shelf-assignment-title" class="text-3xl font-handwritten mb-4">Shelf Assignments</h2>
+                        <div id="shelf-assignment-grid" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <!-- Assignment Panel -->
+                    <div id="assignment-panel" class="phone-app-screen hidden">
+                        <h2 id="assignment-title" class="text-2xl font-handwritten mb-4">Assign Item</h2>
+                        <div id="assignment-grid" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <!-- Employees Panel -->
+                    <div id="employees-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Manage Employees</h2>
+                        <div id="employee-list" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Customers Panel -->
+                    <div id="customers-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Customers</h2>
+                        <div class="flex border-b-2 border-amber-800/30 mb-2">
+                            <button id="in-store-customers-btn" class="flex-1 p-2 bg-amber-800/20 rounded-t-md">In Store</button>
+                            <button id="all-customers-btn" class="flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">All</button>
+                        </div>
+                        <div id="in-store-customer-list" class="space-y-2"></div>
+                        <div id="all-customer-list" class="hidden flex-col space-y-2"></div>
+                    </div>
+
+                     <!-- Reports Panel -->
+                    <div id="reports-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Daily Reports</h2>
+                        <p>This feature is coming soon!</p>
+                    </div>
+                </div>
+
+
                 <!-- Phone Footer / Close Button -->
-                <div class="pt-4 mt-auto flex justify-center items-center space-x-12">
+                <div class="flex-shrink-0 pt-4 mt-auto flex justify-center items-center space-x-12">
                     <button id="phone-back-btn" class="text-gray-400 hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
                     </button>
@@ -292,23 +265,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Favorites Panel (formerly Quick Order) -->
-        <div id="favorites-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-40 backdrop-blur-sm">
-            <button id="close-favorites" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
-            <h2 class="text-2xl font-handwritten mb-4 text-center">Favorites</h2>
-            <div id="favorites-grid-container" class="h-[400px] overflow-y-auto p-2 bg-white/50 rounded-md">
-                <div id="favorites-grid" class="grid grid-cols-1 gap-2">
-                    <!-- Starred items will be populated here -->
-                </div>
-            </div>
-            <div class="text-right mt-4 p-2 border-t-2 border-amber-900/50 flex justify-end items-center">
-                <span class="text-xl mr-4">Total: $<span id="favorites-total">0.00</span></span>
-                <button id="place-favorites-order-btn" class="btn-style px-6 py-2 rounded-lg text-lg">Place Order</button>
-            </div>
-        </div>
-
-
     </div>
 
     <!-- Message Box -->
@@ -697,15 +653,28 @@
         window.addEventListener('keyup', (e) => {
             keys[e.code] = false;
             if (e.code === 'KeyF') {
-                togglePanel('orders');
+                 // Legacy keybind, now opens phone to orders
+                openPhonePanel();
+                showAppScreen('restock-panel');
             } else if (e.code === 'KeyG') {
-                openBasketPanel();
+                // Legacy keybind, now opens phone to basket
+                openPhonePanel();
+                showAppScreen('basket-panel');
             } else if (e.code === 'KeyT') {
-                openUnlocksPanel();
+                // Legacy keybind, now opens phone to unlocks
+                openPhonePanel();
+                showAppScreen('unlocks-panel');
             } else if (e.code === 'KeyE') {
                 handleInteraction();
             } else if (e.code === 'Escape') {
-                if (activePanel) {
+                if (isPhoneOpen) {
+                    if (activePhoneScreen) {
+                        showAppGrid(); // Go back to app grid
+                    } else {
+                        closePhone(); // Close phone from app grid
+                    }
+                } else if (activePanel) {
+                    // Handle legacy panels if any are still in use
                     togglePanel(activePanel, false);
                 }
             }
@@ -3784,7 +3753,7 @@
             allBtn.onclick = showAll;
 
             showInStore();
-            togglePanel('customers', true);
+            showAppScreen('customers-panel');
         }
 
         function openEmployeesPanel() {
@@ -3828,7 +3797,7 @@
             if (!anyUnlocked) {
                 employeeList.innerHTML = `<p class="text-center p-4">No employees hired yet.</p>`;
             }
-            togglePanel('employees', true);
+            showAppScreen('employees-panel');
         }
 
         function openBasketPanel() {
@@ -3854,7 +3823,7 @@
                 }
             }
 
-            togglePanel('basket', true);
+            showAppScreen('basket-panel');
         }
 
         function openShelfAssignmentPanel() {
@@ -3873,7 +3842,7 @@
                 }
             });
 
-            togglePanel('shelf-assignment', true);
+            showAppScreen('shelf-assignment-panel');
         }
 
         function showShelfSlotsForAssignment(shelf) {
@@ -3930,19 +3899,24 @@
         let currentFavoritesOrder = {};
 
         function openPhonePanel() {
+            const phonePanel = document.getElementById('phone-panel');
+            phonePanel.classList.remove('hidden');
+            isPhoneOpen = true;
+            showAppGrid(); // Start at the home screen
+
             const appsGrid = document.getElementById('phone-apps-grid');
-            appsGrid.innerHTML = ''; // Clear previous app icons
+            if (appsGrid.children.length > 0) return; // Populate apps only once
 
             const apps = [
-                { name: 'Favorites', icon: '⭐', action: openFavoritesPanel },
-                { name: 'Order', icon: '📦', action: openRestockPanel },
-                { name: 'Basket', icon: '🧺', action: openBasketPanel },
-                { name: 'Shelves', icon: '📚', action: openShelfAssignmentPanel },
-                { name: 'Employees', icon: '👥', action: openEmployeesPanel },
-                { name: 'Customers', icon: '👤', action: openCustomersPanel },
-                { name: 'Unlocks', icon: '🔑', action: openUnlocksPanel },
-                { name: 'Reports', icon: '📈', action: () => showMessage("Daily reports coming soon!") },
-                { name: 'Settings', icon: '⚙️', action: () => togglePanel('settings', true) },
+                { name: 'Favorites', icon: '⭐', panelId: 'favorites-panel', action: openFavoritesPanel },
+                { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
+                { name: 'Basket', icon: '🧺', panelId: 'basket-panel', action: openBasketPanel },
+                { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
+                { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
+                { name: 'Customers', icon: '👤', panelId: 'customers-panel', action: openCustomersPanel },
+                { name: 'Unlocks', icon: '🔑', panelId: 'unlocks-panel', action: openUnlocksPanel },
+                { name: 'Reports', icon: '📈', panelId: 'reports-panel', action: () => showMessage("Daily reports coming soon!") },
+                { name: 'Settings', icon: '⚙️', panelId: 'settings-panel', action: () => showAppScreen('settings-panel') },
             ];
 
             apps.forEach(app => {
@@ -3953,13 +3927,13 @@
                     <span class="text-xs font-medium">${app.name}</span>
                 `;
                 appButton.onclick = () => {
-                    togglePanel('phone', false); // Close the phone
-                    app.action(); // Open the selected app panel
+                    // Prepare the panel's content first, then show it.
+                    if(app.action) app.action();
+                    // For simple panels without a dedicated open function, just show the screen.
+                    else showAppScreen(app.panelId);
                 };
                 appsGrid.appendChild(appButton);
             });
-
-            togglePanel('phone', true);
         }
 
         function openFavoritesPanel() {
@@ -3969,7 +3943,7 @@
 
             if (starredItems.length === 0) {
                 favoritesGrid.innerHTML = `<p class="text-center p-4">No items have been starred yet. Star items from the main order screen.</p>`;
-                togglePanel('favorites', true);
+                showAppScreen('favorites-panel');
                 return;
             }
 
@@ -4007,7 +3981,7 @@
                 });
             });
 
-            togglePanel('favorites', true);
+            showAppScreen('favorites-panel');
         }
 
         function updateFavoritesTotal() {
@@ -4125,7 +4099,7 @@
                 });
             });
 
-            togglePanel('restock', true);
+            showAppScreen('restock-panel');
         }
 
         function purchaseUnlock(type, key) {
@@ -4251,7 +4225,7 @@
                 });
             });
 
-            togglePanel('unlocks', true);
+            showAppScreen('unlocks-panel');
         }
 
 
@@ -4355,7 +4329,7 @@
                     }
                 });
             });
-            togglePanel('storage', true);
+            showAppScreen('storage-panel');
         }
 
 function openProductAssignmentForShelf(shelf, slotIndex) {
@@ -4500,7 +4474,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 });
             });
 
-            togglePanel('shelf', true);
+            showAppScreen('shelf-panel');
         }
 
         function takeItemFromStorage(itemName, cell) {
@@ -4528,42 +4502,58 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
 
-        let activePanel = null;
+        let activePanel = null; // DEPRECATED: Will be replaced by phone-specific logic
+        let activePhoneScreen = null; // Tracks the currently open app screen inside the phone
+        let isPhoneOpen = false;
         let activeShelf = null;
         let activeStorageCell = null;
+
+        function closePhone() {
+            const phonePanel = document.getElementById('phone-panel');
+            phonePanel.classList.add('hidden');
+            isPhoneOpen = false;
+            activePhoneScreen = null;
+        }
+
+        function showAppGrid() {
+            document.getElementById('phone-apps-grid').classList.remove('hidden');
+            document.getElementById('phone-app-screens').classList.add('hidden');
+            activePhoneScreen = null;
+        }
+
+        function showAppScreen(panelId) {
+            const appScreensContainer = document.getElementById('phone-app-screens');
+
+            // Hide all other screens within the container
+            const allScreens = appScreensContainer.querySelectorAll('.phone-app-screen');
+            allScreens.forEach(screen => screen.classList.add('hidden'));
+
+            // Show the target screen
+            const targetScreen = document.getElementById(panelId);
+            if (targetScreen) {
+                targetScreen.classList.remove('hidden');
+            }
+
+            // Show the container and hide the grid
+            appScreensContainer.classList.remove('hidden');
+            document.getElementById('phone-apps-grid').classList.add('hidden');
+
+            activePhoneScreen = panelId;
+        }
+
+
         function togglePanel(panelName, forceOpen = false) {
-            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'phone-panel', 'favorites-panel', 'shelf-assignment-panel', 'employees-panel', 'customers-panel'];
+            // This function is now a legacy wrapper. New UI should use the phone functions.
             const targetPanel = document.getElementById(`${panelName}-panel`);
-
             if (forceOpen) {
-                // Close all other panels
-                allPanels.forEach(pId => {
-                    const p = document.getElementById(pId);
-                    if (p && p.id !== `${panelName}-panel`) {
-                        p.classList.add('hidden');
-                    }
-                });
-                if (targetPanel) targetPanel.classList.remove('hidden');
-                activePanel = panelName;
-                return;
-            }
-
-            if (activePanel === panelName) {
-                // Close the current panel
-                if (targetPanel) targetPanel.classList.add('hidden');
-                activePanel = null;
-                if (panelName === 'shelf') activeShelf = null;
-                if (panelName === 'storage') activeStorageCell = null;
+                 if (targetPanel) targetPanel.classList.remove('hidden');
+                 activePanel = panelName;
             } else {
-                 // Close the previously active panel
-                if (activePanel) {
-                    const oldPanel = document.getElementById(`${activePanel}-panel`);
-                    if (oldPanel) oldPanel.classList.add('hidden');
-                }
-                // Open the new panel
-                if (targetPanel) targetPanel.classList.remove('hidden');
-                activePanel = panelName;
+                 if (targetPanel) targetPanel.classList.add('hidden');
+                 activePanel = null;
             }
+             if (panelName === 'shelf') activeShelf = null;
+             if (panelName === 'storage') activeStorageCell = null;
         }
 
         function startNewGame() {
@@ -4667,13 +4657,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
             // Setup close buttons for all panels
-            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'phone', 'favorites', 'shelf-assignment', 'employees', 'customers'].forEach(panelName => {
-                const closeButton = document.getElementById(`close-${panelName}`);
-                if (closeButton) {
-                    closeButton.addEventListener('click', () => togglePanel(panelName, false));
-                }
-            });
-            document.getElementById('phone-back-btn').addEventListener('click', () => togglePanel('phone', false));
+            document.getElementById('close-phone').addEventListener('click', closePhone);
+            document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
 
             // Settings Toggles
             const devToggle = document.getElementById('developer-toggle');

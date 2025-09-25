@@ -86,7 +86,7 @@
             text-align: center;
         }
 
-        #phone-panel {
+        #clipboard-panel {
             max-width: 420px; /* Increased width */
             height: 90vh; /* Increased height */
             max-height: 800px;
@@ -94,7 +94,8 @@
 
         .phone-app-screen {
             color: #5d4037;
-            background-color: #f7e7d8;
+            /* The background is now the paper, so this isn't needed */
+            /* background-color: #f7e7d8; */
         }
 
         /* Toggle Switch Styles */
@@ -132,26 +133,25 @@
         <!-- Hidden canvas for generating the sprite sheet -->
         <canvas id="spriteSheetCanvas" width="270" height="270" style="display:none;"></canvas>
 
-        <!-- Phone Panel -->
-        <div id="phone-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full p-2 border-4 border-amber-900 rounded-2xl bg-amber-100/95 shadow-xl z-30 backdrop-blur-sm">
-             <div id="phone-screen" class="bg-gray-800 rounded-lg h-full flex flex-col overflow-hidden">
-                <!-- Phone Header -->
-                <div class="flex-shrink-0 flex justify-between items-center pb-2 border-b border-gray-600 px-4 pt-2">
-                    <span id="phone-time" class="text-sm font-bold text-gray-300">9:41 AM</span>
-                    <div class="w-24 h-5 bg-black rounded-full"></div>
-                    <div class="flex items-center space-x-2">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M12 20h.01"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/></svg>
-                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-gray-300"><path d="M2 2h20v20H2z"/></svg>
+        <!-- Clipboard Panel -->
+        <div id="clipboard-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full p-2 z-30">
+            <!-- The Clipboard itself -->
+            <div class="relative w-full h-full bg-amber-800 border-4 border-amber-900 rounded-lg shadow-xl pt-16">
+                <!-- The Clip -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-20 bg-slate-400 border-4 border-slate-600 rounded-lg shadow-md">
+                    <div class="w-full h-full bg-gradient-to-b from-slate-300 to-slate-500 rounded-md"></div>
+                    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-3 bg-slate-600 rounded-sm"></div>
+                </div>
+
+                <!-- The Paper -->
+                <div id="clipboard-paper" class="bg-amber-50 rounded-lg h-full flex flex-col overflow-hidden m-2 p-2 border-2 border-amber-900/20">
+                    <!-- Apps Grid -->
+                    <div id="phone-apps-grid" class="grid grid-cols-4 gap-x-2 gap-y-4 p-4 flex-grow overflow-y-auto">
+                        <!-- App icons will be populated here by JS -->
                     </div>
-                </div>
 
-                <!-- Apps Grid -->
-                <div id="phone-apps-grid" class="grid grid-cols-4 gap-x-2 gap-y-4 p-4 flex-grow overflow-y-auto">
-                    <!-- App icons will be populated here by JS -->
-                </div>
-
-                <!-- Nested App Screens -->
-                <div id="phone-app-screens" class="flex-grow overflow-y-auto hidden p-4 space-y-4">
+                    <!-- Nested App Screens -->
+                    <div id="phone-app-screens" class="flex-grow overflow-y-auto hidden p-4 space-y-4">
                     <!-- Settings Panel -->
                     <div id="settings-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Settings</h2>
@@ -256,12 +256,11 @@
                 </div>
 
 
-                <!-- Phone Footer / Close Button -->
-                <div class="flex-shrink-0 pt-4 mt-auto flex justify-center items-center space-x-12">
-                    <button id="phone-back-btn" class="text-gray-400 hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-                    </button>
-                     <button id="close-phone" class="w-24 h-1.5 bg-gray-500 rounded-full hover:bg-gray-400 transition-colors"></button>
+                    <!-- Footer Buttons -->
+                    <div class="flex-shrink-0 pt-4 mt-auto flex justify-center items-center space-x-4">
+                        <button id="phone-back-btn" class="btn-style px-6 py-2">Back</button>
+                        <button id="close-phone" class="btn-style bg-red-700 hover:bg-red-600 px-6 py-2">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -654,15 +653,15 @@
             keys[e.code] = false;
             if (e.code === 'KeyF') {
                  // Legacy keybind, now opens phone to orders
-                openPhonePanel();
+                openClipboardPanel();
                 showAppScreen('restock-panel');
             } else if (e.code === 'KeyG') {
                 // Legacy keybind, now opens phone to basket
-                openPhonePanel();
+                openClipboardPanel();
                 showAppScreen('basket-panel');
             } else if (e.code === 'KeyT') {
                 // Legacy keybind, now opens phone to unlocks
-                openPhonePanel();
+                openClipboardPanel();
                 showAppScreen('unlocks-panel');
             } else if (e.code === 'KeyE') {
                 handleInteraction();
@@ -671,7 +670,7 @@
                     if (activePhoneScreen) {
                         showAppGrid(); // Go back to app grid
                     } else {
-                        closePhone(); // Close phone from app grid
+                        closeClipboard(); // Close phone from app grid
                     }
                 } else if (activePanel) {
                     // Handle legacy panels if any are still in use
@@ -3441,7 +3440,7 @@
 
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
-                 if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openPhonePanel(); }
+                 if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openClipboardPanel(); }
                 return;
             }
 
@@ -3844,6 +3843,52 @@
 
             showAppScreen('shelf-assignment-panel');
         }
+        function populateInStoreCustomers() {
+            const customerList = document.getElementById('in-store-customer-list');
+            if (!customerList) return; // Exit if the panel isn't open/doesn't exist
+            customerList.innerHTML = '';
+
+            const activeCustomers = customers.filter(c => !c.leaving);
+
+            if (activeCustomers.length === 0) {
+                customerList.innerHTML = `<p class="text-center p-4">No customers in the shop.</p>`;
+                return;
+            }
+
+            activeCustomers.forEach(customer => {
+                const customerDiv = document.createElement('div');
+                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 cursor-pointer hover:bg-amber-200/50 transition-colors';
+                customerDiv.dataset.customerId = customer.id;
+
+                let status = '';
+                if (customer.waitTimer > 60) {
+                    status = `<span class="font-bold text-yellow-600 animate-pulse">Needs Attention!</span>`;
+                } else if (customer.state === 'waitingAtCounter') {
+                    status = `<span class="font-bold text-green-600">Ready to Checkout</span>`;
+                } else {
+                    status = `<span class="text-gray-500">${customer.state}</span>`;
+                }
+
+                customerDiv.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="font-bold text-lg">${customer.name}</div>
+                        <div>${status}</div>
+                    </div>
+                    <div class="text-sm">Wait Time: ${Math.round(customer.waitTimer)}s</div>
+                    <div class="text-xs mt-1">Looking for: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
+                `;
+
+                customerDiv.addEventListener('click', () => {
+                    const targetCustomer = customers.find(c => c.id === customer.id);
+                    if (targetCustomer) {
+                        // When a customer is clicked, pan the camera to them
+                        targetCameraX = -targetCustomer.x + canvas.width / 2;
+                        closeClipboard();
+                    }
+                });
+                customerList.appendChild(customerDiv);
+            });
+        }
 
         function showShelfSlotsForAssignment(shelf) {
             const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
@@ -3898,9 +3943,9 @@
         let currentRestockOrder = {};
         let currentFavoritesOrder = {};
 
-        function openPhonePanel() {
-            const phonePanel = document.getElementById('phone-panel');
-            phonePanel.classList.remove('hidden');
+        function openClipboardPanel() {
+            const clipboardPanel = document.getElementById('clipboard-panel');
+            clipboardPanel.classList.remove('hidden');
             isPhoneOpen = true;
             showAppGrid(); // Start at the home screen
 
@@ -3921,11 +3966,15 @@
 
             apps.forEach(app => {
                 const appButton = document.createElement('button');
-                appButton.className = 'flex flex-col items-center justify-center space-y-1 text-white hover:bg-gray-700 rounded-lg p-2 transition-colors';
-                appButton.innerHTML = `
-                    <div class="text-4xl">${app.icon}</div>
-                    <span class="text-xs font-medium">${app.name}</span>
-                `;
+                appButton.className = 'flex flex-col items-center justify-center space-y-1 text-amber-900 hover:bg-amber-200/50 rounded-lg p-2 transition-colors';
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'text-4xl';
+                iconDiv.innerHTML = app.icon; // Use innerHTML to render emoji
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'text-xs font-medium';
+                nameSpan.textContent = app.name;
+                appButton.appendChild(iconDiv);
+                appButton.appendChild(nameSpan);
                 appButton.onclick = () => {
                     // Prepare the panel's content first, then show it.
                     if(app.action) app.action();
@@ -4508,9 +4557,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         let activeShelf = null;
         let activeStorageCell = null;
 
-        function closePhone() {
-            const phonePanel = document.getElementById('phone-panel');
-            phonePanel.classList.add('hidden');
+        function closeClipboard() {
+            const clipboardPanel = document.getElementById('clipboard-panel');
+            clipboardPanel.classList.add('hidden');
             isPhoneOpen = false;
             activePhoneScreen = null;
         }

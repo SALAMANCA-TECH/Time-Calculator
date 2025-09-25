@@ -1029,6 +1029,13 @@
         }
 
         function drawLoadingDock() {
+            ctx.save(); // Save context state
+
+            // Create a clipping path for the loading dock area
+            ctx.beginPath();
+            ctx.rect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height);
+            ctx.clip();
+
             ctx.fillStyle = 'rgba(255, 235, 59, 0.3)'; // Light yellow background
             ctx.fillRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height);
 
@@ -1036,15 +1043,19 @@
             ctx.lineWidth = 4;
             const spacing = 40;
             ctx.beginPath();
-            for (let i = -canvas.height; i < canvas.width; i += spacing) {
+            // Draw hatching lines that cover the entire visible canvas, but will be clipped
+            for (let i = -canvas.height; i < worldWidth; i += spacing) {
                 ctx.moveTo(i, canvas.height);
                 ctx.lineTo(i + loadingDock.height, loadingDock.y);
             }
-             for (let i = canvas.width + canvas.height; i > 0; i -= spacing) {
+             for (let i = worldWidth + canvas.height; i > 0; i -= spacing) {
                 ctx.moveTo(i, canvas.height);
                 ctx.lineTo(i - loadingDock.height, loadingDock.y);
             }
             ctx.stroke();
+
+            ctx.restore(); // Restore context state, removing the clip
+
             ctx.strokeStyle = '#5d4037';
             ctx.lineWidth = 2;
             ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
@@ -2175,6 +2186,8 @@
             switch(manager.state) {
                 case 'idle':
                     if (manager.stateTimer <= 0) {
+                        const MAX_DOCK_PACKAGES = 5;
+
                         // --- Morning Prep Logic ---
                         if (dayPhase === 'opening' && manager.canOrder && !manager.hasPlacedMorningOrder) {
                             const shelfDemand = {};
@@ -2213,7 +2226,12 @@
                                     }
                                 }
 
-                                if (finalOrderList.length > 0) {
+                                let packagesFromOrder = 0;
+                                finalOrderList.forEach(orderItem => {
+                                    packagesFromOrder += Math.ceil(orderItem.quantity / MAX_PACKAGE_SIZE);
+                                });
+
+                                if (finalOrderList.length > 0 && loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
                                     manager.task = {
                                         action: 'order_bulk',
                                         items: finalOrderList,
@@ -2255,16 +2273,20 @@
                         }
 
                         if (urgentOrderItem) {
-                            manager.task = {
-                                action: 'order',
-                                item: urgentOrderItem,
-                                isUrgent: true,
-                                requiredQuantity: requiredQuantity,
-                                target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                            };
-                            manager.state = 'going_to_office';
-                            manager.stateTimer = 1000;
-                            break;
+                            const quantityToOrder = requiredQuantity;
+                            const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
+                            if (loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
+                                manager.task = {
+                                    action: 'order',
+                                    item: urgentOrderItem,
+                                    isUrgent: true,
+                                    requiredQuantity: requiredQuantity,
+                                    target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                                };
+                                manager.state = 'going_to_office';
+                                manager.stateTimer = 1000;
+                                break;
+                            }
                         }
 
                         // --- Evening Low-Stock Check ---
@@ -2277,15 +2299,27 @@
                             if (lowStockItems.length > 0) {
                                 lowStockItems.sort((a, b) => (itemPopularity[b] || 0) - (itemPopularity[a] || 0));
                                 const mostPopularLowItem = lowStockItems[0];
-                                manager.task = {
-                                    action: 'order',
-                                    item: mostPopularLowItem,
-                                    isUrgent: false,
-                                    target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                                };
-                                manager.state = 'going_to_office';
+                                const quantityToOrder = 10;
+                                const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
+
+                                if (loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
+                                    manager.task = {
+                                        action: 'order',
+                                        item: mostPopularLowItem,
+                                        isUrgent: false,
+                                        target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                                    };
+                                    manager.state = 'going_to_office';
+                                } else {
+                                    manager.stateTimer = 10000;
+                                    if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
+                                         manager.task = { target: {x: manager.idleX, y: manager.idleY} };
+                                     } else {
+                                         manager.task = null;
+                                     }
+                                }
                             } else {
-                                manager.stateTimer = 10000;
+                                 manager.stateTimer = 10000;
                                 if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
                                      manager.task = { target: {x: manager.idleX, y: manager.idleY} };
                                  } else {
@@ -3409,7 +3443,8 @@
             worldWidth = canvas.width + officeWidth;
             desk.width = worldWidth;
             loadingDock.y = canvas.height - loadingDock.height;
-            loadingDock.width = worldWidth;
+            loadingDock.x = officeWidth;
+            loadingDock.width = canvas.width;
             cameraY = 0;
 
             if (cameraState === 'store') {
@@ -4236,9 +4271,12 @@
         function placeOrder(isPhoneOrder = false) {
             const orderSource = isPhoneOrder ? currentPhoneOrder : currentRestockOrder;
             const panelId = isPhoneOrder ? 'phone' : 'restock';
+            const MAX_DOCK_PACKAGES = 5;
 
             let totalCost = 0;
             let itemsToOrder = 0;
+            let packagesFromOrder = 0;
+
             for (const itemName in orderSource) {
                 const quantity = orderSource[itemName];
                 if (quantity > 0) {
@@ -4246,12 +4284,21 @@
                     const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
                     totalCost += restockPrice * quantity;
                     itemsToOrder++;
+                    packagesFromOrder += Math.ceil(quantity / MAX_PACKAGE_SIZE);
                 }
             }
+
             if (itemsToOrder === 0) {
                 showMessage("Your order is empty.");
                 return;
             }
+
+            if (loadingDockPackages.length + packagesFromOrder > MAX_DOCK_PACKAGES) {
+                showMessage(`This order would create ${packagesFromOrder} packages, exceeding the loading dock limit of ${MAX_DOCK_PACKAGES}. Please clear some space first.`);
+                return;
+            }
+
+
             if (cash >= totalCost) {
                 cash -= totalCost;
                 for (const itemName in orderSource) {

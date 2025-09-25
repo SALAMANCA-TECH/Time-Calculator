@@ -279,6 +279,21 @@
             </div>
         </div>
 
+        <!-- Phone Panel -->
+        <div id="phone-panel" class="fixed top-4 right-0 w-full max-w-sm p-4 border-2 border-amber-900 rounded-lg bg-amber-100/95 shadow-xl z-30 backdrop-blur-sm transition-transform duration-300 ease-in-out translate-x-full">
+            <button id="close-phone" class="absolute top-2 right-3 text-3xl font-bold hover:text-red-600 transition-colors">&times;</button>
+            <h2 class="text-2xl font-handwritten mb-4 text-center">Quick Order</h2>
+            <div id="phone-grid-container" class="h-[400px] overflow-y-auto p-2 bg-white/50 rounded-md">
+                <div id="phone-grid" class="grid grid-cols-1 gap-2">
+                    <!-- Starred items will be populated here -->
+                </div>
+            </div>
+            <div class="text-right mt-4 p-2 border-t-2 border-amber-900/50 flex justify-end items-center">
+                <span class="text-xl mr-4">Total: $<span id="phone-total">0.00</span></span>
+                <button id="place-phone-order-btn" class="btn-style px-6 py-2 rounded-lg text-lg">Place Order</button>
+            </div>
+        </div>
+
 
     </div>
 
@@ -502,6 +517,7 @@
         let continuousMode = false;
         let isMandatoryBreak = false;
         let midDayBreakTriggered = false;
+        let starredItems = [];
 
         const OPENING_DURATION = 60000; // 1 minute
         const OPEN_DURATION = 180000; // 3 minutes
@@ -538,6 +554,7 @@
         const clipboard = { x: 0, y: 0, width: 50, height: 60 };
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
         const lockIcon = { x: 0, y: 0, width: 50, height: 50 };
+        const phoneIcon = { x: 0, y: 0, width: 50, height: 50 };
         let storageCells = [];
         let shelves = [];
         const MAX_BASKET_SIZE = 5;
@@ -1226,7 +1243,7 @@
         }
 
         function drawStaticUI() {
-            const boxWidth = 290, boxHeight = 70;
+            const boxWidth = 350, boxHeight = 70;
             const boxX = (canvas.width - boxWidth) / 2, boxY = 20;
 
             ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
@@ -1236,14 +1253,17 @@
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
             const iconY = boxY + 10;
-            cashRegister.x = boxX + 20; cashRegister.y = iconY;
-            shoppingBasket.x = boxX + 85; shoppingBasket.y = iconY;
-            clipboard.x = boxX + 150; clipboard.y = iconY;
-            lockIcon.x = boxX + 215; lockIcon.y = iconY;
+            cashRegister.x = boxX + 15; cashRegister.y = iconY;
+            shoppingBasket.x = boxX + 80; shoppingBasket.y = iconY;
+            clipboard.x = boxX + 145; clipboard.y = iconY;
+            phoneIcon.x = boxX + 210; phoneIcon.y = iconY;
+            lockIcon.x = boxX + 275; lockIcon.y = iconY;
+
 
             drawCashRegister(cashRegister.x, cashRegister.y, cashRegister.width, cashRegister.height);
             drawShoppingBasket(shoppingBasket.x, shoppingBasket.y, shoppingBasket.width, shoppingBasket.height);
             drawClipboard(clipboard.x, clipboard.y, clipboard.width, clipboard.height);
+            drawPhoneIcon(phoneIcon.x, phoneIcon.y, phoneIcon.width, phoneIcon.height);
             drawLockIcon(lockIcon.x, lockIcon.y, lockIcon.width, lockIcon.height);
 
 
@@ -1319,6 +1339,28 @@
             // Body (the square part)
             ctx.fillStyle = '#f5f5f5';
             ctx.fillRect(x, y + h * 0.4, w, h * 0.6);
+        }
+
+        function drawPhoneIcon(x, y, w, h) {
+            ctx.fillStyle = '#f5f5f5';
+            ctx.strokeStyle = '#f5f5f5';
+            ctx.lineWidth = 3;
+
+            // Phone body
+            ctx.beginPath();
+            ctx.roundRect(x + w * 0.15, y, w * 0.7, h, 8);
+            ctx.fill();
+
+            // Screen
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x + w * 0.25, y + 8, w * 0.5, h - 24);
+
+            // Home button
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x + w * 0.5, y + h - 8, 4, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
         // --- START: Sprite Sheet Generation Code ---
@@ -3402,14 +3444,11 @@
 
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= panelX && x <= panelX + panelWidth && y >= panelY && y <= panelY + panelHeight) {
-                 if (x >= cashRegister.x && x <= cashRegister.x + cashRegister.width && y >= cashRegister.y && y <= cashRegister.y + cashRegister.height) { togglePanel('restock'); }
+                 if (x >= cashRegister.x && x <= cashRegister.x + cashRegister.width && y >= cashRegister.y && y <= cashRegister.y + cashRegister.height) { openRestockPanel(); }
                  else if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { openBasketPanel(); }
-                 else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) {
-                    openClipboardPanel();
-                 }
-                 else if (x >= lockIcon.x && x <= lockIcon.x + lockIcon.width && y >= lockIcon.y && y <= lockIcon.y + lockIcon.height) {
-                    openUnlocksPanel();
-                 }
+                 else if (x >= clipboard.x && x <= clipboard.x + clipboard.width && y >= clipboard.y && y <= clipboard.y + clipboard.height) { openClipboardPanel(); }
+                 else if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openPhonePanel(); }
+                 else if (x >= lockIcon.x && x <= lockIcon.x + lockIcon.width && y >= lockIcon.y && y <= lockIcon.y + lockIcon.height) { openUnlocksPanel(); }
                 return;
             }
 
@@ -3892,10 +3931,70 @@
 
 
         let currentRestockOrder = {};
+        let currentPhoneOrder = {};
+
+        function openPhonePanel() {
+            const phoneGrid = document.getElementById('phone-grid');
+            phoneGrid.innerHTML = '';
+            updatePhoneTotal();
+
+            if (starredItems.length === 0) {
+                phoneGrid.innerHTML = `<p class="text-center p-4">No items have been starred yet. Star items from the main order screen.</p>`;
+                togglePanel('phone', true);
+                return;
+            }
+
+            phoneGrid.innerHTML += `
+                <div class="grid grid-cols-4 gap-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                    <span class="font-bold col-span-2">Item</span>
+                    <span class="text-right font-bold">Cost</span>
+                    <span class="text-center font-bold">Qty</span>
+                </div>
+            `;
+
+            for (const itemName of starredItems) {
+                const itemData = items[itemName];
+                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid grid-cols-4 gap-2 items-center py-2 border-b border-amber-800/10';
+                itemDiv.innerHTML = `
+                    <span class="text-lg col-span-2">${itemName}</span>
+                    <span class="text-right text-lg">$${restockPrice.toFixed(2)}</span>
+                    <div class="flex items-center justify-center space-x-1">
+                        <button class="btn-style qty-btn-phone text-sm px-2 py-1" data-item="${itemName}" data-amount="5">+5</button>
+                    </div>
+                `;
+                phoneGrid.appendChild(itemDiv);
+            }
+
+             phoneGrid.querySelectorAll('.qty-btn-phone').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.item;
+                    const amount = parseInt(e.target.dataset.amount, 10);
+                    currentPhoneOrder[itemName] = (currentPhoneOrder[itemName] || 0) + amount;
+                    updatePhoneTotal();
+                    // Maybe add a visual confirmation? For now, just update total.
+                });
+            });
+
+            togglePanel('phone', true);
+        }
+
+        function updatePhoneTotal() {
+            let total = 0;
+            for (const itemName in currentPhoneOrder) {
+                const quantity = currentPhoneOrder[itemName];
+                const itemData = items[itemName];
+                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                total += restockPrice * quantity;
+            }
+            document.getElementById('phone-total').textContent = total.toFixed(2);
+        }
+
         function openRestockPanel() {
             const restockGrid = document.getElementById('restock-grid');
             restockGrid.innerHTML = '';
-            currentRestockOrder = {};
+            // currentRestockOrder = {}; // Keep order state if panel is closed
             updateRestockTotal();
 
             // Determine which items are available to order based on unlocked storage
@@ -3916,32 +4015,63 @@
             }
 
             restockGrid.innerHTML += `
-                <div class="grid grid-cols-4 gap-4 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                <div class="grid grid-cols-5 gap-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                    <span class="text-center">⭐</span>
                     <span class="font-bold">Item</span>
                     <span class="text-right font-bold">Cost</span>
-                    <span class="text-right font-bold">In Stock</span>
+                    <span class="text-right font-bold">Stock</span>
                     <span class="text-center font-bold">Order Qty</span>
                 </div>
             `;
             for (const itemName of unlockedItems) {
                 const itemData = items[itemName];
                 const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                const isStarred = starredItems.includes(itemName);
+
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'grid grid-cols-4 gap-4 items-center py-2 border-b border-amber-800/10';
+                itemDiv.className = 'grid grid-cols-5 gap-2 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
+                    <button class="text-2xl text-center star-btn" data-item="${itemName}">${isStarred ? '⭐' : '☆'}</button>
                     <span class="text-lg">${itemName}</span>
                     <span class="text-right text-lg">$${restockPrice.toFixed(2)}</span>
                     <span class="text-right text-lg">${inventory[itemName]}</span>
-                    <div class="text-center">
-                        <input type="number" min="0" value="0" data-item="${itemName}" class="w-20 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-600">
+                    <div class="flex items-center justify-center space-x-1">
+                        <input type="number" min="0" value="${currentRestockOrder[itemName] || 0}" data-item="${itemName}" class="w-16 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-600">
+                        <button class="btn-style qty-btn text-sm px-2 py-1" data-item="${itemName}" data-amount="1">+1</button>
+                        <button class="btn-style qty-btn text-sm px-2 py-1" data-item="${itemName}" data-amount="5">+5</button>
                     </div>
                 `;
                 restockGrid.appendChild(itemDiv);
             }
-            restockGrid.querySelectorAll('input').forEach(input => {
+
+            // Add event listeners after all elements are in the DOM
+            restockGrid.querySelectorAll('.star-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.item;
+                    if (starredItems.includes(itemName)) {
+                        starredItems = starredItems.filter(i => i !== itemName);
+                        e.target.textContent = '☆';
+                    } else {
+                        if (starredItems.length < 5) {
+                            starredItems.push(itemName);
+                            e.target.textContent = '⭐';
+                        } else {
+                            showMessage("You can only star up to 5 items.");
+                        }
+                    }
+                    saveGame();
+                });
+            });
+
+            restockGrid.querySelectorAll('input[type="number"]').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const itemName = e.target.dataset.item;
-                    const quantity = parseInt(e.target.value, 10) || 0;
+                    let quantity = parseInt(e.target.value, 10);
+                     if (isNaN(quantity) || quantity < 0) {
+                        quantity = 0;
+                        e.target.value = 0;
+                    }
+
                     if (quantity > 0) {
                         currentRestockOrder[itemName] = quantity;
                     } else {
@@ -3950,6 +4080,21 @@
                     updateRestockTotal();
                 });
             });
+
+            restockGrid.querySelectorAll('.qty-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.item;
+                    const amount = parseInt(e.target.dataset.amount, 10);
+                    const input = restockGrid.querySelector(`input[data-item="${itemName}"]`);
+                    let currentValue = parseInt(input.value, 10) || 0;
+                    currentValue += amount;
+                    input.value = currentValue;
+
+                    // Manually trigger the input event to update the order
+                    input.dispatchEvent(new Event('input'));
+                });
+            });
+
             togglePanel('restock', true);
         }
 
@@ -4091,10 +4236,13 @@
             document.getElementById('restock-total').textContent = total.toFixed(2);
         }
 
-        function placeOrder() {
+        function placeOrder(isPhoneOrder = false) {
+            const orderSource = isPhoneOrder ? currentPhoneOrder : currentRestockOrder;
+            const panelId = isPhoneOrder ? 'phone' : 'restock';
+
             let totalCost = 0;
             let itemsToOrder = 0;
-            for (const itemName in currentRestockOrder) {
+            for (const itemName in orderSource) {
                 const quantity = currentRestockOrder[itemName];
                 if (quantity > 0) {
                     const itemData = items[itemName];
@@ -4109,17 +4257,22 @@
             }
             if (cash >= totalCost) {
                 cash -= totalCost;
-                for (const itemName in currentRestockOrder) {
-                    let quantityToOrder = currentRestockOrder[itemName];
+                for (const itemName in orderSource) {
+                    let quantityToOrder = orderSource[itemName];
                     while (quantityToOrder > 0) {
                         const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
                         loadingDockPackages.push({itemName: itemName, quantity: quantityForPackage});
                         quantityToOrder -= quantityForPackage;
                     }
                 }
+                if (isPhoneOrder) {
+                    currentPhoneOrder = {};
+                } else {
+                    currentRestockOrder = {};
+                }
                 updateUI();
                 saveGame();
-                togglePanel('restock', false);
+                togglePanel(panelId, false);
                 showMessage(`Order placed for $${totalCost.toFixed(2)}! The supplies have been delivered to the loading dock.`);
             } else {
                 showMessage(`You can't afford this order! You need $${totalCost.toFixed(2)} but only have $${cash.toFixed(2)}.`);
@@ -4337,28 +4490,42 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         let activeShelf = null;
         let activeStorageCell = null;
         function togglePanel(panelName, forceOpen = false) {
-            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'clipboard-panel'];
+            const allPanels = ['storage-panel', 'shelf-panel', 'assignment-panel', 'place-item-panel', 'orders-panel', 'basket-panel', 'restock-panel', 'unlocks-panel', 'settings-panel', 'clipboard-panel', 'phone-panel'];
             const targetPanel = document.getElementById(`${panelName}-panel`);
 
-            // Special handling for animated clipboard
-            if (panelName === 'clipboard') {
-                allPanels.forEach(p => {
-                    if (p !== 'clipboard-panel') document.getElementById(p).classList.add('hidden');
+            // Special handling for animated side panels
+            if (panelName === 'clipboard' || panelName === 'phone') {
+                const isClipboard = panelName === 'clipboard';
+                const otherPanelName = isClipboard ? 'phone' : 'clipboard';
+                const otherPanel = document.getElementById(`${otherPanelName}-panel`);
+
+                // Close all non-animated panels
+                allPanels.forEach(pId => {
+                    const p = document.getElementById(pId);
+                    if (p !== targetPanel && p !== otherPanel) {
+                        p.classList.add('hidden');
+                    }
                 });
+
+                // Ensure the other animated panel is closed before opening the new one
+                if (!otherPanel.classList.contains('translate-x-full')) {
+                    otherPanel.classList.add('translate-x-full');
+                }
+
                 if (forceOpen) {
                     targetPanel.classList.remove('translate-x-full');
-                    activePanel = 'clipboard';
+                    activePanel = panelName;
                 } else {
                     const isOpen = !targetPanel.classList.contains('translate-x-full');
-                    if(isOpen) {
+                    if (isOpen) {
                         targetPanel.classList.add('translate-x-full');
                         activePanel = null;
                     } else {
                         targetPanel.classList.remove('translate-x-full');
-                        activePanel = 'clipboard';
+                        activePanel = panelName;
                     }
                 }
-                 // Reset other active items
+                // Reset other active items
                 activeShelf = null;
                 activeStorageCell = null;
                 return;
@@ -4411,7 +4578,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
-                customerProfiles
+                customerProfiles, starredItems
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -4431,6 +4598,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     unlocks = gameState.unlocks || unlocks;
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
+                    starredItems = gameState.starredItems || [];
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {
@@ -4494,12 +4662,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             });
 
 
-            document.getElementById('place-order-btn').addEventListener('click', placeOrder);
+            document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
+            document.getElementById('place-phone-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('settings-btn').addEventListener('click', () => togglePanel('settings', true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
             // Setup close buttons for all panels
-            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'clipboard'].forEach(panelName => {
+            ['storage', 'shelf', 'assignment', 'place-item', 'orders', 'basket', 'restock', 'unlocks', 'settings', 'clipboard', 'phone'].forEach(panelName => {
                 document.getElementById(`close-${panelName}`).addEventListener('click', () => togglePanel(panelName, false));
             });
 

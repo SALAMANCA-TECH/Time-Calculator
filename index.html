@@ -283,11 +283,9 @@
                     <div class="space-y-2 text-lg">
                         <p>Day Ended: <span id="report-day" class="font-bold"></span></p>
                         <p>Gross Sales: <span id="report-sales" class="font-bold"></span></p>
-                        <p>Daily Expenses: <span id="report-expenses" class="font-bold"></span></p>
-                    <div class="pl-4 text-base border-l-2 border-amber-800/30 ml-2 space-y-1 my-1">
-                        <p>Rent: <span id="report-rent-cost" class="font-bold"></span></p>
-                        <p>Labor: <span id="report-labor-cost" class="font-bold"></span></p>
-                        <p>Storage: <span id="report-storage-cost" class="font-bold"></span></p>
+                    <p>Today's Accrued Expenses: <span id="report-expenses" class="font-bold"></span></p>
+                    <div id="weekly-bill-report" class="pl-4 text-base border-l-2 border-amber-800/30 ml-2 space-y-1 my-1">
+
                     </div>
                         <p class="border-t border-amber-800/30 pt-2">Net Profit: <span id="report-profit" class="font-bold"></span></p>
                     </div>
@@ -492,6 +490,7 @@
         let isMandatoryBreak = false;
         let midDayBreakTriggered = false;
         let starredItems = [];
+        let weeklyExpenses = 0;
 
         const OPENING_DURATION = 60000; // 1 minute
         const OPEN_DURATION = 180000; // 3 minutes
@@ -3166,19 +3165,29 @@
                 }
             }
 
-            const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
-            const dailyStorageCost = (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
+            const dailyAccruedExpenses = dailyOperatingCosts.rent + dailyLaborCost;
+            weeklyExpenses += dailyAccruedExpenses;
 
-            const dailyExpenses = dailyOperatingCosts.rent + dailyLaborCost + dailyStorageCost;
-            cash -= dailyExpenses;
+            let weeklyBillPaid = 0;
+
+            if (day > 0 && day % 7 === 0) {
+                const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
+                const weeklyStorageCost = unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate;
+                const totalWeeklyBill = weeklyExpenses + weeklyStorageCost;
+
+                cash -= totalWeeklyBill;
+                weeklyBillPaid = totalWeeklyBill;
+                weeklyExpenses = 0; // Reset for the next week
+
+                if (cash < 0) {
+                    updateUI();
+                    endGame(`Game Over! You couldn't pay your weekly bills of $${totalWeeklyBill.toFixed(2)} and ended with a debt of $${Math.abs(cash).toFixed(2)}.`);
+                    return;
+                }
+            }
+
             customers.forEach(c => c.state = 'leaving');
             timeSinceLastCustomer = 0;
-
-            if (day > 0 && day % 7 === 0 && cash < 0) {
-                updateUI();
-                endGame(`Game Over! You couldn't pay your weekly bills and ended with a debt of $${Math.abs(cash).toFixed(2)}.`);
-                return;
-            }
 
             updateUI();
             const reportPanel = document.getElementById('end-of-day-panel');
@@ -3232,12 +3241,17 @@
     `;
             document.getElementById('report-day').textContent = day;
             document.getElementById('report-sales').textContent = `$${grossSales.toFixed(2)}`;
-            document.getElementById('report-expenses').textContent = `-$${dailyExpenses.toFixed(2)}`;
-            // Populate the cost breakdown
-            document.getElementById('report-rent-cost').textContent = `-$${dailyOperatingCosts.rent.toFixed(2)}`;
-            document.getElementById('report-labor-cost').textContent = `-$${dailyLaborCost.toFixed(2)}`;
-            document.getElementById('report-storage-cost').textContent = `-$${dailyStorageCost.toFixed(2)}`;
-            document.getElementById('report-profit').textContent = `$${(grossSales - dailyExpenses).toFixed(2)}`;
+            document.getElementById('report-expenses').textContent = `-$${dailyAccruedExpenses.toFixed(2)}`;
+
+            const weeklyReportDiv = document.getElementById('weekly-bill-report');
+            weeklyReportDiv.innerHTML = ''; // Clear previous weekly report
+            if (weeklyBillPaid > 0) {
+                weeklyReportDiv.innerHTML = `
+                    <p class="font-bold text-red-600">Weekly Bill Paid: -$${weeklyBillPaid.toFixed(2)}</p>
+                `;
+            }
+
+            document.getElementById('report-profit').textContent = `$${(grossSales - dailyAccruedExpenses).toFixed(2)}`;
             reportPanel.classList.remove('hidden');
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;

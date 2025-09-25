@@ -2646,6 +2646,16 @@
             return targetShelf;
         }
 
+        function getStorageStock(itemName) {
+            let total = 0;
+            storageCells.forEach((cell, index) => {
+                if (unlocks.storage[index] && cell.items && cell.items[itemName]) {
+                    total += cell.items[itemName];
+                }
+            });
+            return total;
+        }
+
         function findRestockingTask() {
              // --- REFACTOR START: Deadlock Prevention ---
             const fullCell = storageCells.find(c => {
@@ -2679,9 +2689,7 @@
             for(let i = 0; i < shelves.length; i++) {
                 if (unlocks.shelves[i]) {
                     for(const slot of shelves[i].items) {
-                        const storageCell = storageCells.find(c => c.allowedItems.includes(slot.assignedItem));
-                        const stock = storageCell ? storageCell.items[slot.assignedItem] || 0 : 0;
-
+                        const stock = getStorageStock(slot.assignedItem);
                         if (slot.assignedItem && slot.quantity < MAX_SHELF_STACK && stock > 0) {
                              if(!neededItems.includes(slot.assignedItem)) neededItems.push(slot.assignedItem);
                         }
@@ -2689,11 +2697,11 @@
                 }
             }
             // Then check for unassigned items that have stock
-            for(const item in inventory){
-                const stock = Object.values(storageCells.find(c => c.allowedItems.includes(item))?.items || {}).reduce((a,b)=>a+b, 0) || 0;
+            for (const item in items) {
+                const stock = getStorageStock(item);
                 if (stock > 0) {
                     const isAssigned = shelves.some(s => s.items.some(i => i.assignedItem === item));
-                    if(!isAssigned && !neededItems.includes(item)) {
+                    if (!isAssigned && !neededItems.includes(item)) {
                         const hasEmptySlot = shelves.some((s, i) => unlocks.shelves[i] && s.items.some(i => i.assignedItem === null));
                         if (hasEmptySlot) {
                             neededItems.push(item);

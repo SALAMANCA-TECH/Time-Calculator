@@ -1446,7 +1446,7 @@
             drawManagersOffice();
 
             // Initialize Coffee Shop properties and draw its background
-            if (unlocks.shelves[5]) {
+            if (shelves.length > 5) {
                 const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio

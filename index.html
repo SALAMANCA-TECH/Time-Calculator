@@ -219,6 +219,8 @@
                             </div>
                             <div class="flex items-center justify-center space-x-2">
                                 <span class="text-xl">Quantity:</span>
+                                <button id="order-quantity-minus-5" class="btn-style qty-btn text-lg px-3 py-1">-5</button>
+                                <button id="order-quantity-minus-1" class="btn-style qty-btn text-lg px-3 py-1">-1</button>
                                 <input type="number" min="0" id="order-quantity-input" data-item="" class="w-20 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80">
                                 <button id="order-quantity-plus-1" class="btn-style qty-btn text-lg px-3 py-1">+1</button>
                                 <button id="order-quantity-plus-5" class="btn-style qty-btn text-lg px-3 py-1">+5</button>
@@ -226,16 +228,6 @@
                         </div>
                         <div class="mt-6 text-center">
                             <button id="order-quantity-done-btn" class="btn-style px-6 py-2">Done</button>
-                        </div>
-                    </div>
-
-                    <!-- Favorites Panel -->
-                    <div id="favorites-panel" class="phone-app-screen hidden">
-                        <h2 class="text-3xl font-handwritten mb-4">Favorites</h2>
-                        <div id="favorites-grid" class="space-y-2"></div>
-                         <div class="mt-4 pt-2 border-t-2 border-amber-800/30 flex justify-between items-center">
-                            <span class="text-xl">Total: $<span id="favorites-total">0.00</span></span>
-                            <button id="place-favorites-order-btn" class="btn-style px-4 py-2">Order All</button>
                         </div>
                     </div>
 
@@ -404,58 +396,58 @@
 
         let customerProfiles = {
             'artist': {
-                "Leo": { "request": "I need some basic supplies for my life drawing class.", "requestedItems": ["Pencil", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Kara": { "request": "I want to try some charcoal drawings. Got any?", "requestedItems": ["Charcoal"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Benny": { "request": "My markers have all dried out! I need a new set.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Vince": { "request": "I'm teaching a class, I need a bulk order of sketchbooks.", "requestedItems": ["Sketchbook", "Sketchbook", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Arturo": { "request": "Just a pencil for now, maybe a sketchbook if I feel inspired.", "requestedItems": ["Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Penelope": { "request": "I need a good set of colored markers for a commission piece.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Chuck": { "request": "Do you have any fine-tipped charcoal pencils?", "requestedItems": ["Charcoal", "Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
+                "Leo": { "request": "I need some basic supplies for my life drawing class.", "requestedItems": ["Pencil", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Kara": { "request": "I want to try some charcoal drawings. Got any?", "requestedItems": ["Charcoal"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Benny": { "request": "My markers have all dried out! I need a new set.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Vince": { "request": "I'm teaching a class, I need a bulk order of sketchbooks.", "requestedItems": ["Sketchbook", "Sketchbook", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Arturo": { "request": "Just a pencil for now, maybe a sketchbook if I feel inspired.", "requestedItems": ["Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Penelope": { "request": "I need a good set of colored markers for a commission piece.", "requestedItems": ["Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Chuck": { "request": "Do you have any fine-tipped charcoal pencils?", "requestedItems": ["Charcoal", "Pencil"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
             },
             'painter': {
-                "Frida": { "request": "I'm starting a new self-portrait. I'll need acrylics and a canvas.", "requestedItems": ["Acrylics", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Claude": { "request": "Just need some water colors for some light studies.", "requestedItems": ["Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Georgia": { "request": "I'm working on a large piece. I need oil paints.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Bob": { "request": "Time to paint some happy little trees. Need some oils.", "requestedItems": ["Oils"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Rembrandt": { "request": "I require the finest acrylics for my next masterpiece.", "requestedItems": ["Acrylics"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Sonia": { "request": "A small canvas and some water colors, please.", "requestedItems": ["Canvas", "Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "JMW": { "request": "I'm feeling dramatic. Give me your most vibrant oils and a large canvas.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
+                "Frida": { "request": "I'm starting a new self-portrait. I'll need acrylics and a canvas.", "requestedItems": ["Acrylics", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Claude": { "request": "Just need some water colors for some light studies.", "requestedItems": ["Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Georgia": { "request": "I'm working on a large piece. I need oil paints.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Bob": { "request": "Time to paint some happy little trees. Need some oils.", "requestedItems": ["Oils"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Rembrandt": { "request": "I require the finest acrylics for my next masterpiece.", "requestedItems": ["Acrylics"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Sonia": { "request": "A small canvas and some water colors, please.", "requestedItems": ["Canvas", "Water Color"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "JMW": { "request": "I'm feeling dramatic. Give me your most vibrant oils and a large canvas.", "requestedItems": ["Oils", "Canvas"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
             },
             'hobbyist': {
-                "Wally": { "request": "I'm building a new model ship. I need glue and some razors for the small parts.", "requestedItems": ["Glue", "Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Gundam Guy": { "request": "I need to paint my latest creation. Got any mini paints?", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Tanya": { "request": "I'm ready to start a new project. A model kit, please!", "requestedItems": ["Model Kits"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Duncan": { "request": "Two thin coats of mini paints are all I need.", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Rick": { "request": "I need razors to... uh... 'customize' my models. Yeah, that's it.", "requestedItems": ["Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Mini Martha": { "request": "A little glue can fix anything!", "requestedItems": ["Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Captain Kit": { "request": "I'm on the hunt for a new model kit to assemble.", "requestedItems": ["Model Kits", "Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
+                "Wally": { "request": "I'm building a new model ship. I need glue and some razors for the small parts.", "requestedItems": ["Glue", "Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Gundam Guy": { "request": "I need to paint my latest creation. Got any mini paints?", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Tanya": { "request": "I'm ready to start a new project. A model kit, please!", "requestedItems": ["Model Kits"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Duncan": { "request": "Two thin coats of mini paints are all I need.", "requestedItems": ["Mini Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Rick": { "request": "I need razors to... uh... 'customize' my models. Yeah, that's it.", "requestedItems": ["Razors"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Mini Martha": { "request": "A little glue can fix anything!", "requestedItems": ["Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Captain Kit": { "request": "I'm on the hunt for a new model kit to assemble.", "requestedItems": ["Model Kits", "Glue"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
             },
             'woodworker': {
-                "Ron": { "request": "I need to finish a chair. Some sanding paper and stainer should do it.", "requestedItems": ["Sanding Paper", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Tammy": { "request": "I'm just starting out. Do you have any wood scraps I can practice on?", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "April": { "request": "I'm building a large table and need some lumber.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Nick": { "request": "I need some quality lumber for a custom piece.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Pat": { "request": "Just some sanding paper to smooth things over.", "requestedItems": ["Sanding Paper"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Woody": { "request": "Got any interesting wood scraps? I like a challenge.", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Cheryl": { "request": "I'm staining a deck. I'll need a lot of stainer.", "requestedItems": ["Stainer", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
+                "Ron": { "request": "I need to finish a chair. Some sanding paper and stainer should do it.", "requestedItems": ["Sanding Paper", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Tammy": { "request": "I'm just starting out. Do you have any wood scraps I can practice on?", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "April": { "request": "I'm building a large table and need some lumber.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Nick": { "request": "I need some quality lumber for a custom piece.", "requestedItems": ["Lumber"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Pat": { "request": "Just some sanding paper to smooth things over.", "requestedItems": ["Sanding Paper"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Woody": { "request": "Got any interesting wood scraps? I like a challenge.", "requestedItems": ["Wood Scraps"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Cheryl": { "request": "I'm staining a deck. I'll need a lot of stainer.", "requestedItems": ["Stainer", "Stainer"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
             },
             'sculptor': {
-                "Michelangelo": { "request": "I have a vision! I require clay to bring it to life.", "requestedItems": ["Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Auguste": { "request": "I need to paint a ceramic piece. Do you have pottery paints?", "requestedItems": ["Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Donatello": { "request": "I am ready to work with a harder medium. A block of stone, please.", "requestedItems": ["Stone", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Henry": { "request": "I'm thinking... bigger. A block of marble.", "requestedItems": ["Marble"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Camille": { "request": "I need clay, and perhaps some pottery paints for the details.", "requestedItems": ["Clay", "Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Constantin": { "request": "Just a simple block of stone today.", "requestedItems": ["Stone"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Barbara": { "request": "I'm making a set of mugs. Clay and pottery paints, please.", "requestedItems": ["Clay", "Pottery Paints", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
+                "Michelangelo": { "request": "I have a vision! I require clay to bring it to life.", "requestedItems": ["Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Auguste": { "request": "I need to paint a ceramic piece. Do you have pottery paints?", "requestedItems": ["Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Donatello": { "request": "I am ready to work with a harder medium. A block of stone, please.", "requestedItems": ["Stone", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Henry": { "request": "I'm thinking... bigger. A block of marble.", "requestedItems": ["Marble"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Camille": { "request": "I need clay, and perhaps some pottery paints for the details.", "requestedItems": ["Clay", "Pottery Paints"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Constantin": { "request": "Just a simple block of stone today.", "requestedItems": ["Stone"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Barbara": { "request": "I'm making a set of mugs. Clay and pottery paints, please.", "requestedItems": ["Clay", "Pottery Paints", "Clay"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
             },
             'architect': {
-                "Frank": { "request": "I'm drafting a new building. I need vellum and some fresh pencil lead.", "requestedItems": ["Vellum", "Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Zaha": { "request": "I need to make a model for a presentation. Do you sell tiny trees?", "requestedItems": ["Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Chris": { "request": "I'm working on some final designs and need some high-quality markers.", "requestedItems": ["Fancy Markers", "Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Renzo": { "request": "I've run out of pencil lead again.", "requestedItems": ["Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Tadao": { "request": "I require vellum for some concrete plans.", "requestedItems": ["Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Maya": { "request": "I'm designing a park. I'll take all the tiny trees you have.", "requestedItems": ["Tiny Trees", "Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false },
-                "Norman": { "request": "A set of your fanciest markers, if you please.", "requestedItems": ["Fancy Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [], "isStarred": false }
+                "Frank": { "request": "I'm drafting a new building. I need vellum and some fresh pencil lead.", "requestedItems": ["Vellum", "Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Zaha": { "request": "I need to make a model for a presentation. Do you sell tiny trees?", "requestedItems": ["Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Chris": { "request": "I'm working on some final designs and need some high-quality markers.", "requestedItems": ["Fancy Markers", "Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Renzo": { "request": "I've run out of pencil lead again.", "requestedItems": ["Pencil Lead"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Tadao": { "request": "I require vellum for some concrete plans.", "requestedItems": ["Vellum"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Maya": { "request": "I'm designing a park. I'll take all the tiny trees you have.", "requestedItems": ["Tiny Trees", "Tiny Trees"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
+                "Norman": { "request": "A set of your fanciest markers, if you please.", "requestedItems": ["Fancy Markers"], "patience": 100, "visitedToday": false, "toolsOwned": [] }
             }
         };
 
@@ -527,7 +519,6 @@
         let continuousMode = false;
         let isMandatoryBreak = false;
         let midDayBreakTriggered = false;
-        let starredItems = [];
         let weeklyExpenses = 0;
 
         const OPENING_DURATION = 60000; // 1 minute
@@ -837,7 +828,7 @@
 
                 ctx.font = '20px "Indie Flower", cursive';
                 ctx.textAlign = 'center';
-                const displayName = this.profile.isStarred ? `⭐ ${this.name}` : this.name;
+                const displayName = this.name;
                 ctx.fillText(displayName, this.x, this.y - this.frameHeight);
             }
 
@@ -2453,24 +2444,6 @@
             switch (salesperson.state) {
                 case 'idle':
                     if (salesperson.stateTimer <= 0) {
-                        // --- PRIORITY 1: Help Starred Customers ---
-                        const starredCustomer = customers.find(c => c.profile.isStarred && (c.behaviorType === 'needsInteraction' && !c.isInteractedWith || c.behaviorType === 'needsAssistance' && !c.needsAssistanceFulfilled) && !c.leaving);
-                        if (starredCustomer) {
-                            if (starredCustomer.behaviorType === 'needsInteraction') {
-                                salesperson.state = 'goingToInteract';
-                                salesperson.task = { customer: starredCustomer, target: { x: starredCustomer.x + 50, y: starredCustomer.y } };
-                            } else { // needsAssistance
-                                salesperson.state = 'assistingCustomer';
-                                salesperson.task = {
-                                    customer: starredCustomer,
-                                    currentItemIndex: 0,
-                                    missingItems: []
-                                };
-                            }
-                            return;
-                        }
-
-                        // --- Original Logic ---
                         const customerToAssist = customers.find(c => c.behaviorType === 'needsAssistance' && !c.needsAssistanceFulfilled && !c.leaving);
                         if (customerToAssist) {
                             salesperson.state = 'assistingCustomer';
@@ -3317,19 +3290,13 @@
                 }
                 const missedItems = report.requestedItems.filter(item => !report.purchasedItems.includes(item));
                 missedItems.forEach(item => missedTally[item] = (missedTally[item] || 0) + 1);
-                const starButtonId = `star-btn-${report.name.replace(/\s+/g, '-')}`;
                 reportDiv.innerHTML = `
-            <div class="font-bold flex justify-between items-center">${report.name} <button id="${starButtonId}" class="text-2xl">${customerProfiles[report.typeKey][report.name].isStarred ? '⭐' : '☆'}</button></div>
+            <div class="font-bold flex justify-between items-center">${report.name}</div>
             <div>Purchased: <span class="font-handwritten">${purchaseSummary}</span></div>
             <div>Intended: <span class="font-handwritten">${report.requestedItems.join(', ')}</span></div>
             <div>Wait Time: <span class="font-handwritten">${report.waitTime}s</span> | Patience: <span class="font-handwritten ${patienceColor}">${patienceSign}${report.patienceChange}</span></div>
         `;
                 reportList.appendChild(reportDiv);
-                document.getElementById(starButtonId).addEventListener('click', (e) => {
-                    const profile = customerProfiles[report.typeKey][report.name];
-                    profile.isStarred = !profile.isStarred;
-                    e.target.textContent = profile.isStarred ? '⭐' : '☆';
-                });
             });
             const topSeller = Object.keys(salesTally).length ? Object.entries(salesTally).sort((a, b) => b[1] - a[1])[0][0] : 'None';
             const topMiss = Object.keys(missedTally).length ? Object.entries(missedTally).sort((a, b) => b[1] - a[1])[0][0] : 'None';
@@ -4102,7 +4069,6 @@
 
 
         let currentRestockOrder = {};
-        let currentFavoritesOrder = {};
 
         function openClipboardPanel() {
             const clipboardPanel = document.getElementById('clipboard-panel');
@@ -4114,7 +4080,6 @@
             if (appsGrid.children.length > 0) return; // Populate apps only once
 
             const apps = [
-                { name: 'Favorites', icon: '⭐', panelId: 'favorites-panel', action: openFavoritesPanel },
                 { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
                 { name: 'Basket', icon: '🧺', panelId: 'basket-panel', action: openBasketPanel },
                 { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
@@ -4144,67 +4109,6 @@
                 };
                 appsGrid.appendChild(appButton);
             });
-        }
-
-        function openFavoritesPanel() {
-            const favoritesGrid = document.getElementById('favorites-grid');
-            favoritesGrid.innerHTML = '';
-            updateFavoritesTotal();
-
-            if (starredItems.length === 0) {
-                favoritesGrid.innerHTML = `<p class="text-center p-4">No items have been starred yet. Star items from the main order screen.</p>`;
-                showAppScreen('favorites-panel');
-                return;
-            }
-
-            favoritesGrid.innerHTML += `
-                <div class="grid grid-cols-4 gap-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
-                    <span class="font-bold col-span-2">Item</span>
-                    <span class="text-right font-bold">Cost</span>
-                    <span class="text-center font-bold">Order Qty</span>
-                </div>
-            `;
-
-            for (const itemName of starredItems) {
-                const itemData = items[itemName];
-                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
-                const orderQty = currentFavoritesOrder[itemName] || 0;
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'grid grid-cols-4 gap-2 items-center py-2 border-b border-amber-800/10';
-                itemDiv.innerHTML = `
-                    <span class="text-lg col-span-2">${itemName}</span>
-                    <span class="text-right text-lg">$${restockPrice.toFixed(2)}</span>
-                    <div class="flex items-center justify-center space-x-2">
-                        <span class="font-handwritten text-xl w-8 text-center">${orderQty}</span>
-                        <button class="btn-style qty-btn-phone text-sm px-2 py-1" data-item="${itemName}" data-amount="5">+5</button>
-                    </div>
-                `;
-                favoritesGrid.appendChild(itemDiv);
-            }
-
-            favoritesGrid.querySelectorAll('.qty-btn-phone').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const itemName = e.target.dataset.item;
-                    const amount = parseInt(e.target.dataset.amount, 10);
-                    currentFavoritesOrder[itemName] = (currentFavoritesOrder[itemName] || 0) + amount;
-                    openFavoritesPanel(); // Re-open to refresh quantities
-                });
-            });
-
-            showAppScreen('favorites-panel');
-        }
-
-        function updateFavoritesTotal() {
-            let total = 0;
-            for (const itemName in currentFavoritesOrder) {
-                const quantity = currentFavoritesOrder[itemName];
-                const itemData = items[itemName];
-                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
-                total += restockPrice * quantity;
-            }
-            document.getElementById('favorites-total').textContent = total.toFixed(2);
-        }
-
         function openRestockPanel() {
             const restockGrid = document.getElementById('restock-grid');
             restockGrid.innerHTML = '';
@@ -4225,50 +4129,38 @@
             }
 
             restockGrid.innerHTML += `
-                <div class="grid grid-cols-4 gap-x-4 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
-                    <span class="text-center">⭐</span>
-                    <span class="font-bold">Item</span>
+                <div class="grid grid-cols-4 gap-x-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                    <span class="font-bold col-span-2">Item</span>
                     <span class="text-right font-bold">Stock</span>
-                    <span></span> <!-- Header for order button -->
+                    <span></span> <!-- Header for buttons -->
                 </div>
             `;
             for (const itemName of unlockedItems) {
-                const isStarred = starredItems.includes(itemName);
 
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'grid grid-cols-4 gap-x-4 items-center py-2 border-b border-amber-800/10';
+                itemDiv.className = 'grid grid-cols-4 gap-x-2 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
-                    <button class="text-2xl text-center star-btn" data-item="${itemName}">${isStarred ? '⭐' : '☆'}</button>
-                    <span class="text-lg">${itemName}</span>
+                    <span class="text-lg col-span-2">${itemName}</span>
                     <span class="text-right text-lg">${inventory[itemName]}</span>
-                    <button class="btn-style order-item-btn px-4 py-1" data-item="${itemName}">Order</button>
+                    <div class="flex space-x-1">
+                        <button class="btn-style order-item-btn text-sm px-2 py-1" data-item="${itemName}">Order</button>
+                        <button class="btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500" data-item="${itemName}">Buy 5</button>
+                    </div>
                 `;
                 restockGrid.appendChild(itemDiv);
             }
-
-            // Add event listeners after all elements are in the DOM
-            restockGrid.querySelectorAll('.star-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const itemName = e.target.dataset.item;
-                    if (starredItems.includes(itemName)) {
-                        starredItems = starredItems.filter(i => i !== itemName);
-                        e.target.textContent = '☆';
-                    } else {
-                        if (starredItems.length < 5) {
-                            starredItems.push(itemName);
-                            e.target.textContent = '⭐';
-                        } else {
-                            showMessage("You can only star up to 5 items.");
-                        }
-                    }
-                    saveGame();
-                });
-            });
 
             restockGrid.querySelectorAll('.order-item-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.item;
                     openOrderQuantityModal(itemName);
+                });
+            });
+
+            restockGrid.querySelectorAll('.buy-now-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.item;
+                    buyNow(itemName);
                 });
             });
 
@@ -4427,9 +4319,33 @@
             document.getElementById('restock-total').textContent = total.toFixed(2);
         }
 
-        function placeOrder(isPhoneOrder = false) {
-            const orderSource = isPhoneOrder ? currentFavoritesOrder : currentRestockOrder;
-            const panelId = isPhoneOrder ? 'favorites' : 'restock';
+        function buyNow(itemName) {
+            const quantity = 5;
+            const itemData = items[itemName];
+            const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+            const totalCost = restockPrice * quantity;
+            const MAX_DOCK_PACKAGES = 5;
+
+            const packagesFromOrder = Math.ceil(quantity / MAX_PACKAGE_SIZE);
+
+            if (loadingDockPackages.length + packagesFromOrder > MAX_DOCK_PACKAGES) {
+                showMessage(`Not enough space on the loading dock to buy now. Please clear some space first.`);
+                return;
+            }
+
+            if (cash >= totalCost) {
+                cash -= totalCost;
+                loadingDockPackages.push({ itemName: itemName, quantity: quantity });
+                updateUI();
+                saveGame();
+                spawnFloatingText(`Bought 5 ${itemName}!`, player.x, player.y - 90, '#3b82f6');
+            } else {
+                showMessage(`You can't afford to buy 5 of ${itemName}! You need $${totalCost.toFixed(2)}.`);
+            }
+        }
+
+        function placeOrder() {
+            const orderSource = currentRestockOrder;
             const MAX_DOCK_PACKAGES = 5;
 
             let totalCost = 0;
@@ -4468,11 +4384,7 @@
                         quantityToOrder -= quantityForPackage;
                     }
                 }
-                if (isPhoneOrder) {
-                currentFavoritesOrder = {};
-                } else {
-                    currentRestockOrder = {};
-                }
+                currentRestockOrder = {};
                 updateUI();
                 saveGame();
                 closeClipboard();
@@ -4768,7 +4680,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
-                customerProfiles, starredItems
+                customerProfiles
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -4788,7 +4700,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     unlocks = gameState.unlocks || unlocks;
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
-                    starredItems = gameState.starredItems || [];
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {
@@ -4852,7 +4763,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
 
             document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
-            document.getElementById('place-favorites-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
 
             // Order Quantity Modal Logic
@@ -4879,6 +4789,18 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             document.getElementById('order-quantity-plus-5').addEventListener('click', () => {
                 quantityInput.value = (parseInt(quantityInput.value, 10) || 0) + 5;
+                quantityInput.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('order-quantity-minus-1').addEventListener('click', () => {
+                const currentValue = (parseInt(quantityInput.value, 10) || 0) - 1;
+                quantityInput.value = Math.max(0, currentValue);
+                quantityInput.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('order-quantity-minus-5').addEventListener('click', () => {
+                const currentValue = (parseInt(quantityInput.value, 10) || 0) - 5;
+                quantityInput.value = Math.max(0, currentValue);
                 quantityInput.dispatchEvent(new Event('input'));
             });
 

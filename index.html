@@ -528,6 +528,7 @@
         let dayTimer = DAY_DURATION;
         let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'open', 'closing'
         let zone1PointTimer = 0;
+        let coffeeShopBehindCounterTimer = 0;
 
         const CUSTOMER_SPAWN_INTERVAL = 8000;
         let timeSinceLastCustomer = 0;
@@ -548,6 +549,7 @@
         const desk = { x: 0, y: 0, width: 0, height: 30 };
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
         const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
+        const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 }, draw: drawCoffeeShopForeground };
         const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
         const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone2 = { x: 0, y: 0, w: 0, h: 0 };
@@ -1092,7 +1094,7 @@
             ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
         }
 
-        function drawCoffeeShop(x, y, shopWidth, shopHeight) {
+        function drawCoffeeShopBackground(x, y, shopWidth, shopHeight) {
             const coffeeDarkBrown = '#4a2e1c';
             const coffeeMidBrown = '#6d4c41';
             const coffeeLightBrown = '#a1887f';
@@ -1194,15 +1196,6 @@
             }
             ctx.stroke();
 
-
-            // Counter
-            const counterY = windowY + windowHeight + shopHeight * 0.03;
-            const counterHeight = shopHeight * 0.04;
-            ctx.fillStyle = coffeeMidBrown;
-            ctx.fillRect(x, counterY, shopWidth, counterHeight);
-            ctx.strokeStyle = coffeeDarkBrown;
-            ctx.strokeRect(x, counterY, shopWidth, counterHeight);
-
             // Espresso Machine
             const machineW = shopWidth * 0.2;
             const machineH = shopHeight * 0.14;
@@ -1215,6 +1208,25 @@
             ctx.fillStyle = '#616161';
             ctx.fillRect(machineX + machineW*0.1, machineY + machineH*0.2, machineW*0.3, machineH*0.2);
             ctx.fillRect(machineX + machineW*0.6, machineY + machineH*0.2, machineW*0.3, machineH*0.2);
+        }
+
+        function drawCoffeeShopForeground() {
+            const x = this.rect.x, y = this.rect.y, shopWidth = this.rect.w, shopHeight = this.rect.h;
+            const coffeeDarkBrown = '#4a2e1c';
+            const coffeeMidBrown = '#6d4c41';
+
+            const signY = y + shopHeight * 0.1;
+            const signHeight = shopHeight * 0.17;
+            const windowY = signY + signHeight + shopHeight * 0.03;
+            const windowHeight = shopHeight * 0.4;
+
+            // Counter
+            const counterY = windowY + windowHeight + shopHeight * 0.03;
+            const counterHeight = shopHeight * 0.04;
+            ctx.fillStyle = coffeeMidBrown;
+            ctx.fillRect(x, counterY, shopWidth, counterHeight);
+            ctx.strokeStyle = coffeeDarkBrown;
+            ctx.strokeRect(x, counterY, shopWidth, counterHeight);
 
             // Stools
             const stoolY = counterY + counterHeight;
@@ -1431,14 +1443,35 @@
             drawLoadingDock();
             drawManagersOffice();
 
-            // Draw Coffee Shop
+            // Initialize Coffee Shop properties
             if (shelves.length > 5) {
                 const lastShelf = shelves[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
-                const coffeeShopX = lastShelf.rect.x + lastShelf.rect.w + 40 + coffeeShopWidth;
-                const coffeeShopY = (desk.y + desk.height) - coffeeShopHeight;
-                drawCoffeeShop(coffeeShopX, coffeeShopY, coffeeShopWidth, coffeeShopHeight);
+
+                coffeeShop.rect.h = coffeeShopHeight;
+                coffeeShop.rect.w = coffeeShopWidth;
+                coffeeShop.rect.x = lastShelf.rect.x + lastShelf.rect.w + 40 + coffeeShop.rect.w;
+                coffeeShop.rect.y = (desk.y + desk.height) - coffeeShop.rect.h;
+                coffeeShop.y = coffeeShop.rect.y + coffeeShop.rect.h; // Set the sorting y-position
+
+                // Define the zone behind the counter
+                coffeeShop.behindCounterZone = {
+                    x: coffeeShop.rect.x,
+                    y: coffeeShop.rect.y,
+                    w: coffeeShop.rect.w,
+                    h: coffeeShop.rect.h * 0.55 // Top 55% of the coffee shop sprite
+                };
+
+                // Define the collision line for the counter
+                const signY = coffeeShop.rect.y + coffeeShop.rect.h * 0.1;
+                const signHeight = coffeeShop.rect.h * 0.17;
+                const windowY = signY + signHeight + coffeeShop.rect.h * 0.03;
+                const windowHeight = coffeeShop.rect.h * 0.4;
+                coffeeShop.collisionLineY = windowY + windowHeight + coffeeShop.rect.h * 0.03;
+
+
+                drawCoffeeShopBackground(coffeeShop.rect.x, coffeeShop.rect.y, coffeeShop.rect.w, coffeeShop.rect.h);
             }
         }
 
@@ -2953,15 +2986,17 @@
             if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
             if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
 
+            const oldY = player.y;
+            let newX = player.x;
+            let newY = player.y;
+
             if (dx !== 0 || dy !== 0) {
                 // Keyboard movement overrides click-to-move
                 player.targetX = null;
                 player.targetY = null;
 
-                const newX = player.x + dx * player.speed * (deltaTime / 1000);
-                const newY = player.y + dy * player.speed * (deltaTime / 1000);
-                player.y = newY;
-                player.x = newX;
+                newX = player.x + dx * player.speed * (deltaTime / 1000);
+                newY = player.y + dy * player.speed * (deltaTime / 1000);
 
                 player.state = 'walk';
                 if (dx < 0) player.facing = 'left';
@@ -2980,8 +3015,8 @@
                 } else {
                     const moveX = (targetDx / dist) * player.speed * (deltaTime / 1000);
                     const moveY = (targetDy / dist) * player.speed * (deltaTime / 1000);
-                    player.x += moveX;
-                    player.y += moveY;
+                    newX = player.x + moveX;
+                    newY = player.y + moveY;
 
                     if (Math.abs(targetDx) > Math.abs(targetDy)) {
                         player.facing = moveX > 0 ? 'right' : 'left';
@@ -2991,6 +3026,20 @@
             } else {
                 player.state = 'idle';
             }
+
+            // Coffee shop collision
+            if (coffeeShop.rect.w > 0) { // check if coffee shop exists
+                if (oldY >= coffeeShop.collisionLineY && newY < coffeeShop.collisionLineY &&
+                    newX > coffeeShop.rect.x && newX < coffeeShop.rect.x + coffeeShop.rect.w) {
+                    newY = coffeeShop.collisionLineY;
+                    if (player.targetY && player.targetY < coffeeShop.collisionLineY) {
+                        player.targetY = null; // Stop click-to-move if hitting the barrier
+                    }
+                }
+            }
+
+            player.x = newX;
+            player.y = newY;
 
             const worldWidth = canvas.width + managersOffice.w;
             player.x = Math.max(player.frameWidth / 2, Math.min(worldWidth - player.frameWidth / 2, player.x));
@@ -3182,6 +3231,19 @@
                 zone1PointTimer = 0;
             }
 
+            // Coffee shop money making timer
+            if (dayStarted && isPlayerInZone(coffeeShop.behindCounterZone)) {
+                coffeeShopBehindCounterTimer += deltaTime;
+                if (coffeeShopBehindCounterTimer >= 10000) { // 10 seconds
+                    cash++;
+                    coffeeShopBehindCounterTimer -= 10000;
+                    updateUI();
+                    spawnFloatingText("+$1", player.x, player.y - 90, "#22c55e");
+                }
+            } else {
+                coffeeShopBehindCounterTimer = 0;
+            }
+
             updateStocker(deltaTime);
             updateCashier(deltaTime);
             updateLoader(deltaTime);
@@ -3240,7 +3302,7 @@
             ctx.translate(cameraX, cameraY);
 
             drawStoreBackground();
-            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, loader, manager, salesperson];
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, coffeeShop, player, stocker, cashier, loader, manager, salesperson];
             dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
             dynamicEntities.forEach(entity => {
                 if (entity instanceof Customer) {

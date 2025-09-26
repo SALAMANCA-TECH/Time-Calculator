@@ -3359,8 +3359,8 @@
                 { label: "Architectural", rect: { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
 
-            cashierCounter.x = storeShiftX + 40;
-            cashierCounter.y = (desk.y - cashierCounter.h) + 40;
+            cashierCounter.x = storeShiftX + 40 + 141;
+            cashierCounter.y = (desk.y - cashierCounter.h) + 40 + 141;
 
             managersOffice.w = officeWidth;
             managersOffice.h = canvas.height / 2;
@@ -3394,7 +3394,7 @@
             const numShelves = 6;
             const shelfPadding = 20;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
-            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2;
+            const startX = storeShiftX + 250;
             if (shelves.length === 0) {
                 for (let i = 0; i < numShelves; i++) {
                     const shelf = {

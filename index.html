@@ -1446,14 +1446,14 @@
             drawManagersOffice();
 
             // Initialize Coffee Shop properties and draw its background
-            if (shelves.length > 5) {
-                const lastShelf = shelves[5];
+            if (unlocks.shelves[5]) {
+                const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
 
                 coffeeShop.rect.h = coffeeShopHeight;
                 coffeeShop.rect.w = coffeeShopWidth;
-                coffeeShop.rect.x = lastShelf.rect.x + lastShelf.rect.w + 40;
+                coffeeShop.rect.x = rightmostCell.rect.x + rightmostCell.rect.w + 40;
                 coffeeShop.rect.y = (desk.y + desk.height) - coffeeShop.rect.h;
                 coffeeShop.y = coffeeShop.rect.y + coffeeShop.rect.h; // Set the sorting y-position
 

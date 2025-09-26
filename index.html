@@ -3588,6 +3588,7 @@
             const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
             if (clickedShelf) {
                 if (Math.hypot(player.x - (clickedShelf.rect.x + clickedShelf.rect.w/2), player.y - (clickedShelf.rect.y + clickedShelf.rect.h/2)) < 150) {
+                    openClipboardPanel();
                     openShelfPanel(clickedShelf);
                     return;
                 }
@@ -3625,7 +3626,18 @@
                 Math.hypot(player.x - c.x, player.y - c.y) < 150
             );
 
-            if (!nearbyCustomer) return; // No one nearby to interact with
+            if (!nearbyCustomer) {
+                const nearbyShelf = shelves.find((shelf, index) =>
+                    unlocks.shelves[index] &&
+                    Math.hypot(player.x - (shelf.rect.x + shelf.rect.w / 2), player.y - (shelf.rect.y + shelf.rect.h / 2)) < 150
+                );
+
+                if (nearbyShelf) {
+                    openClipboardPanel();
+                    openShelfPanel(nearbyShelf);
+                }
+                return;
+            }
 
             // --- New Interaction Logic for Waiting Customers (PRIORITY CHECK) ---
             if (nearbyCustomer.waitTimer > 60) { // Check for 60 seconds
@@ -4636,7 +4648,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 });
             });
 
-            togglePanel('shelf', true);
+            showAppScreen('shelf-panel');
         }
 
         function takeItemFromStorage(itemName, cell) {

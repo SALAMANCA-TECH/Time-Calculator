@@ -559,6 +559,7 @@
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
         const lockIcon = { x: 0, y: 0, width: 50, height: 50 };
         const phoneIcon = { x: 0, y: 0, width: 50, height: 50 };
+        const coffeeShop = { x: 0, y: 0, w: 0, h: 0, draw: drawCoffeeShop_fg };
         let storageCells = [];
         let shelves = [];
         const MAX_BASKET_SIZE = 5;
@@ -1094,7 +1095,7 @@
             ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
         }
 
-        function drawCoffeeShopBackground(x, y, shopWidth, shopHeight) {
+        function drawCoffeeShop_bg(x, y, shopWidth, shopHeight) {
             const coffeeDarkBrown = '#4a2e1c';
             const coffeeMidBrown = '#6d4c41';
             const coffeeLightBrown = '#a1887f';
@@ -1230,23 +1231,23 @@
 
             // Stools
             const stoolY = counterY + counterHeight;
-            const stoolW = shopWidth * 0.1;
-            const stoolH = shopHeight * 0.06;
-            const legH = shopHeight * 0.04;
-            const legW = shopWidth * 0.015;
+            const stoolW = w * 0.1;
+            const stoolH = h * 0.06;
+            const legH = h * 0.04;
+            const legW = w * 0.015;
 
-            const stoolX1 = x + shopWidth * 0.5;
+            const stoolX1 = x + w * 0.5;
             ctx.fillStyle = coffeeMidBrown;
             ctx.fillRect(stoolX1, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX1 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX1 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
 
-            const stoolX2 = x + shopWidth * 0.67;
+            const stoolX2 = x + w * 0.67;
             ctx.fillRect(stoolX2, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX2 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX2 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
 
-            const stoolX3 = x + shopWidth * 0.84;
+            const stoolX3 = x + w * 0.84;
             ctx.fillRect(stoolX3, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX3 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX3 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
@@ -3302,8 +3303,11 @@
             ctx.translate(cameraX, cameraY);
 
             drawStoreBackground();
-            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, coffeeShop, player, stocker, cashier, loader, manager, salesperson];
-            dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, loader, manager, salesperson];
+            if (shelves.length > 5) {
+                dynamicEntities.push(coffeeShop);
+            }
+            dynamicEntities.sort((a, b) => (a.sortY || a.y) - (b.sortY || b.y));
             dynamicEntities.forEach(entity => {
                 if (entity instanceof Customer) {
                     entity.draw();
@@ -3319,7 +3323,7 @@
                     drawManager();
                 } else if (entity === salesperson) {
                     drawSalesperson();
-                } else if (entity.rect) { // It's a shelf
+                } else if (entity.draw) {
                     entity.draw();
                 }
             });
@@ -3678,6 +3682,24 @@
             if (day === 1 && !dayStarted) {
                 player.x = stocker.idleX - 40;
                 player.y = startY;
+            }
+
+            if (shelves.length > 5) {
+                const lastShelf = shelves[5];
+                coffeeShop.h = (desk.y + desk.height) * 0.58;
+                coffeeShop.w = coffeeShop.h * (300 / 350);
+                const rightmostCell = storageCells[5];
+                const shelfPadding = 20;
+                coffeeShop.x = rightmostCell.rect.x + rightmostCell.rect.w + shelfPadding;
+                coffeeShop.y = (desk.y + desk.height) - coffeeShop.h;
+
+                const signY = coffeeShop.y + coffeeShop.h * 0.1;
+                const signHeight = coffeeShop.h * 0.17;
+                const windowY = signY + signHeight + coffeeShop.h * 0.03;
+                const windowHeight = coffeeShop.h * 0.4;
+                const counterY = windowY + windowHeight + coffeeShop.h * 0.03;
+                const counterHeight = coffeeShop.h * 0.04;
+                coffeeShop.sortY = counterY + counterHeight;
             }
         }
 

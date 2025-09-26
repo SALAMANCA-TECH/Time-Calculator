@@ -90,6 +90,16 @@
             max-width: 420px; /* Increased width */
             height: 90vh; /* Increased height */
             max-height: 800px;
+            position: fixed;
+            top: 5vh;
+            right: 0;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 30;
+        }
+
+        #clipboard-panel.open {
+            transform: translateX(0);
         }
 
         .phone-app-screen {
@@ -134,7 +144,7 @@
         <canvas id="spriteSheetCanvas" width="270" height="270" style="display:none;"></canvas>
 
         <!-- Clipboard Panel -->
-        <div id="clipboard-panel" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full p-2 z-30">
+        <div id="clipboard-panel" class="w-full p-2">
             <!-- The Clipboard itself -->
             <div class="relative w-full h-full bg-amber-800 border-4 border-amber-900 rounded-lg shadow-xl pt-16">
                 <!-- The Clip -->
@@ -4074,7 +4084,7 @@
 
         function openClipboardPanel() {
             const clipboardPanel = document.getElementById('clipboard-panel');
-            clipboardPanel.classList.remove('hidden');
+            clipboardPanel.classList.add('open');
             isPhoneOpen = true;
             showAppGrid(); // Start at the home screen
 
@@ -4693,7 +4703,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         function closeClipboard() {
             const clipboardPanel = document.getElementById('clipboard-panel');
-            clipboardPanel.classList.add('hidden');
+            clipboardPanel.classList.remove('open');
             isPhoneOpen = false;
             activePhoneScreen = null;
         }

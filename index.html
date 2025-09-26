@@ -3622,8 +3622,8 @@
                 manager.y = manager.idleY;
             }
 
-            barista.idleX = coffeeShop.rect.x + coffeeShop.rect.w - 40;
-            barista.idleY = coffeeShop.rect.y + 40;
+            barista.idleX = coffeeShop.rect.x + (coffeeShop.rect.w / 2) + 20;
+            barista.idleY = coffeeShop.rect.y + (coffeeShop.rect.h / 2);
             if (barista.state === 'idle' && !barista.task) {
                 barista.x = barista.idleX;
                 barista.y = barista.idleY;

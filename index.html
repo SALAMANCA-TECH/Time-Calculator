@@ -3622,11 +3622,11 @@
                 manager.y = manager.idleY;
             }
 
-            loader.idleX = officeZone2.x + officeZone2.w / 2 + 20;
-            loader.idleY = officeZone2.y + officeZone2.h / 2;
-            if (loader.state === 'idle' && !loader.task) {
-                loader.x = loader.idleX;
-                loader.y = loader.idleY;
+            barista.idleX = coffeeShop.rect.x + coffeeShop.rect.w - 40;
+            barista.idleY = coffeeShop.rect.y + 40;
+            if (barista.state === 'idle' && !barista.task) {
+                barista.x = barista.idleX;
+                barista.y = barista.idleY;
             }
 
             salesperson.idleX = storeShiftX + canvas.width - 100;

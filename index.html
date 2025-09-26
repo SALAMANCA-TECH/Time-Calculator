@@ -3351,12 +3351,12 @@
             storageCells = [
                 // Bottom Row
                 { label: "Drawing", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
-                { label: "Painting", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
-                { label: "Models", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
                 // Top Row
                 { label: "Woodworking", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
-                { label: "Sculpture", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
-                { label: "Architectural", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+                { label: "Sculpture", rect: { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
 
             cashierCounter.x = storeShiftX + 40 + 141;

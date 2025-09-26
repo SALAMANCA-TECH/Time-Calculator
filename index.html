@@ -573,20 +573,20 @@
         const MAX_BASKET_SIZE = 5;
         const MAX_SHELF_STACK = 10;
         const STOCKER_BASKET_SIZE = 6 * MAX_SHELF_STACK;
-        const LOADER_BASKET_SIZE = 10;
+        const BARISTA_BASKET_SIZE = 10;
         const MAX_PACKAGE_SIZE = 20;
         const PACKAGE_WIDTH = 60;
         const PACKAGE_HEIGHT = 50;
         let loadingDockPackages = [];
 
         let unlocks = {
-            employees: { cashier: false, stocker: false, loader: false, manager: false, salesperson: false },
+            employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
             shelves: [true, false, false, false, false, false],
             storage: [false, false, false, false, false, false]
         };
 
         const unlockCosts = {
-            employees: { cashier: 10, stocker: 15, loader: 20, manager: 50, salesperson: 30 },
+            employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
             shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
             storage: [10, 20, 30, 40, 50, 60]
         };
@@ -597,7 +597,7 @@
             salaries: {
                 cashier: 20,
                 stocker: 25,
-                loader: 30,
+                barista: 30,
                 manager: 50,
                 salesperson: 40
             }
@@ -639,7 +639,7 @@
             basket: []
         };
 
-        const loader = {
+        const barista = {
             x: 600, y: 600, width: 50, height: 50, speed: 160,
             currentFrame: 0, frameWidth: 90, frameHeight: 90,
             animationSpeed: 150, lastFrameTime: 0,
@@ -682,7 +682,7 @@
         const breakSpots = {
             cashier:     { x: 30, y: 15 }, // Top chair
             stocker:     { x: 60, y: 65 }, // Bottom chair
-            loader:      { x: 10, y: 40 }, // Left of table
+            barista:      { x: 10, y: 40 }, // Left of table
             manager:     { x: 85, y: 40 }, // Right of table
             salesperson: { x: 45, y: 40 }  // Center of table
         };
@@ -804,6 +804,7 @@
                 this.stateTimer = 0;
                 this.currentItemIndex = 0;
                 this.isWaitingForRestock = false;
+                this.boughtCoffee = false;
 
                 this.spriteImage = new Image();
                 this.spriteSheetLoaded = false;
@@ -1457,31 +1458,6 @@
 
             // Initialize Coffee Shop properties and draw its background
             if (shelves.length > 5) {
-                const rightmostCell = storageCells[5];
-                const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
-                const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
-
-                coffeeShop.rect.h = coffeeShopHeight;
-                coffeeShop.rect.w = coffeeShopWidth;
-                coffeeShop.rect.x = rightmostCell.rect.x + rightmostCell.rect.w + 40;
-                coffeeShop.rect.y = (desk.y + desk.height) - coffeeShop.rect.h;
-                coffeeShop.y = coffeeShop.rect.y + coffeeShop.rect.h; // Set the sorting y-position
-
-                // Define the zone behind the counter
-                coffeeShop.behindCounterZone = {
-                    x: coffeeShop.rect.x,
-                    y: coffeeShop.rect.y,
-                    w: coffeeShop.rect.w,
-                    h: coffeeShop.rect.h * 0.75 // Area behind the counter
-                };
-
-                // Define the collision line for the counter
-                const signY = coffeeShop.rect.y + coffeeShop.rect.h * 0.1;
-                const signHeight = coffeeShop.rect.h * 0.17;
-                const windowY = signY + signHeight + coffeeShop.rect.h * 0.03;
-                const windowHeight = coffeeShop.rect.h * 0.4;
-                coffeeShop.collisionLineY = windowY + windowHeight + coffeeShop.rect.h * 0.03;
-
                 drawCoffeeShopBackground(coffeeShop.rect.x, coffeeShop.rect.y, coffeeShop.rect.w, coffeeShop.rect.h);
             }
         }
@@ -2030,9 +2006,9 @@
             drawCharacter(cashier, playerSpriteImage, "Cashier", 'sepia(0.8) saturate(3)');
         }
 
-        function drawLoader() {
-            if (!unlocks.employees.loader) return;
-            drawCharacter(loader, playerSpriteImage, "Loader", 'hue-rotate(90deg) saturate(1.5)');
+        function drawBarista() {
+            if (!unlocks.employees.barista) return;
+            drawCharacter(barista, playerSpriteImage, "Barista", 'hue-rotate(90deg) saturate(1.5)');
         }
 
         function drawManager() {
@@ -2252,95 +2228,32 @@
             }
         }
 
-        function updateLoader(deltaTime) {
-             if (!unlocks.employees.loader) return;
+        function updateBarista(deltaTime) {
+            if (!unlocks.employees.barista) return;
 
-            if (loader.onBreak) {
-                const breakSpot = getBreakSpot('loader');
-                if (moveCharacterTowards(loader, breakSpot.x, breakSpot.y, deltaTime)) {
-                    loader.state = 'idle';
+            if (barista.onBreak) {
+                const breakSpot = getBreakSpot('barista');
+                if (moveCharacterTowards(barista, breakSpot.x, breakSpot.y, deltaTime)) {
+                    barista.state = 'idle';
                 } else {
-                    loader.state = 'walk';
+                    barista.state = 'walk';
                 }
-                updateCharacterAnimation(loader, deltaTime);
+                updateCharacterAnimation(barista, deltaTime);
                 return;
             }
 
-             if (handlePreDayState(loader, deltaTime)) return;
+            if (handlePreDayState(barista, deltaTime)) return;
 
-            updateCharacterAnimation(loader, deltaTime);
-            loader.stateTimer -= deltaTime;
+            updateCharacterAnimation(barista, deltaTime);
+            barista.stateTimer -= deltaTime;
 
-            switch(loader.state) {
-                case 'idle':
-                    if (loader.stateTimer <= 0) {
-                        if (loadingDockPackages.length > 0) {
-                            loader.state = 'fetching_dock';
-                            const firstPackageX = loadingDock.x + 10 + PACKAGE_WIDTH / 2;
-                            loader.task = { target: { x: firstPackageX, y: loadingDock.y - 40 } };
-                        } else {
-                            loader.stateTimer = 2000; // Check again in 2 seconds
-                             if(Math.hypot(loader.x - loader.idleX, loader.y - loader.idleY) > 5) {
-                                 loader.task = { target: {x: loader.idleX, y: loader.idleY} };
-                             } else {
-                                 loader.task = null;
-                             }
-                        }
-                    }
-                     if(loader.task && loader.task.target) {
-                         moveCharacterTowards(loader, loader.task.target.x, loader.task.target.y, deltaTime);
-                    }
-                    break;
-                case 'fetching_dock':
-                    if (moveCharacterTowards(loader, loader.task.target.x, loader.task.target.y, deltaTime)) {
-                        if (loadingDockPackages.length > 0) {
-                            const firstPackage = loadingDockPackages[0];
-                            while(loader.basket.length < LOADER_BASKET_SIZE && firstPackage.quantity > 0) {
-                                loader.basket.push(firstPackage.itemName);
-                                firstPackage.quantity--;
-                            }
-                             if (firstPackage.quantity <= 0) {
-                                 loadingDockPackages.shift();
-                            }
-                        }
-                        loader.state = 'delivering';
-                        loader.task = null;
-                    }
-                    break;
-                case 'delivering':
-                     if (!loader.task) {
-                        if (loader.basket.length === 0) {
-                            loader.state = 'idle';
-                            loader.task = { target: {x: loader.idleX, y: loader.idleY} };
-                            break;
-                        }
-                        const itemToDeliver = loader.basket[0];
-                        const targetCell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToDeliver));
-                         if(targetCell) {
-                             const currentFill = Object.values(targetCell.items).reduce((a, b) => a + b, 0);
-                             if (currentFill < targetCell.capacity) {
-                                 loader.task = { target: { x: targetCell.rect.x + targetCell.rect.w / 2, y: targetCell.rect.y + targetCell.rect.h + 20 }, item: itemToDeliver, cell: targetCell };
-                             } else {
-                                 // Cell is full, wait and try again
-                                 loader.stateTimer = 3000;
-                                 loader.task = null;
-                             }
-                         } else {
-                            console.error(`No storage cell found for ${itemToDeliver}`);
-                            loader.basket.shift(); // discard item if no home
-                         }
-                        }
-                         if (loader.task && moveCharacterTowards(loader, loader.task.target.x, loader.task.target.y, deltaTime)) {
-                         const deliveredItem = loader.basket.shift();
-                         const cell = loader.task.cell;
-                         if (!cell.items[deliveredItem]) {
-                             cell.items[deliveredItem] = 0;
-                         }
-                         cell.items[deliveredItem]++;
-                         loader.task = null;
-                        }
-                    break;
-
+            // The barista's only job is to go to their idle spot for now.
+            // Coffee selling logic will be added later.
+            if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
+                barista.state = 'walk';
+                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
+            } else {
+                barista.state = 'idle';
             }
         }
 
@@ -2892,21 +2805,7 @@
                 return currentFill >= c.capacity;
             });
 
-            if (fullCell && loader.state === 'idle' && loadingDockPackages.length > 0) {
-                for (const item in fullCell.items) {
-                    if (fullCell.items[item] > 0) {
-                        const shelfWithSpace = findShelfForStocking(item);
-                        if (shelfWithSpace) {
-                            return {
-                                action: 'fetching',
-                                item: item,
-                                target: { x: fullCell.rect.x + fullCell.rect.w / 2, y: fullCell.rect.y + fullCell.rect.h + 10 },
-                                priority: 'deadlock_break'
-                            };
-                        }
-                    }
-                }
-            }
+            // OBSOLETE: Deadlock logic for the removed 'loader' role.
             const availableStock = new Map();
             storageCells.forEach((cell, index) => {
                 if (unlocks.storage[index] && cell.items) {
@@ -3188,7 +3087,7 @@
                     isMandatoryBreak = true;
                     spawnFloatingText("LUNCH BREAK!", canvas.width / 2, 120, '#3b82f6');
 
-                    const employees = { cashier, stocker, loader, manager, salesperson };
+                    const employees = { cashier, stocker, barista, manager, salesperson };
                     for (const empKey in employees) {
                         if (unlocks.employees[empKey]) {
                             employees[empKey].onBreak = true;
@@ -3270,7 +3169,7 @@
 
             updateStocker(deltaTime);
             updateCashier(deltaTime);
-            updateLoader(deltaTime);
+            updateBarista(deltaTime);
             updateManager(deltaTime);
             updateSalesperson(deltaTime);
 
@@ -3326,7 +3225,7 @@
             ctx.translate(cameraX, cameraY);
 
             drawStoreBackground();
-            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, coffeeShop, player, stocker, cashier, loader, manager, salesperson];
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, coffeeShop, player, stocker, cashier, barista, manager, salesperson];
             dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
             dynamicEntities.forEach(entity => {
                 if (entity instanceof Customer) {
@@ -3337,8 +3236,8 @@
                     drawStocker();
                 } else if (entity === cashier) {
                     drawCashier();
-                } else if (entity === loader) {
-                    drawLoader();
+                } else if (entity === barista) {
+                    drawBarista();
                 } else if (entity === manager) {
                     drawManager();
                 } else if (entity === salesperson) {
@@ -3391,7 +3290,8 @@
                 purchasedItems: [...customer.order],
                 waitTime: Math.round(customer.waitTimer),
                 patienceChange: customer.profile.patience - customer.initialPatience,
-                discount: customer.discount
+                discount: customer.discount,
+                boughtCoffee: customer.boughtCoffee
             });
         }
 
@@ -3425,6 +3325,13 @@
             if (salePrice <= customer.budget) {
                 cash += salePrice;
                 shopPoints += customer.discount > 0 ? 1 : 3; // Less points for discounted sales
+
+                if (unlocks.employees.barista && Math.random() < 0.33) {
+                    cash += 10;
+                    customer.boughtCoffee = true;
+                    spawnFloatingText("Coffee! +$10", customer.x, customer.y - 120, '#654321');
+                }
+
                 customer.leaving = true;
                 customer.state = 'leaving';
                 const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
@@ -3534,8 +3441,9 @@
                 }
                 const missedItems = report.requestedItems.filter(item => !report.purchasedItems.includes(item));
                 missedItems.forEach(item => missedTally[item] = (missedTally[item] || 0) + 1);
+                const coffeeIcon = report.boughtCoffee ? ' ☕' : '';
                 reportDiv.innerHTML = `
-            <div class="font-bold flex justify-between items-center">${report.name}</div>
+            <div class="font-bold flex justify-between items-center">${report.name}${coffeeIcon}</div>
             <div>Purchased: <span class="font-handwritten">${purchaseSummary}</span></div>
             <div>Intended: <span class="font-handwritten">${report.requestedItems.join(', ')}</span></div>
             <div>Wait Time: <span class="font-handwritten">${report.waitTime}s</span> | Patience: <span class="font-handwritten ${patienceColor}">${patienceSign}${report.patienceChange}</span></div>
@@ -3602,6 +3510,35 @@
                 { label: "Sculpture", rect: { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
                 { label: "Architectural", rect: { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
+
+            // NEW COFFEE SHOP LOGIC
+            if (shelves.length > 5) {
+                const rightmostCell = storageCells[5];
+                const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
+                const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
+
+                coffeeShop.rect.h = coffeeShopHeight;
+                coffeeShop.rect.w = coffeeShopWidth;
+                coffeeShop.rect.x = rightmostCell.rect.x + rightmostCell.rect.w + 40;
+                coffeeShop.rect.y = (desk.y + desk.height) - coffeeShop.rect.h;
+                coffeeShop.y = coffeeShop.rect.y + coffeeShop.rect.h; // Set the sorting y-position
+
+                // Define the zone behind the counter
+                coffeeShop.behindCounterZone = {
+                    x: coffeeShop.rect.x,
+                    y: coffeeShop.rect.y,
+                    w: coffeeShop.rect.w,
+                    h: coffeeShop.rect.h * 0.75 // Area behind the counter
+                };
+
+                // Define the collision line for the counter
+                const signY = coffeeShop.rect.y + coffeeShop.rect.h * 0.1;
+                const signHeight = coffeeShop.rect.h * 0.17;
+                const windowY = signY + signHeight + coffeeShop.rect.h * 0.03;
+                const windowHeight = coffeeShop.rect.h * 0.4;
+                coffeeShop.collisionLineY = windowY + windowHeight + coffeeShop.rect.h * 0.03;
+            }
+
 
             cashierCounter.x = storeShiftX + 40 + 141;
             cashierCounter.y = (desk.y - cashierCounter.h) + 40 + 141;
@@ -4130,7 +4067,7 @@
             const employeeList = document.getElementById('employee-list');
             employeeList.innerHTML = '';
 
-            const employees = { cashier, stocker, loader, manager, salesperson };
+            const employees = { cashier, stocker, barista, manager, salesperson };
 
             let anyUnlocked = false;
             for (const empKey in unlocks.employees) {

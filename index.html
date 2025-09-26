@@ -1436,7 +1436,7 @@
                 const lastShelf = shelves[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
-                const coffeeShopX = lastShelf.rect.x + lastShelf.rect.w + 40;
+                const coffeeShopX = lastShelf.rect.x + lastShelf.rect.w + 40 + coffeeShopWidth;
                 const coffeeShopY = (desk.y + desk.height) - coffeeShopHeight;
                 drawCoffeeShop(coffeeShopX, coffeeShopY, coffeeShopWidth, coffeeShopHeight);
             }

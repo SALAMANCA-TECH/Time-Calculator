@@ -4554,7 +4554,16 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             };
             assignmentGrid.appendChild(clearButton);
 
-            for (const itemName in items) {
+            const unlockedItems = new Set();
+            storageCells.forEach((cell, index) => {
+                if (unlocks.storage[index]) {
+                    cell.allowedItems.forEach(item => unlockedItems.add(item));
+                }
+            });
+            storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
+
+
+            for (const itemName of unlockedItems) {
                 const button = document.createElement('button');
                 button.className = 'btn-style';
                 button.textContent = itemName;

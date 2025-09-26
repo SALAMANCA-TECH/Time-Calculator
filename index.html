@@ -207,9 +207,25 @@
                     <div id="restock-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Order Supplies</h2>
                         <div id="restock-grid" class="space-y-2"></div>
-                        <div class="mt-4 pt-2 border-t-2 border-amber-800/30 flex justify-between items-center">
-                            <span class="text-xl">Total: $<span id="restock-total">0.00</span></span>
-                            <button id="place-order-btn" class="btn-style px-4 py-2">Place Order</button>
+                    </div>
+
+                    <!-- Order Quantity Modal -->
+                    <div id="order-quantity-modal" class="phone-app-screen hidden">
+                        <h2 id="order-quantity-item-name" class="text-3xl font-handwritten mb-4">Order Item</h2>
+                        <div class="space-y-4 p-4 bg-white/30 rounded-md">
+                            <div>
+                                <span class="text-xl">Cost per item:</span>
+                                <span id="order-quantity-item-cost" class="text-xl font-handwritten">$0.00</span>
+                            </div>
+                            <div class="flex items-center justify-center space-x-2">
+                                <span class="text-xl">Quantity:</span>
+                                <input type="number" min="0" id="order-quantity-input" data-item="" class="w-20 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80">
+                                <button id="order-quantity-plus-1" class="btn-style qty-btn text-lg px-3 py-1">+1</button>
+                                <button id="order-quantity-plus-5" class="btn-style qty-btn text-lg px-3 py-1">+5</button>
+                            </div>
+                        </div>
+                        <div class="mt-6 text-center">
+                            <button id="order-quantity-done-btn" class="btn-style px-6 py-2">Done</button>
                         </div>
                     </div>
 
@@ -269,6 +285,12 @@
                         <h2 class="text-3xl font-handwritten mb-4">Daily Reports</h2>
                         <p>This feature is coming soon!</p>
                     </div>
+                </div>
+
+                <!-- Shared Order Footer -->
+                <div id="order-footer" class="hidden mt-auto pt-2 border-t-2 border-amber-800/30 flex justify-between items-center">
+                    <span class="text-xl">Total: $<span id="restock-total">0.00</span></span>
+                    <button id="place-order-btn" class="btn-style px-4 py-2">Place Order</button>
                 </div>
 
 
@@ -4186,52 +4208,40 @@
         function openRestockPanel() {
             const restockGrid = document.getElementById('restock-grid');
             restockGrid.innerHTML = '';
-            // currentRestockOrder = {}; // Keep order state if panel is closed
             updateRestockTotal();
 
-            // Determine which items are available to order based on unlocked storage
             const unlockedItems = new Set();
             storageCells.forEach((cell, index) => {
                 if (unlocks.storage[index]) {
                     cell.allowedItems.forEach(item => unlockedItems.add(item));
                 }
             });
-
-            // Always allow ordering of items in the first (default unlocked) storage cell
             storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
-
 
             if (unlockedItems.size === 0) {
                 restockGrid.innerHTML = `<p class="text-center p-4">Unlock more storage cells to order new types of items!</p>`;
+                showAppScreen('restock-panel');
                 return;
             }
 
             restockGrid.innerHTML += `
-                <div class="grid grid-cols-5 gap-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                <div class="grid grid-cols-4 gap-x-4 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
                     <span class="text-center">⭐</span>
                     <span class="font-bold">Item</span>
-                    <span class="text-right font-bold">Cost</span>
                     <span class="text-right font-bold">Stock</span>
-                    <span class="text-center font-bold">Order Qty</span>
+                    <span></span> <!-- Header for order button -->
                 </div>
             `;
             for (const itemName of unlockedItems) {
-                const itemData = items[itemName];
-                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
                 const isStarred = starredItems.includes(itemName);
 
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'grid grid-cols-5 gap-2 items-center py-2 border-b border-amber-800/10';
+                itemDiv.className = 'grid grid-cols-4 gap-x-4 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
                     <button class="text-2xl text-center star-btn" data-item="${itemName}">${isStarred ? '⭐' : '☆'}</button>
                     <span class="text-lg">${itemName}</span>
-                    <span class="text-right text-lg">$${restockPrice.toFixed(2)}</span>
                     <span class="text-right text-lg">${inventory[itemName]}</span>
-                    <div class="flex items-center justify-center space-x-1">
-                        <input type="number" min="0" value="${currentRestockOrder[itemName] || 0}" data-item="${itemName}" class="w-16 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-600">
-                        <button class="btn-style qty-btn text-sm px-2 py-1" data-item="${itemName}" data-amount="1">+1</button>
-                        <button class="btn-style qty-btn text-sm px-2 py-1" data-item="${itemName}" data-amount="5">+5</button>
-                    </div>
+                    <button class="btn-style order-item-btn px-4 py-1" data-item="${itemName}">Order</button>
                 `;
                 restockGrid.appendChild(itemDiv);
             }
@@ -4255,39 +4265,28 @@
                 });
             });
 
-            restockGrid.querySelectorAll('input[type="number"]').forEach(input => {
-                input.addEventListener('input', (e) => {
-                    const itemName = e.target.dataset.item;
-                    let quantity = parseInt(e.target.value, 10);
-                     if (isNaN(quantity) || quantity < 0) {
-                        quantity = 0;
-                        e.target.value = 0;
-                    }
-
-                    if (quantity > 0) {
-                        currentRestockOrder[itemName] = quantity;
-                    } else {
-                        delete currentRestockOrder[itemName];
-                    }
-                    updateRestockTotal();
-                });
-            });
-
-            restockGrid.querySelectorAll('.qty-btn').forEach(button => {
+            restockGrid.querySelectorAll('.order-item-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.item;
-                    const amount = parseInt(e.target.dataset.amount, 10);
-                    const input = restockGrid.querySelector(`input[data-item="${itemName}"]`);
-                    let currentValue = parseInt(input.value, 10) || 0;
-                    currentValue += amount;
-                    input.value = currentValue;
-
-                    // Manually trigger the input event to update the order
-                    input.dispatchEvent(new Event('input'));
+                    openOrderQuantityModal(itemName);
                 });
             });
 
             showAppScreen('restock-panel');
+        }
+
+        function openOrderQuantityModal(itemName) {
+            const itemData = items[itemName];
+            const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+
+            document.getElementById('order-quantity-item-name').textContent = itemName;
+            document.getElementById('order-quantity-item-cost').textContent = `$${restockPrice.toFixed(2)}`;
+
+            const quantityInput = document.getElementById('order-quantity-input');
+            quantityInput.value = currentRestockOrder[itemName] || 0;
+            quantityInput.dataset.item = itemName;
+
+            showAppScreen('order-quantity-modal');
         }
 
         function purchaseUnlock(type, key) {
@@ -4732,6 +4731,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('phone-apps-grid').classList.add('hidden');
 
             activePhoneScreen = panelId;
+
+            // Show/hide the shared order footer
+            const orderFooter = document.getElementById('order-footer');
+            if (panelId === 'restock-panel' || panelId === 'order-quantity-modal') {
+                orderFooter.classList.remove('hidden');
+            } else {
+                orderFooter.classList.add('hidden');
+            }
         }
 
 
@@ -4847,6 +4854,38 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
             document.getElementById('place-favorites-order-btn').addEventListener('click', () => placeOrder(true));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
+
+            // Order Quantity Modal Logic
+            const quantityInput = document.getElementById('order-quantity-input');
+            quantityInput.addEventListener('input', (e) => {
+                const itemName = e.target.dataset.item;
+                let quantity = parseInt(e.target.value, 10);
+                if (isNaN(quantity) || quantity < 0) {
+                    quantity = 0;
+                    e.target.value = 0;
+                }
+                if (quantity > 0) {
+                    currentRestockOrder[itemName] = quantity;
+                } else {
+                    delete currentRestockOrder[itemName];
+                }
+                updateRestockTotal();
+            });
+
+            document.getElementById('order-quantity-plus-1').addEventListener('click', () => {
+                quantityInput.value = (parseInt(quantityInput.value, 10) || 0) + 1;
+                quantityInput.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('order-quantity-plus-5').addEventListener('click', () => {
+                quantityInput.value = (parseInt(quantityInput.value, 10) || 0) + 5;
+                quantityInput.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('order-quantity-done-btn').addEventListener('click', () => {
+                openRestockPanel();
+            });
+
 
             // Phone Navigation
             document.getElementById('close-phone').addEventListener('click', closeClipboard);

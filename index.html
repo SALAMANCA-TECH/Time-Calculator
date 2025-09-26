@@ -3630,7 +3630,9 @@
                 const lastShelf = shelves[5];
                 coffeeShop.h = (desk.y + desk.height) * 0.58;
                 coffeeShop.w = coffeeShop.h * (300 / 350);
-                coffeeShop.x = lastShelf.rect.x + lastShelf.rect.w + 40 + coffeeShop.w;
+                const rightmostCell = storageCells[5];
+                const shelfPadding = 20;
+                coffeeShop.x = rightmostCell.rect.x + rightmostCell.rect.w + shelfPadding;
                 coffeeShop.y = (desk.y + desk.height) - coffeeShop.h;
 
                 const signY = coffeeShop.y + coffeeShop.h * 0.1;

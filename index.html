@@ -4795,17 +4795,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 const isChecked = enabledItems[itemName];
+                const sanitizedItemName = itemName.replace(/\s+/g, '-').toLowerCase();
+
 
                 itemDiv.innerHTML = `
-                    <label for="toggle-${itemName}" class="text-lg">${itemName}</label>
+                    <label for="toggle-${sanitizedItemName}" class="text-lg">${itemName}</label>
                     <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="toggle-${itemName}" id="toggle-${itemName}" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${isChecked ? 'checked' : ''}/>
-                        <label for="toggle-${itemName}" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        <input type="checkbox" name="toggle-${sanitizedItemName}" id="toggle-${sanitizedItemName}" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${isChecked ? 'checked' : ''}/>
+                        <label for="toggle-${sanitizedItemName}" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                 `;
                 itemsGrid.appendChild(itemDiv);
 
-                const toggle = itemDiv.querySelector(`#toggle-${itemName}`);
+                const toggle = itemDiv.querySelector(`#toggle-${sanitizedItemName}`);
                 toggle.addEventListener('change', (e) => {
                     enabledItems[itemName] = e.target.checked;
                     saveGame();

@@ -3351,16 +3351,16 @@
             storageCells = [
                 // Bottom Row
                 { label: "Drawing", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
-                { label: "Painting", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2 - 100, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
-                { label: "Models", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2 - 200, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
                 // Top Row
                 { label: "Woodworking", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
-                { label: "Sculpture", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2 - 100, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
-                { label: "Architectural", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2 - 200, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+                { label: "Sculpture", rect: { x: storeShiftX + canvas.width / 2 - cellWidth / 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: storeShiftX + canvas.width - cellWidth - cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
             ];
 
-            cashierCounter.x = storeShiftX + 40 + 50;
-            cashierCounter.y = (desk.y - cashierCounter.h) + 40 + 50;
+            cashierCounter.x = storeShiftX + 40 + 141;
+            cashierCounter.y = (desk.y - cashierCounter.h) + 40 + 141;
 
             managersOffice.w = officeWidth;
             managersOffice.h = canvas.height / 2;
@@ -3394,7 +3394,7 @@
             const numShelves = 6;
             const shelfPadding = 50;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
-            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2 - 70;
+            const startX = storeShiftX + (canvas.width - totalShelvesWidth) / 2;
             if (shelves.length === 0) {
                 for (let i = 0; i < numShelves; i++) {
                     const shelf = {

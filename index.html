@@ -279,6 +279,11 @@
                         <h2 class="text-3xl font-handwritten mb-4">Daily Reports</h2>
                         <p>This feature is coming soon!</p>
                     </div>
+                    <!-- Items Panel -->
+                    <div id="items-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Toggle Items</h2>
+                        <div id="items-toggle-grid" class="space-y-2"></div>
+                    </div>
                 </div>
 
                 <!-- Shared Order Footer -->
@@ -454,57 +459,59 @@
         };
 
         async function generateCustomerRequest() {
-            const availableTypeKeys = ['artist'];
-            unlocks.storage.forEach((isUnlocked, index) => {
-                if (isUnlocked) {
-                    const typeKey = Object.keys(customerTypes).find(key => customerTypes[key].storageIndex === index);
-                    if (typeKey && !availableTypeKeys.includes(typeKey)) {
-                        availableTypeKeys.push(typeKey);
+            const unlockedAndEnabledItems = new Set();
+            Object.keys(enabledItems).forEach(item => {
+                if (enabledItems[item]) {
+                    // Check if the item is actually unlocked via storage
+                    const isUnlocked = storageCells.some((cell, index) => (index === 0 || unlocks.storage[index]) && cell.allowedItems.includes(item));
+                    if (isUnlocked) {
+                        unlockedAndEnabledItems.add(item);
                     }
                 }
             });
 
-            const unlockedItems = new Set(storageCells[0].allowedItems); // Artists are always available
-            unlocks.storage.forEach((isUnlocked, index) => {
-                if (isUnlocked) {
-                    storageCells[index].allowedItems.forEach(item => unlockedItems.add(item));
-                }
+            const availableTypeKeys = Object.keys(customerTypes).filter(typeKey => {
+                const typeItems = storageCells[customerTypes[typeKey].storageIndex].allowedItems;
+                // An artist type is available if at least one of their items is enabled.
+                return typeItems.some(item => unlockedAndEnabledItems.has(item));
             });
 
 
             if (availableTypeKeys.length === 0) {
-                console.warn("No customer types available to spawn.");
+                console.warn("No customer types available to spawn based on enabled items.");
                 return null;
             }
 
-            for (let i = 0; i < 20; i++) { // Retry loop
+            for (let i = 0; i < 50; i++) { // Increased retry loop for more complex filtering
                 const chosenTypeKey = availableTypeKeys[Math.floor(Math.random() * availableTypeKeys.length)];
                 const customersForType = customerProfiles[chosenTypeKey];
 
-                const availableCustomers = Object.keys(customersForType).filter(name => !customersForType[name].visitedToday);
+                const availableCustomers = Object.keys(customersForType).filter(name => {
+                    if (customersForType[name].visitedToday) return false;
+                    // A customer is only available if ALL their requested items are enabled.
+                    return customersForType[name].requestedItems.every(item => unlockedAndEnabledItems.has(item));
+                });
+
 
                 if (availableCustomers.length === 0) {
-                    continue;
+                    continue; // Try another customer type
                 }
 
                 const chosenCustomerName = availableCustomers[Math.floor(Math.random() * availableCustomers.length)];
                 const customerData = { ...customersForType[chosenCustomerName] };
 
-                const validRequestedItems = customerData.requestedItems.filter(item => unlockedItems.has(item));
+                // No need to filter requestedItems again, it was done when filtering availableCustomers
+                customersForType[chosenCustomerName].visitedToday = true;
 
-                if (validRequestedItems.length > 0) {
-                    customerData.requestedItems = validRequestedItems;
-                    customersForType[chosenCustomerName].visitedToday = true;
+                return {
+                    name: chosenCustomerName,
+                    ...customerData,
+                    customerType: chosenTypeKey
+                };
 
-                    return {
-                        name: chosenCustomerName,
-                        ...customerData,
-                        customerType: chosenTypeKey
-                    };
-                }
             }
 
-            return null;
+            return null; // Return null if no suitable customer is found
         }
 
         let cash = 100;
@@ -747,6 +754,9 @@
         let inventory = {};
         // Initialize inventory for a new game. This will be overwritten by loadGame if a save exists.
         Object.keys(items).forEach(item => inventory[item] = 5);
+        let enabledItems = {};
+        Object.keys(items).forEach(item => enabledItems[item] = true);
+
 
         class Customer {
             constructor(profile, name, request, requestedItems, customerType) {
@@ -4317,6 +4327,7 @@
                 { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
                 { name: 'Basket', icon: '🧺', panelId: 'basket-panel', action: openBasketPanel },
                 { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
+                { name: 'Items', icon: '💡', panelId: 'items-panel', action: openItemsPanel },
                 { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
                 { name: 'Customers', icon: '👤', panelId: 'customers-panel', action: openCustomersPanel },
                 { name: 'Unlocks', icon: '🔑', panelId: 'unlocks-panel', action: openUnlocksPanel },
@@ -4760,6 +4771,50 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             showAppScreen('assignment-panel');
         }
 
+        function openItemsPanel() {
+            const itemsGrid = document.getElementById('items-toggle-grid');
+            itemsGrid.innerHTML = '';
+
+            const unlockedItems = new Set();
+            // Artist items are always available
+            storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
+            // Add items from unlocked storage cells
+            unlocks.storage.forEach((isUnlocked, index) => {
+                if (isUnlocked) {
+                    storageCells[index].allowedItems.forEach(item => unlockedItems.add(item));
+                }
+            });
+
+            if (unlockedItems.size === 0) {
+                itemsGrid.innerHTML = `<p class="text-center p-4">Unlock storage to manage items.</p>`;
+                showAppScreen('items-panel');
+                return;
+            }
+
+            for (const itemName of unlockedItems) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+                const isChecked = enabledItems[itemName];
+
+                itemDiv.innerHTML = `
+                    <label for="toggle-${itemName}" class="text-lg">${itemName}</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="toggle-${itemName}" id="toggle-${itemName}" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${isChecked ? 'checked' : ''}/>
+                        <label for="toggle-${itemName}" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                `;
+                itemsGrid.appendChild(itemDiv);
+
+                const toggle = itemDiv.querySelector(`#toggle-${itemName}`);
+                toggle.addEventListener('change', (e) => {
+                    enabledItems[itemName] = e.target.checked;
+                    saveGame();
+                });
+            }
+
+            showAppScreen('items-panel');
+        }
+
         function openShelfPanel(shelf) {
             activeShelf = shelf;
             const shelfGrid = document.getElementById('shelf-grid');
@@ -4915,7 +4970,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
-                customerProfiles
+                customerProfiles, enabledItems
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -4935,6 +4990,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     unlocks = gameState.unlocks || unlocks;
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
+                    enabledItems = gameState.enabledItems || enabledItems;
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {

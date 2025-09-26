@@ -4422,6 +4422,7 @@
                 spawnFloatingText('Unlocked!', player.x, player.y - 90, '#f59e0b');
                 updateUI();
                 saveGame();
+                initializeLayout(); // Recalculate layout to show new items
                 openUnlocksPanel(); // Refresh the panel
             } else {
                 showMessage(`You need ${cost} points to unlock this.`);
@@ -5085,7 +5086,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 // Ensure all idle states are correct before starting
                 if (!stocker.task) stocker.state = 'idle';
                 if (!cashier.task) cashier.state = 'idle';
-                if (!loader.task) loader.state = 'idle';
                 if (!manager.task) manager.state = 'idle';
                 if (!salesperson.task) salesperson.state = 'idle';
             });

@@ -552,12 +552,6 @@
         const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone2 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone3 = { x: 0, y: 0, w: 0, h: 0 };
-        const coffeeShop = {
-            rect: { x: 0, y: 0, w: 200, h: 400 },
-            counter: { x: 0, y: 0, w: 150, h: 50 },
-            shelf: { x: 0, y: 0, w: 120, h: 30 },
-            grinder: { x: 0, y: 0, w: 25, h: 40 }
-        };
         const cashRegister = { x: 0, y: 0, width: 60, height: 50 };
         const clipboard = { x: 0, y: 0, width: 50, height: 60 };
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
@@ -1179,76 +1173,6 @@
 
         }
 
-        function drawCoffeeGrinder(x, y, w, h) {
-            ctx.fillStyle = '#4a4a4a'; // Dark gray
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 2;
-
-            // Grinder Body
-            ctx.fillRect(x, y, w, h);
-            ctx.strokeRect(x, y, w, h);
-
-            // Hopper (top part)
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.fillRect(x + 2, y + 2, w - 4, h * 0.3);
-
-            // Spout
-            ctx.fillStyle = '#6a6a6a';
-            ctx.fillRect(x + w / 2 - 5, y + h * 0.8, 10, h * 0.2);
-
-            // Dial
-            ctx.fillStyle = '#c0c0c0';
-            ctx.beginPath();
-            ctx.arc(x + w + 4, y + h / 2, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        }
-
-        function drawCoffeeShelf(x, y, w, h) {
-            ctx.fillStyle = '#6d4c41'; // Darker wood color
-            ctx.strokeStyle = '#4e342e';
-            ctx.lineWidth = 2;
-            ctx.fillRect(x, y, w, h);
-            ctx.strokeRect(x, y, w, h);
-        }
-
-        function drawCoffeeCounter(x, y, w, h) {
-            ctx.fillStyle = '#8d6e63'; // Same as other counters
-            ctx.fillRect(x, y, w, h);
-            ctx.strokeStyle = '#4e342e';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(x, y, w, h);
-            ctx.fillStyle = '#6d4c41'; // Darker top
-            ctx.fillRect(x, y, w, 10);
-        }
-
-        function drawCoffeeShop() {
-            const r = coffeeShop.rect;
-            const floorHeight = r.h / 2;
-
-            // Building structure
-            ctx.fillStyle = '#a1887f'; // A slightly different wall color
-            ctx.fillRect(r.x, r.y, r.w, r.h);
-            ctx.strokeStyle = '#4e342e';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(r.x, r.y, r.w, r.h);
-
-            // Floor separator
-            ctx.beginPath();
-            ctx.moveTo(r.x, r.y + floorHeight);
-            ctx.lineTo(r.x + r.w, r.y + floorHeight);
-            ctx.stroke();
-
-            // Draw interior elements
-            drawCoffeeCounter(coffeeShop.counter.x, coffeeShop.counter.y, coffeeShop.counter.w, coffeeShop.counter.h);
-            drawCoffeeShelf(coffeeShop.shelf.x, coffeeShop.shelf.y, coffeeShop.shelf.w, coffeeShop.shelf.h);
-            drawCoffeeGrinder(coffeeShop.grinder.x, coffeeShop.grinder.y, coffeeShop.grinder.w, coffeeShop.grinder.h);
-
-            // Add a simple "door"
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.fillRect(r.x + r.w - 50, r.y + r.h - 100, 40, 96);
-        }
-
         function drawPackage(pkg, x, y) {
             ctx.fillStyle = '#b9936c';
             ctx.strokeStyle = '#5d4037';
@@ -1358,7 +1282,6 @@
 
             drawLoadingDock();
             drawManagersOffice();
-            drawCoffeeShop();
         }
 
         function drawStaticUI() {
@@ -3494,24 +3417,6 @@
                      shelves[i].y = shelfY + shelfHeight;
                  }
             }
-
-            // --- Coffee Shop Layout ---
-            const lastShelf = shelves[shelves.length - 1];
-            const coffeeShopPadding = 60;
-            coffeeShop.rect.x = lastShelf.rect.x + lastShelf.rect.w + coffeeShopPadding;
-            // Align bottom of coffee shop with bottom of shelves
-            coffeeShop.rect.y = (shelfY + shelfHeight) - coffeeShop.rect.h;
-
-            // Lower floor counter
-            coffeeShop.counter.x = coffeeShop.rect.x + (coffeeShop.rect.w - coffeeShop.counter.w) / 2;
-            coffeeShop.counter.y = coffeeShop.rect.y + coffeeShop.rect.h - coffeeShop.counter.h - 30; // 30px from bottom
-
-            // Upper floor shelf & grinder
-            const floorHeight = coffeeShop.rect.h / 2;
-            coffeeShop.shelf.x = coffeeShop.rect.x + (coffeeShop.rect.w - coffeeShop.shelf.w) / 2;
-            coffeeShop.shelf.y = coffeeShop.rect.y + floorHeight / 2 - coffeeShop.shelf.h / 2; // Centered on top floor back wall
-            coffeeShop.grinder.x = coffeeShop.shelf.x - coffeeShop.grinder.w - 15; // To the left of the shelf
-            coffeeShop.grinder.y = coffeeShop.shelf.y + coffeeShop.shelf.h - coffeeShop.grinder.h; // Align bottoms
             const startY = cashierCounter.y + cashierCounter.h / 2;
 
             // --- Employee Idle Positions ---
@@ -3615,7 +3520,7 @@
 
             initializeLayout();
 
-            worldWidth = coffeeShop.rect.x + coffeeShop.rect.w + 50; // Add padding at the end
+            worldWidth = canvas.width + officeWidth;
             desk.width = worldWidth;
             loadingDock.y = canvas.height - loadingDock.height;
             loadingDock.x = officeWidth;

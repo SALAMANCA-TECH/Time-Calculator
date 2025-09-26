@@ -587,7 +587,7 @@
 
         const unlockCosts = {
             employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
-            shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
+            shelves: [null, 5, 10, 20, 40, 42], // index 0 is free
             storage: [10, 20, 30, 40, 50, 60]
         };
 
@@ -3623,7 +3623,7 @@
             }
 
             barista.idleX = coffeeShop.rect.x + (coffeeShop.rect.w / 2);
-            barista.idleY = coffeeShop.rect.y + (coffeeShop.rect.h * 0.7);
+            barista.idleY = coffeeShop.rect.y + coffeeShop.rect.h - 20;
             if (barista.state === 'idle' && !barista.task) {
                 barista.x = barista.idleX;
                 barista.y = barista.idleY;
@@ -4367,9 +4367,14 @@
         function purchaseUnlock(type, key) {
             let cost = 0;
             let prerequisite = true;
+            let prerequisiteMessage = "You must unlock the previous tier first!";
 
             if (type === 'employee') {
                 cost = unlockCosts.employees[key];
+                if (key === 'barista' && !unlocks.shelves[5]) {
+                    prerequisite = false;
+                    prerequisiteMessage = "You must unlock the Coffee Shop (Shelf 6) first!";
+                }
             } else if (type === 'shelf') {
                 key = parseInt(key);
                 cost = unlockCosts.shelves[key];
@@ -4389,7 +4394,7 @@
             }
 
             if (!prerequisite) {
-                showMessage("You must unlock the previous tier first!");
+                showMessage(prerequisiteMessage);
                 return;
             }
 
@@ -4425,6 +4430,7 @@
                 const cost = developerMode ? 0 : unlockCosts.employees[emp];
                 const isUnlocked = unlocks.employees[emp];
                 const canAfford = shopPoints >= cost;
+                const prerequisiteMet = emp === 'barista' ? unlocks.shelves[5] : true;
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 div.innerHTML = `
@@ -4432,8 +4438,8 @@
                         <span class="text-lg">${emp.charAt(0).toUpperCase() + emp.slice(1)}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                     </div>
-                    <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
-                        ${isUnlocked ? 'Unlocked' : 'Buy'}
+                    <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
+                        ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
                     </button>
                 `;
                 empContainer.appendChild(div);

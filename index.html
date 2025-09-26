@@ -4842,7 +4842,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         </div>
                     `;
                 } else {
-                    content = `<div class="self-center">Empty Slot</div>`;
+                    content = `<button class="btn-style w-full h-full flex items-center justify-center" data-action="assign" data-shelf="${shelves.indexOf(shelf)}" data-slot="${i}">Assign Item</button>`;
                 }
                 slotDiv.innerHTML = content;
                 shelfGrid.appendChild(slotDiv);
@@ -4850,27 +4850,79 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             shelfGrid.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', e => {
-                    const shelfIndex = parseInt(e.target.dataset.shelf, 10);
-                    const slotIndex = parseInt(e.target.dataset.slot, 10);
-                    const action = e.target.dataset.action;
+                    const shelfIndex = parseInt(e.currentTarget.dataset.shelf, 10);
+                    const slotIndex = parseInt(e.currentTarget.dataset.slot, 10);
+                    const action = e.currentTarget.dataset.action;
                     const targetShelf = shelves[shelfIndex];
+
+                    if (!targetShelf) return;
                     const targetSlot = targetShelf.items[slotIndex];
+
                     if (action === 'take') {
                         player.basket.push(targetSlot.assignedItem);
                         targetSlot.quantity--;
+                        saveGame();
+                        openShelfPanel(targetShelf);
                     } else if (action === 'place') {
                         const itemIndex = player.basket.indexOf(targetSlot.assignedItem);
                         if (itemIndex > -1) {
                             player.basket.splice(itemIndex, 1);
                             targetSlot.quantity++;
+                            saveGame();
+                            openShelfPanel(targetShelf);
                         }
+                    } else if (action === 'assign') {
+                        openBasketAssignmentForShelf(targetShelf, slotIndex);
                     }
-                    saveGame();
-                    openShelfPanel(targetShelf); // Refresh panel
                 });
             });
 
             showAppScreen('shelf-panel');
+        }
+
+        function openBasketAssignmentForShelf(shelf, slotIndex) {
+            if (player.basket.length === 0) {
+                showMessage("Your basket is empty. Add items to your basket to assign them to a shelf.");
+                return;
+            }
+
+            const assignmentGrid = document.getElementById('assignment-grid');
+            const assignmentTitle = document.getElementById('assignment-title');
+            assignmentGrid.innerHTML = '';
+            assignmentTitle.textContent = `Assign from Basket`;
+
+            const backButton = document.createElement('button');
+            backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
+            backButton.textContent = '← Back to Shelf';
+            backButton.onclick = () => openShelfPanel(shelf);
+            assignmentGrid.appendChild(backButton);
+
+            const uniqueItemsInBasket = [...new Set(player.basket)];
+
+            uniqueItemsInBasket.forEach(itemName => {
+                const button = document.createElement('button');
+                button.className = 'btn-style';
+                button.textContent = itemName;
+                button.onclick = () => {
+                    const targetSlot = shelf.items[slotIndex];
+                    const itemIndexInBasket = player.basket.indexOf(itemName);
+
+                    if (itemIndexInBasket > -1) {
+                        // Remove item from basket
+                        player.basket.splice(itemIndexInBasket, 1);
+
+                        // Assign to shelf and set quantity to 1
+                        targetSlot.assignedItem = itemName;
+                        targetSlot.quantity = 1;
+
+                        saveGame();
+                        openShelfPanel(shelf); // Refresh the shelf panel to show the change
+                    }
+                };
+                assignmentGrid.appendChild(button);
+            });
+
+            showAppScreen('assignment-panel');
         }
 
         function takeItemFromStorage(itemName, cell) {

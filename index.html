@@ -1463,7 +1463,7 @@
             drawManagersOffice();
 
             // Initialize Coffee Shop properties and draw its background
-            if (unlocks.venues.coffeeShop) {
+            if (unlocks.coffeeShop) {
                 drawCoffeeShopBackground(coffeeShop.rect.x, coffeeShop.rect.y, coffeeShop.rect.w, coffeeShop.rect.h);
             }
         }
@@ -3518,7 +3518,7 @@
             ];
 
             // NEW COFFEE SHOP LOGIC
-            if (unlocks.venues.coffeeShop) {
+            if (unlocks.coffeeShop) {
                 const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
@@ -4536,25 +4536,6 @@
                     purchaseUnlock(type, key);
                 });
             });
-
-            // Venues
-            for (const venue in unlockCosts.venues) {
-                const cost = developerMode ? 0 : unlockCosts.venues[venue];
-                const isUnlocked = unlocks.venues[venue];
-                const canAfford = shopPoints >= cost;
-                const div = document.createElement('div');
-                div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-                div.innerHTML = `
-                    <div>
-                        <span class="text-lg">${venue.charAt(0).toUpperCase() + venue.slice(1).replace(/([A-Z])/g, ' $1')}</span>
-                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
-                    </div>
-                    <button class="btn-style px-4 py-1" data-type="venue" data-key="${venue}" ${isUnlocked ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
-                        ${isUnlocked ? 'Unlocked' : 'Buy'}
-                    </button>
-                `;
-                venuesContainer.appendChild(div);
-            }
 
             showAppScreen('unlocks-panel');
         }

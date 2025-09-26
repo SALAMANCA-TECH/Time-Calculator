@@ -202,9 +202,9 @@
                                 <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Storage</h3>
                                 <div id="unlocks-storage" class="space-y-2"></div>
                             </div>
-                             <div>
-                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Venues</h3>
-                                <div id="unlocks-venues" class="space-y-2"></div>
+                            <div>
+                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Upgrades</h3>
+                                <div id="unlocks-upgrades" class="space-y-2"></div>
                             </div>
                         </div>
                     </div>
@@ -587,14 +587,14 @@
             employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
             shelves: [true, false, false, false, false, false],
             storage: [false, false, false, false, false, false],
-            venues: { coffeeShop: false }
+            coffeeShop: false
         };
 
         const unlockCosts = {
             employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
             shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
             storage: [10, 20, 30, 40, 50, 60],
-            venues: { coffeeShop: 42 }
+            coffeeShop: 100
         };
 
         const dailyOperatingCosts = {
@@ -4393,8 +4393,11 @@
                 if (key > 0 && !unlocks.storage[key - 1]) {
                     prerequisite = false;
                 }
-            } else if (type === 'venue') {
-                cost = unlockCosts.venues[key];
+            } else if (type === 'coffeeShop') {
+                cost = unlockCosts.coffeeShop;
+                if (!unlocks.shelves[2]) { // Requires at least 2 shelves
+                    prerequisite = false;
+                }
             }
 
             if (developerMode) {
@@ -4402,7 +4405,7 @@
             }
 
             if (!prerequisite) {
-                showMessage(prerequisiteMessage);
+                showMessage("You must unlock the prerequisite tier first!");
                 return;
             }
 
@@ -4414,13 +4417,14 @@
                     unlocks.shelves[key] = true;
                 } else if (type === 'storage') {
                     unlocks.storage[key] = true;
-                } else if (type === 'venue') {
-                    unlocks.venues[key] = true;
+                } else if (type === 'coffeeShop') {
+                    unlocks.coffeeShop = true;
                 }
 
                 spawnFloatingText('Unlocked!', player.x, player.y - 90, '#f59e0b');
                 updateUI();
                 saveGame();
+                initializeLayout(); // Recalculate layout to show new items
                 openUnlocksPanel(); // Refresh the panel
             } else {
                 showMessage(`You need ${cost} points to unlock this.`);
@@ -4431,24 +4435,32 @@
             const empContainer = document.getElementById('unlocks-employees');
             const shelvesContainer = document.getElementById('unlocks-shelves');
             const storageContainer = document.getElementById('unlocks-storage');
-            const venuesContainer = document.getElementById('unlocks-venues');
+            const upgradesContainer = document.getElementById('unlocks-upgrades');
             empContainer.innerHTML = '';
             shelvesContainer.innerHTML = '';
             storageContainer.innerHTML = '';
-            venuesContainer.innerHTML = '';
+            upgradesContainer.innerHTML = '';
 
             // Employees
             for (const emp in unlockCosts.employees) {
                 const cost = developerMode ? 0 : unlockCosts.employees[emp];
                 const isUnlocked = unlocks.employees[emp];
                 const canAfford = shopPoints >= cost;
-                const prerequisiteMet = emp === 'barista' ? unlocks.venues.coffeeShop : true;
+                let prerequisiteMet = true;
+                let prerequisiteText = '';
+
+                if (emp === 'barista' && !unlocks.coffeeShop) {
+                    prerequisiteMet = false;
+                    prerequisiteText = '<span class="text-xs text-red-600 block">Requires Coffee Shop</span>';
+                }
+
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 div.innerHTML = `
                     <div>
                         <span class="text-lg">${emp.charAt(0).toUpperCase() + emp.slice(1)}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
+                        ${prerequisiteText}
                     </div>
                     <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
                         ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
@@ -4496,6 +4508,26 @@
                 `;
                 storageContainer.appendChild(div);
             }
+
+            // Upgrades
+            const coffeeCost = developerMode ? 0 : unlockCosts.coffeeShop;
+            const coffeeUnlocked = unlocks.coffeeShop;
+            const coffeeCanAfford = shopPoints >= coffeeCost;
+            const coffeePrerequisite = unlocks.shelves[5]; // Requires all 6 shelves
+            const coffeeDiv = document.createElement('div');
+            coffeeDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+            coffeeDiv.innerHTML = `
+                <div>
+                    <span class="text-lg">Coffee Shop</span>
+                    <span class="text-sm text-amber-800/80 block">Cost: ${coffeeCost} Points</span>
+                    ${!coffeePrerequisite ? '<span class="text-xs text-red-600 block">Requires 6 shelves</span>' : ''}
+                </div>
+                <button class="btn-style px-4 py-1" data-type="coffeeShop" data-key="coffeeShop" ${coffeeUnlocked || !coffeePrerequisite ? 'disabled' : ''} ${!coffeeCanAfford && !coffeeUnlocked ? 'disabled' : ''}>
+                    ${coffeeUnlocked ? 'Unlocked' : (coffeePrerequisite ? 'Buy' : 'Locked')}
+                </button>
+            `;
+            upgradesContainer.appendChild(coffeeDiv);
+
 
             document.getElementById('unlocks-panel').querySelectorAll('button[data-type]').forEach(button => {
                 button.addEventListener('click', (e) => {
@@ -5075,7 +5107,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 // Ensure all idle states are correct before starting
                 if (!stocker.task) stocker.state = 'idle';
                 if (!cashier.task) cashier.state = 'idle';
-                if (!loader.task) loader.state = 'idle';
                 if (!manager.task) manager.state = 'idle';
                 if (!salesperson.task) salesperson.state = 'idle';
             });

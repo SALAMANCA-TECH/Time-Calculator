@@ -124,14 +124,16 @@
     <div id="game-container" class="relative w-full flex-grow">
         <!-- The UI that sits on top of the canvas -->
         <div id="game-ui" class="absolute top-4 left-4 z-10 flex items-center space-x-4">
-             <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
+             <div class="relative overflow-hidden p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
                  $<span id="cash-display">0</span>
+                 <div id="cash-progress-bar" class="absolute bottom-0 left-0 h-1/5 bg-green-500 transition-all duration-200" style="width: 0%;"></div>
              </div>
              <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
                  Day: <span id="day-display">1</span>
              </div>
-              <div class="p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
+              <div class="relative overflow-hidden p-3 text-xl border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm">
                  Points: <span id="shop-points-display">0</span>
+                 <div id="points-progress-bar" class="absolute bottom-0 left-0 h-1/5 bg-blue-500 transition-all duration-200" style="width: 0%;"></div>
              </div>
              <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">Start Day</button>
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
@@ -3233,14 +3235,27 @@
             // Coffee shop money making timer
             if (dayStarted && isPlayerInZone(coffeeShop.behindCounterZone)) {
                 coffeeShopBehindCounterTimer += deltaTime;
-                if (coffeeShopBehindCounterTimer >= 10000) { // 10 seconds
+                if (coffeeShopBehindCounterTimer >= 5000) { // 5 seconds
                     cash++;
-                    coffeeShopBehindCounterTimer -= 10000;
+                    coffeeShopBehindCounterTimer -= 5000;
                     updateUI();
                     spawnFloatingText("+$1", player.x, player.y - 90, "#22c55e");
                 }
             } else {
                 coffeeShopBehindCounterTimer = 0;
+            }
+
+            // Update progress bars
+            const cashProgressBar = document.getElementById('cash-progress-bar');
+            if (cashProgressBar) {
+                const cashProgress = Math.min(100, (coffeeShopBehindCounterTimer / 5000) * 100);
+                cashProgressBar.style.width = `${cashProgress}%`;
+            }
+
+            const pointsProgressBar = document.getElementById('points-progress-bar');
+            if (pointsProgressBar) {
+                const pointsProgress = Math.min(100, (zone1PointTimer / 5000) * 100);
+                pointsProgressBar.style.width = `${pointsProgress}%`;
             }
 
             updateStocker(deltaTime);

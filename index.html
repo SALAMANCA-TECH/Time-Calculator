@@ -557,6 +557,7 @@
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
         const lockIcon = { x: 0, y: 0, width: 50, height: 50 };
         const phoneIcon = { x: 0, y: 0, width: 50, height: 50 };
+        const coffeeShop = { x: 0, y: 0, w: 0, h: 0, draw: drawCoffeeShop_fg };
         let storageCells = [];
         let shelves = [];
         const MAX_BASKET_SIZE = 5;
@@ -1092,7 +1093,7 @@
             ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
         }
 
-        function drawCoffeeShop(x, y, shopWidth, shopHeight) {
+        function drawCoffeeShop_bg(x, y, shopWidth, shopHeight) {
             const coffeeDarkBrown = '#4a2e1c';
             const coffeeMidBrown = '#6d4c41';
             const coffeeLightBrown = '#a1887f';
@@ -1194,15 +1195,6 @@
             }
             ctx.stroke();
 
-
-            // Counter
-            const counterY = windowY + windowHeight + shopHeight * 0.03;
-            const counterHeight = shopHeight * 0.04;
-            ctx.fillStyle = coffeeMidBrown;
-            ctx.fillRect(x, counterY, shopWidth, counterHeight);
-            ctx.strokeStyle = coffeeDarkBrown;
-            ctx.strokeRect(x, counterY, shopWidth, counterHeight);
-
             // Espresso Machine
             const machineW = shopWidth * 0.2;
             const machineH = shopHeight * 0.14;
@@ -1215,26 +1207,44 @@
             ctx.fillStyle = '#616161';
             ctx.fillRect(machineX + machineW*0.1, machineY + machineH*0.2, machineW*0.3, machineH*0.2);
             ctx.fillRect(machineX + machineW*0.6, machineY + machineH*0.2, machineW*0.3, machineH*0.2);
+        }
+
+        function drawCoffeeShop_fg() {
+            const {x, y, w, h} = coffeeShop;
+            const coffeeDarkBrown = '#4a2e1c';
+            const coffeeMidBrown = '#6d4c41';
+            const signY = y + h * 0.1;
+            const signHeight = h * 0.17;
+            const windowY = signY + signHeight + h * 0.03;
+            const windowHeight = h * 0.4;
+
+            // Counter
+            const counterY = windowY + windowHeight + h * 0.03;
+            const counterHeight = h * 0.04;
+            ctx.fillStyle = coffeeMidBrown;
+            ctx.fillRect(x, counterY, w, counterHeight);
+            ctx.strokeStyle = coffeeDarkBrown;
+            ctx.strokeRect(x, counterY, w, counterHeight);
 
             // Stools
             const stoolY = counterY + counterHeight;
-            const stoolW = shopWidth * 0.1;
-            const stoolH = shopHeight * 0.06;
-            const legH = shopHeight * 0.04;
-            const legW = shopWidth * 0.015;
+            const stoolW = w * 0.1;
+            const stoolH = h * 0.06;
+            const legH = h * 0.04;
+            const legW = w * 0.015;
 
-            const stoolX1 = x + shopWidth * 0.5;
+            const stoolX1 = x + w * 0.5;
             ctx.fillStyle = coffeeMidBrown;
             ctx.fillRect(stoolX1, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX1 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX1 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
 
-            const stoolX2 = x + shopWidth * 0.67;
+            const stoolX2 = x + w * 0.67;
             ctx.fillRect(stoolX2, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX2 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX2 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
 
-            const stoolX3 = x + shopWidth * 0.84;
+            const stoolX3 = x + w * 0.84;
             ctx.fillRect(stoolX3, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX3 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX3 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
@@ -1433,12 +1443,7 @@
 
             // Draw Coffee Shop
             if (shelves.length > 5) {
-                const lastShelf = shelves[5];
-                const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
-                const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
-                const coffeeShopX = lastShelf.rect.x + lastShelf.rect.w + 40 + coffeeShopWidth;
-                const coffeeShopY = (desk.y + desk.height) - coffeeShopHeight;
-                drawCoffeeShop(coffeeShopX, coffeeShopY, coffeeShopWidth, coffeeShopHeight);
+                drawCoffeeShop_bg(coffeeShop.x, coffeeShop.y, coffeeShop.w, coffeeShop.h);
             }
         }
 
@@ -3241,7 +3246,10 @@
 
             drawStoreBackground();
             const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, loader, manager, salesperson];
-            dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
+            if (shelves.length > 5) {
+                dynamicEntities.push(coffeeShop);
+            }
+            dynamicEntities.sort((a, b) => (a.sortY || a.y) - (b.sortY || b.y));
             dynamicEntities.forEach(entity => {
                 if (entity instanceof Customer) {
                     entity.draw();
@@ -3257,7 +3265,7 @@
                     drawManager();
                 } else if (entity === salesperson) {
                     drawSalesperson();
-                } else if (entity.rect) { // It's a shelf
+                } else if (entity.draw) {
                     entity.draw();
                 }
             });
@@ -3616,6 +3624,22 @@
             if (day === 1 && !dayStarted) {
                 player.x = stocker.idleX - 40;
                 player.y = startY;
+            }
+
+            if (shelves.length > 5) {
+                const lastShelf = shelves[5];
+                coffeeShop.h = (desk.y + desk.height) * 0.58;
+                coffeeShop.w = coffeeShop.h * (300 / 350);
+                coffeeShop.x = lastShelf.rect.x + lastShelf.rect.w + 40 + coffeeShop.w;
+                coffeeShop.y = (desk.y + desk.height) - coffeeShop.h;
+
+                const signY = coffeeShop.y + coffeeShop.h * 0.1;
+                const signHeight = coffeeShop.h * 0.17;
+                const windowY = signY + signHeight + coffeeShop.h * 0.03;
+                const windowHeight = coffeeShop.h * 0.4;
+                const counterY = windowY + windowHeight + coffeeShop.h * 0.03;
+                const counterHeight = coffeeShop.h * 0.04;
+                coffeeShop.sortY = counterY + counterHeight;
             }
         }
 

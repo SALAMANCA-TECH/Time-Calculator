@@ -4424,7 +4424,8 @@
                 const cost = developerMode ? 0 : unlockCosts.shelves[i];
                 const isUnlocked = unlocks.shelves[i];
                 const canAfford = shopPoints >= cost;
-                const prerequisiteMet = unlocks.shelves[i - 1];
+                // The coffee shop (index 5) has no prerequisite.
+                const prerequisiteMet = i === 5 ? true : unlocks.shelves[i - 1];
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 const shelfName = i === 5 ? "Coffee Shop" : `Shelf ${i + 1}`;

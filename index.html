@@ -620,17 +620,26 @@
             storage: [10, 20, 30, 40, 50, 60]
         };
 
+        let employeeWorkTimers = {
+            cashier: 0,
+            stocker: 0,
+            barista: 0,
+            manager: 0,
+            salesperson: 0
+        };
+
+        const employeePayRates = { // per minute
+            cashier: 2,
+            stocker: 1,
+            barista: 3,
+            manager: 5,
+            salesperson: 1
+        };
+
         const dailyOperatingCosts = {
             rent: 5,
             storageUnitWeeklyRate: 70,
-            coffeeShop: 2,
-            salaries: {
-                cashier: 20,
-                stocker: 25,
-                barista: 30,
-                manager: 50,
-                salesperson: 40
-            }
+            coffeeShop: 2
         };
 
         const player = {
@@ -3063,6 +3072,14 @@
             if (dayStarted) {
                 dayTimer -= deltaTime;
 
+                // Track employee work time
+                const employees = { cashier, stocker, barista, manager, salesperson };
+                for (const empKey in employees) {
+                    if (unlocks.employees[empKey] && !employees[empKey].onBreak) {
+                        employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + deltaTime;
+                    }
+                }
+
                 if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2)) {
                     midDayBreakTriggered = true;
                     isMandatoryBreak = true;
@@ -3404,9 +3421,12 @@
             dailyLaborCosts = {}; // Reset for the report
             for (const employee in unlocks.employees) {
                 if (unlocks.employees[employee]) {
-                    const salary = dailyOperatingCosts.salaries[employee];
-                    dailyLaborCosts[employee] = salary;
-                    dailyLaborCost += salary;
+                    const workTimeInSeconds = (employeeWorkTimers[employee] || 0) / 1000;
+                    const payRatePerSecond = employeePayRates[employee] / 60;
+                    const cost = Math.ceil(workTimeInSeconds * payRatePerSecond);
+                    dailyLaborCosts[employee] = cost;
+                    dailyLaborCost += cost;
+                    employeeWorkTimers[employee] = 0; // Reset for next day
                 }
             }
             cash -= dailyLaborCost; // Pay labor immediately
@@ -5161,7 +5181,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
                 customerProfiles, enabledItems,
-                currentWeeklyAccruedBill, currentWeeklyLaborCost
+                currentWeeklyAccruedBill, currentWeeklyLaborCost,
+                employeeWorkTimers
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -5187,6 +5208,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     enabledItems = gameState.enabledItems || enabledItems;
                     currentWeeklyAccruedBill = gameState.currentWeeklyAccruedBill || 0;
                     currentWeeklyLaborCost = gameState.currentWeeklyLaborCost || 0;
+                    employeeWorkTimers = gameState.employeeWorkTimers || { cashier: 0, stocker: 0, barista: 0, manager: 0, salesperson: 0 };
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {

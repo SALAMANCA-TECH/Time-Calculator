@@ -116,6 +116,23 @@
         .toggle-checkbox:checked + .toggle-label {
             background-color: #f7e7d8;
         }
+
+        /* Static Basket Styles */
+        #static-basket-items {
+            width: 200px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            z-index: 1000;
+            /* Start hidden, no 'hidden' class needed */
+            display: none;
+        }
+
+        #static-basket-items.open {
+            max-height: 300px;
+            overflow-y: auto;
+            display: block; /* Become visible when open */
+        }
     </style>
 </head>
 <body class="p-4 flex flex-col items-center justify-center h-screen">
@@ -137,6 +154,15 @@
              </div>
              <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">Start Day</button>
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
+            <div id="static-basket-container" class="relative">
+                <div id="static-basket-icon" class="p-2 text-4xl cursor-pointer">
+                    <span>🧺</span>
+                    <span id="static-basket-count" class="absolute top-0 right-0 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center border-2 border-white">0</span>
+                </div>
+                <div id="static-basket-items" class="absolute top-full left-0 mt-2 p-2 bg-amber-100/95 border-2 border-amber-900 rounded-lg shadow-md">
+                    <!-- Items will be populated here -->
+                </div>
+            </div>
         </div>
 
         <!-- Canvas for the game -->
@@ -237,11 +263,6 @@
                         </div>
                     </div>
 
-                    <!-- Basket Panel -->
-                    <div id="basket-panel" class="phone-app-screen hidden">
-                        <h2 class="text-3xl font-handwritten mb-4">Your Basket</h2>
-                        <div id="basket-grid" class="space-y-2"></div>
-                    </div>
 
                     <!-- Shelf Assignment Panel -->
                     <div id="shelf-assignment-panel" class="phone-app-screen hidden">
@@ -253,6 +274,12 @@
                     <div id="shelf-panel" class="phone-app-screen hidden">
                         <h2 id="shelf-title" class="text-3xl font-handwritten mb-4">Manage Shelf</h2>
                         <div id="shelf-grid" class="grid grid-cols-1 gap-4"></div>
+                    </div>
+
+                    <!-- Storage Panel -->
+                    <div id="storage-panel" class="phone-app-screen hidden">
+                        <h2 id="storage-title" class="text-3xl font-handwritten mb-4">Manage Storage</h2>
+                        <div id="storage-grid" class="grid grid-cols-2 gap-4"></div>
                     </div>
 
                     <!-- Assignment Panel -->
@@ -430,6 +457,19 @@
 
             <div class="text-center mt-4 flex-shrink-0">
                 <button id="next-day-report-btn" class="btn-style px-8 py-3 text-xl">Start Next Day</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Scheduling Panel -->
+    <div id="employee-schedule-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="max-height: 90vh;">
+            <h2 class="text-3xl font-handwritten text-center mb-4 flex-shrink-0">Employee Work Schedule</h2>
+            <div id="employee-schedule-list" class="flex-grow overflow-y-auto p-2 bg-white/30 rounded-md border space-y-4">
+                <!-- Employee schedule details will be populated here -->
+            </div>
+            <div class="text-center mt-4 flex-shrink-0">
+                <button id="close-schedule-panel-btn" class="btn-style px-8 py-3 text-xl">Close</button>
             </div>
         </div>
     </div>
@@ -616,18 +656,24 @@
         let dayStarted = false;
         let developerMode = false;
         let continuousMode = false;
-        let isMandatoryBreak = false;
-        let midDayBreakTriggered = false;
         let currentWeeklyAccruedBill = 0;
         let currentWeeklyLaborCost = 0;
         let currentWeeklyRentCost = 0;
         let currentWeeklyStorageCost = 0;
         let currentWeeklyCoffeeCost = 0;
 
-        const OPENING_DURATION = 60000; // 1 minute
-        const OPEN_DURATION = 180000; // 3 minutes
-        const CLOSING_DURATION = 60000; // 1 minute
-        const DAY_DURATION = OPENING_DURATION + OPEN_DURATION + CLOSING_DURATION; // Total 5 minutes
+        const daySegments = [
+            { name: 'Openers', duration: 15000, color: '#ffffcc', base: 'opening' }, // Lighter Yellow
+            { name: 'Shift Start', duration: 15000, color: '#facc15', base: 'opening' }, // Yellow
+            { name: 'Day Shift', duration: 30000, color: '#22c55e', base: 'open' },    // Green
+            { name: 'Day Break', duration: 30000, color: '#e0e0e0', base: 'open' },    // Light Grey
+            { name: 'Eve Break', duration: 30000, color: '#a0a0a0', base: 'open' },    // Dark Grey
+            { name: 'Night Shift', duration: 30000, color: '#22c55e', base: 'open' },  // Green
+            { name: 'Shift End', duration: 15000, color: '#ef4444', base: 'closing' }, // Red
+            { name: 'Closers', duration: 15000, color: '#b91c1c', base: 'closing' }  // Darker Red
+        ];
+
+        const DAY_DURATION = daySegments.reduce((acc, seg) => acc + seg.duration, 0);
         let dayTimer = DAY_DURATION;
         let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'open', 'closing'
         let zone1PointTimer = 0;
@@ -666,6 +712,7 @@
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
         const lockIcon = { x: 0, y: 0, width: 50, height: 50 };
         const phoneIcon = { x: 0, y: 0, width: 50, height: 50 };
+        const managersComputer = { x: 0, y: 0, w: 0, h: 0 };
         let storageCells = [];
         let shelves = [];
         const MAX_BASKET_SIZE = 5;
@@ -679,14 +726,14 @@
 
         let unlocks = {
             employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
-            shelves: [true, false, false, false, false, false],
+            shelves: [true, false, false, false, false, false, false, false],
             facilities: { coffeeShop: false },
             storage: [false, false, false, false, false, false]
         };
 
         const unlockCosts = {
             employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
-            shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
+            shelves: [null, 5, 10, 20, 40, 80, 30, 30], // index 0 is free
             facilities: { coffeeShop: 100 },
             storage: [10, 20, 30, 40, 50, 60]
         };
@@ -733,7 +780,10 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
-            playerInitiatedBreak: false
+            playerInitiatedBreak: false,
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const cashier = {
@@ -746,7 +796,10 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            basket: []
+            basket: [],
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const barista = {
@@ -759,7 +812,10 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
-            playerInitiatedBreak: false
+            playerInitiatedBreak: false,
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
         const manager = {
             x: 200, y: 300, width: 50, height: 50, speed: 150,
@@ -773,7 +829,10 @@
             playerInitiatedBreak: false,
             canOrder: true,
             lastOrderQuarter: -1,
-                hasPlacedMorningOrder: false,
+            hasPlacedMorningOrder: false,
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const salesperson = {
@@ -786,7 +845,10 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            basket: []
+            basket: [],
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const breakSpots = {
@@ -821,10 +883,6 @@
                  // Legacy keybind, now opens phone to orders
                 openClipboardPanel();
                 showAppScreen('restock-panel');
-            } else if (e.code === 'KeyG') {
-                // Legacy keybind, now opens phone to basket
-                openClipboardPanel();
-                showAppScreen('basket-panel');
             } else if (e.code === 'KeyT') {
                 // Legacy keybind, now opens phone to unlocks
                 openClipboardPanel();
@@ -1033,35 +1091,82 @@
                     case 'takingItem':
                         this.stateTimer -= deltaTime;
                         if (this.stateTimer <= 0) {
-                            const currentItem = this.requestedItems[this.currentItemIndex];
-                            const shelf = shelves.find(s => s.items.some(i => i && i.assignedItem === currentItem));
-                            if(shelf) {
-                                const slot = shelf.items.find(i => i && i.assignedItem === currentItem && i.quantity > 0);
+                            const currentItemName = this.requestedItems[this.currentItemIndex];
+                            const shelf = shelves.find(s => s.items.some(i => i && i.assignedItem === currentItemName));
+                            if (shelf) {
+                                const slot = shelf.items.find(i => i && i.assignedItem === currentItemName && i.quantity > 0);
                                 if (slot) {
+                                    // 1. Take the item
                                     slot.quantity--;
-                                    this.order.push(currentItem);
-                                    this.currentItemIndex++; // <-- FIX: This was missing!
-                                     if(this.currentItemIndex >= this.requestedItems.length) {
-                                         this.request = `Got everything! Time to check out.`;
-                                         this.state = 'queuing';
-                                     } else {
-                                         this.state = 'browsing';
-                                         if(!this.findNextItemTarget()){
-                                             this.request = `Can't find the other items... I'll just look around.`;
-                                             this.state = 'wandering';
-                                             this.isWaitingForRestock = true;
-                                             this.stateTimer = 0;
-                                         }
-                                     }
+                                    this.order.push({ itemName: currentItemName, shelfType: shelf.type });
+
+                                    // 2. Handle SPECIALS shelf effect
+                                    if (shelf.type === 'SPECIALS') {
+                                        const originalRequest = [...customerProfiles[this.customerType][this.name].requestedItems];
+                                        let cheapestItemName = null;
+                                        let minCost = Infinity;
+                                        originalRequest.forEach(reqItem => {
+                                            if (items[reqItem].cost < minCost) {
+                                                minCost = items[reqItem].cost;
+                                                cheapestItemName = reqItem;
+                                            }
+                                        });
+
+                                        if (cheapestItemName) {
+                                            spawnFloatingText(`-1 ${cheapestItemName}`, this.x, this.y - 120, '#42a5f5');
+                                            const inBasketIndex = this.order.findIndex(o => o.itemName === cheapestItemName);
+                                            if (inBasketIndex > -1) {
+                                                this.order.splice(inBasketIndex, 1);
+                                            }
+                                            const inRequestsIndex = this.requestedItems.indexOf(cheapestItemName);
+                                            if (inRequestsIndex > -1) {
+                                                if (inRequestsIndex <= this.currentItemIndex) {
+                                                    this.currentItemIndex--;
+                                                }
+                                                this.requestedItems.splice(inRequestsIndex, 1);
+                                            }
+                                        }
+                                    } else if (shelf.type === 'SALES' && Math.random() < 0.3) { // 30% chance for impulse buy
+                                        const availableUpsellSlots = shelf.items.filter(s =>
+                                            s.assignedItem && s.quantity > 0 &&
+                                            !this.requestedItems.includes(s.assignedItem) &&
+                                            !this.order.some(orderItem => orderItem.itemName === s.assignedItem)
+                                        );
+
+                                        if (availableUpsellSlots.length > 0) {
+                                            const upsellSlot = availableUpsellSlots[Math.floor(Math.random() * availableUpsellSlots.length)];
+                                            upsellSlot.quantity--;
+                                            this.order.push({ itemName: upsellSlot.assignedItem, shelfType: 'SALES' });
+                                            spawnFloatingText(`+1 ${upsellSlot.assignedItem}!`, this.x, this.y - 120, '#ef4444');
+                                        }
+                                    }
+
+
+                                    // 3. Move to the next item
+                                    this.currentItemIndex++;
+
+                                    // 4. Decide what to do next
+                                    if (this.currentItemIndex >= this.requestedItems.length) {
+                                        this.request = `Got everything! Time to check out.`;
+                                        this.state = 'queuing';
+                                    } else {
+                                        this.state = 'browsing';
+                                        if (!this.findNextItemTarget()) {
+                                            this.request = `Can't find the other items... I'll just look around.`;
+                                            this.state = 'wandering';
+                                            this.isWaitingForRestock = true;
+                                            this.stateTimer = 0;
+                                        }
+                                    }
                                 } else {
-                                    this.request = `They're out of ${currentItem}!`;
+                                    this.request = `They're out of ${currentItemName}!`;
                                     logCustomerToSalesReport(this);
                                     this.state = 'leaving';
                                 }
                             } else {
-                                 this.request = `They're out of ${currentItem}!`;
-                                 logCustomerToSalesReport(this);
-                                 this.state = 'leaving';
+                                this.request = `They're out of ${currentItemName}!`;
+                                logCustomerToSalesReport(this);
+                                this.state = 'leaving';
                             }
                         }
                         break;
@@ -1078,6 +1183,28 @@
                                 this.waitTimer = 0; // Reset timer
                                 return;
                             }
+
+                            // SALES SHELF ATTRACTION LOGIC
+                            const salesShelves = shelves.filter(s => s.type === 'SALES' && unlocks.shelves[shelves.indexOf(s)] && s.items.some(slot => slot.assignedItem && slot.quantity > 0));
+                            if (salesShelves.length > 0 && Math.random() < 0.2) { // 20% chance per wander cycle
+                                const randomSalesShelf = salesShelves[Math.floor(Math.random() * salesShelves.length)];
+                                const availableItems = randomSalesShelf.items.filter(slot => slot.assignedItem && slot.quantity > 0);
+                                const randomItemSlot = availableItems[Math.floor(Math.random() * availableItems.length)];
+                                const newItem = randomItemSlot.assignedItem;
+
+                                if (!this.requestedItems.includes(newItem)) {
+                                    this.requestedItems.push(newItem);
+                                    this.currentItemIndex = this.requestedItems.length - 1; // Target the new item
+                                    this.request = `Ooh, a sale! I'll take a ${newItem}!`;
+                                    this.showSpeechBubble = true;
+                                    this.speechBubbleTimer = 4000;
+                                    this.state = 'browsing';
+                                    this.isWaitingForRestock = false; // No longer waiting for a specific restock
+                                    this.findNextItemTarget();
+                                    return; // Exit the wandering state update
+                                }
+                            }
+
 
                             const firstShelfX = shelves[0].rect.x;
                             const lastShelf = shelves[shelves.length - 1];
@@ -1361,10 +1488,14 @@
             const pcHeight = 30;
             const pcX = deskX - pcWidth + 5; // Positioned to the left of the desk
             const pcY = deskY + (deskHeight - pcHeight) / 2;
+            managersComputer.x = pcX;
+            managersComputer.y = pcY;
+            managersComputer.w = pcWidth;
+            managersComputer.h = pcHeight;
             ctx.fillStyle = '#333';
-            ctx.fillRect(pcX, pcY, pcWidth, pcHeight);
+            ctx.fillRect(managersComputer.x, managersComputer.y, managersComputer.w, managersComputer.h);
             ctx.fillStyle = '#555'; // Screen
-            ctx.fillRect(pcX + 3, pcY + 3, pcWidth - 8, pcHeight - 6);
+            ctx.fillRect(managersComputer.x + 3, managersComputer.y + 3, managersComputer.w - 8, managersComputer.h - 6);
 
 
             // Lounge Area (Zone 2) - Rotated Couch
@@ -2147,11 +2278,9 @@
                             stocker.task = task;
                             stocker.state = task.action;
                         } else {
-                            stocker.stateTimer = 3000;
-                            if(Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
-                                stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
-                                moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime);
-                            } else {
+                            stocker.stateTimer = 3000; // No tasks, wait before checking again
+                            if (Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
+                                stocker.state = 'returning';
                                 stocker.task = null;
                             }
                         }
@@ -2163,7 +2292,7 @@
                         const cell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToTake) && c.items[itemToTake] > 0);
                         if(cell) {
                             while(stocker.basket.length < STOCKER_BASKET_SIZE && cell.items[itemToTake] > 0) {
-                                stocker.basket.push(itemToTake);
+                                stocker.basket.push({ itemName: itemToTake, shelfType: 'NORMAL' });
                                 cell.items[itemToTake]--;
                             }
                         }
@@ -2176,7 +2305,7 @@
                         const pkg = loadingDockPackages[stocker.task.packageIndex];
                         if (pkg && pkg.itemName === stocker.task.item) {
                             while(stocker.basket.length < STOCKER_BASKET_SIZE && pkg.quantity > 0) {
-                                stocker.basket.push(pkg.itemName);
+                                stocker.basket.push({ itemName: pkg.itemName, shelfType: 'NORMAL' });
                                 pkg.quantity--;
                             }
                             if (pkg.quantity <= 0) {
@@ -2190,11 +2319,11 @@
                 case 'stocking':
                     if (!stocker.task) {
                         if (stocker.basket.length === 0) {
-                            stocker.state = 'idle';
-                            stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                            stocker.state = 'returning';
+                            stocker.task = null;
                             break;
                         }
-                        const itemToStock = stocker.basket[0];
+                        const itemToStock = stocker.basket[0].itemName;
                         const targetShelf = findShelfForStocking(itemToStock);
                         if (targetShelf) {
                             stocker.task = { action: 'place', item: itemToStock, shelf: targetShelf, target: {x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 10} };
@@ -2202,7 +2331,7 @@
                             stocker.basket.shift();
                         }
                     }
-                    if (stocker.task && moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                     if (stocker.task && moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
                         const shelf = stocker.task.shelf;
                         const itemToStock = stocker.task.item;
 
@@ -2212,15 +2341,21 @@
                         }
 
                         if (slot) {
-                            const itemIndexInBasket = stocker.basket.indexOf(itemToStock);
-                            if(itemIndexInBasket > -1) {
-                                if(slot.assignedItem === null) {
+                            const itemIndexInBasket = stocker.basket.findIndex(basketItem => basketItem.itemName === itemToStock);
+                            if (itemIndexInBasket > -1) {
+                                if (slot.assignedItem === null) {
                                     slot.assignedItem = itemToStock;
                                 }
                                 stocker.basket.splice(itemIndexInBasket, 1);
                                 slot.quantity++;
                             }
                         }
+                        stocker.task = null;
+                    }
+                    break;
+                case 'returning':
+                    if (moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime)) {
+                        stocker.state = 'idle';
                         stocker.task = null;
                     }
                     break;
@@ -2258,6 +2393,12 @@
                             target: { x: customerToServe.x - 30, y: customerToServe.y - 100 }
                         };
                         cashier.state = 'serving';
+                    } else {
+                        // If no customer, ensure cashier is at their post
+                        if (Math.hypot(cashier.x - cashier.idleX, cashier.y - cashier.idleY) > 5) {
+                            cashier.state = 'returning';
+                            cashier.task = null; // Clear task before returning
+                        }
                     }
                     break;
                 case 'serving':
@@ -2271,12 +2412,13 @@
                         if(cashier.task) {
                             completeTransaction(cashier.task.customerId);
                         }
-                        cashier.task = { target: {x: cashier.idleX, y: cashier.idleY } };
                         cashier.state = 'returning';
+                        cashier.task = null;
                     }
                     break;
                 case 'returning':
-                    if(cashier.task && moveCharacterTowards(cashier, cashier.task.target.x, cashier.task.target.y, deltaTime)) {
+                    // This state now directly uses idleX/idleY, ignoring any task.
+                    if(moveCharacterTowards(cashier, cashier.idleX, cashier.idleY, deltaTime)) {
                         cashier.state = 'idle';
                         cashier.task = null;
                     }
@@ -2698,12 +2840,15 @@
                                         }));
                                         if (allStockedItems.length > 0) {
                                             const randomItem = allStockedItems[Math.floor(Math.random() * allStockedItems.length)];
-                                            customer.order.push(randomItem);
-                                            customer.profile.patience -= 10;
-                                            customer.patience = customer.profile.patience; // Sync instance
-                                            customer.state = 'queuing';
-                                            customer.request = `Alright, you've convinced me. I'll take the ${randomItem}.`;
-                                            spawnFloatingText("Convinced!", salesperson.x, salesperson.y - 90, '#f59e0b');
+                                            const shelfWithItem = shelves.find(s => s.items.some(slot => slot.assignedItem === randomItem && slot.quantity > 0));
+                                            if (shelfWithItem) {
+                                                customer.order.push({ itemName: randomItem, shelfType: shelfWithItem.type });
+                                                customer.profile.patience -= 10;
+                                                customer.patience = customer.profile.patience; // Sync instance
+                                                customer.state = 'queuing';
+                                                customer.request = `Alright, you've convinced me. I'll take the ${randomItem}.`;
+                                                spawnFloatingText("Convinced!", salesperson.x, salesperson.y - 90, '#f59e0b');
+                                            }
                                         } else {
                                             customer.profile.patience -= 30;
                                             customer.patience = customer.profile.patience; // Sync instance
@@ -2771,7 +2916,7 @@
                                 const slot = targetShelf.items.find(i => i && i.assignedItem === itemToCollect && i.quantity > 0);
                                 if (slot) {
                                     slot.quantity--;
-                                    salesperson.basket.push(itemToCollect);
+                                    salesperson.basket.push({ itemName: itemToCollect, shelfType: targetShelf.type });
                                     task.currentItemIndex++; // Move to next item
                                 }
                             }
@@ -2802,7 +2947,7 @@
                         const item = salesperson.task.target.item;
                         if (cell && item && cell.items[item] > 0) {
                             cell.items[item]--;
-                            salesperson.basket.push(item);
+                            salesperson.basket.push({ itemName: item, shelfType: 'NORMAL' });
                             salesperson.task.currentItemIndex++;
                         }
                         salesperson.state = 'collectingItem'; // Go back to check for the next item
@@ -3057,45 +3202,28 @@
             const radius = Math.min(centerX, centerY) - 2;
             pieClockCtx.clearRect(0, 0, pieClockCanvas.width, pieClockCanvas.height);
 
-            const startAngle = -Math.PI / 2;
-            const openingAngle = (OPENING_DURATION / DAY_DURATION) * 2 * Math.PI;
-            const openAngle = (OPEN_DURATION / DAY_DURATION) * 2 * Math.PI;
+            let currentAngle = -Math.PI / 2;
+            const overlayColor = 'rgba(93, 64, 55, 0.6)';
 
-            const openingColor = '#facc15'; // Yellow
-            const openColor = '#22c55e'; // Green
-            const closingColor = '#ef4444'; // Red
-            const overlayColor = 'rgba(93, 64, 55, 0.6)'; // Darkening overlay
+            // Draw all the segments first
+            daySegments.forEach(segment => {
+                const segmentAngle = (segment.duration / DAY_DURATION) * 2 * Math.PI;
+                pieClockCtx.fillStyle = segment.color;
+                pieClockCtx.beginPath();
+                pieClockCtx.moveTo(centerX, centerY);
+                pieClockCtx.arc(centerX, centerY, radius, currentAngle, currentAngle + segmentAngle);
+                pieClockCtx.closePath();
+                pieClockCtx.fill();
+                currentAngle += segmentAngle;
+            });
 
-            // Opening segment
-            pieClockCtx.fillStyle = openingColor;
-            pieClockCtx.beginPath();
-            pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle, startAngle + openingAngle);
-            pieClockCtx.closePath();
-            pieClockCtx.fill();
-
-            // Open segment
-            pieClockCtx.fillStyle = openColor;
-            pieClockCtx.beginPath();
-            pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle, startAngle + openingAngle + openAngle);
-            pieClockCtx.closePath();
-            pieClockCtx.fill();
-
-            // Closing segment
-            pieClockCtx.fillStyle = closingColor;
-            pieClockCtx.beginPath();
-            pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle + openAngle, startAngle + 2 * Math.PI);
-            pieClockCtx.closePath();
-            pieClockCtx.fill();
 
             if (dayStarted) {
                  const progressAngle = ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
                  pieClockCtx.fillStyle = overlayColor;
                  pieClockCtx.beginPath();
                  pieClockCtx.moveTo(centerX, centerY);
-                 pieClockCtx.arc(centerX, centerY, radius + 1, startAngle + progressAngle, startAngle + 2 * Math.PI);
+                 pieClockCtx.arc(centerX, centerY, radius + 1, -Math.PI / 2 + progressAngle, -Math.PI / 2 + (2 * Math.PI));
                  pieClockCtx.closePath();
                  pieClockCtx.fill();
             } else {
@@ -3104,6 +3232,21 @@
                 pieClockCtx.beginPath();
                 pieClockCtx.arc(centerX, centerY, radius + 1, 0, 2 * Math.PI);
                 pieClockCtx.fill();
+            }
+
+            // Draw the "second hand"
+            if (dayStarted) {
+                const progressAngle = ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
+                const handAngle = -Math.PI / 2 + progressAngle;
+                const handX = centerX + radius * Math.cos(handAngle);
+                const handY = centerY + radius * Math.sin(handAngle);
+
+                pieClockCtx.strokeStyle = 'white';
+                pieClockCtx.lineWidth = 2;
+                pieClockCtx.beginPath();
+                pieClockCtx.moveTo(centerX, centerY);
+                pieClockCtx.lineTo(handX, handY);
+                pieClockCtx.stroke();
             }
 
             // Border
@@ -3131,6 +3274,45 @@
             }
         }
 
+        function getCurrentSegment(timer) {
+            let elapsedTime = DAY_DURATION - timer;
+            let cumulativeDuration = 0;
+            for (const segment of daySegments) {
+                cumulativeDuration += segment.duration;
+                if (elapsedTime < cumulativeDuration) {
+                    return segment;
+                }
+            }
+            return daySegments[daySegments.length - 1]; // Return last segment if timer is at 0
+        }
+
+        function isEmployeeWorking(employee, currentSegment) {
+            const segmentName = currentSegment.name;
+
+            // Rule 1: Handle assigned breaks
+            if ((segmentName === 'Day Break' && employee.breakPreference === 'Day') ||
+                (segmentName === 'Eve Break' && employee.breakPreference === 'Eve')) {
+                return false; // On their assigned break
+            }
+
+            // Rule 2: Handle special shifts
+            if (segmentName === 'Openers') {
+                return employee.isOpener; // Work only if they are an opener
+            }
+            if (segmentName === 'Closers') {
+                return employee.isCloser; // Work only if they are a closer
+            }
+
+            // Rule 3: They work during all other standard segments, including the break they are not assigned to.
+            const standardWorkSegments = ['Shift Start', 'Day Shift', 'Day Break', 'Eve Break', 'Night Shift', 'Shift End'];
+            if (standardWorkSegments.includes(segmentName)) {
+                return true;
+            }
+
+            // Default to not working for any other case (e.g., pre-day)
+            return false;
+        }
+
         function gameLoop(timestamp) {
             if (!running || !lastTimestamp) {
                 lastTimestamp = timestamp;
@@ -3143,52 +3325,38 @@
             if (dayStarted) {
                 dayTimer -= deltaTime;
 
-                // Track employee work time
                 const employees = { cashier, stocker, barista, manager, salesperson };
+                const currentSegment = dayTimer > 0 ? getCurrentSegment(dayTimer) : null;
+
+                // Update employee onBreak status based on schedule
+                if (currentSegment) {
+                    for (const empKey in employees) {
+                        if (unlocks.employees[empKey]) {
+                            const employee = employees[empKey];
+                            if (!employee.playerInitiatedBreak) {
+                                const wasOnBreak = employee.onBreak;
+                                const isNowOnBreak = !isEmployeeWorking(employee, currentSegment);
+                                employee.onBreak = isNowOnBreak;
+
+                                // If break just ended, force them to return to their post
+                                if (wasOnBreak && !isNowOnBreak) {
+                                    employee.state = 'returning';
+                                    employee.task = null; // Clear any previous task
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Track employee work time
                 for (const empKey in employees) {
                     if (unlocks.employees[empKey] && !employees[empKey].onBreak) {
                         employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + deltaTime;
                     }
                 }
 
-                if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2)) {
-                    midDayBreakTriggered = true;
-                    isMandatoryBreak = true;
-                    spawnFloatingText("LUNCH BREAK!", canvas.width / 2, 120, '#3b82f6');
-
-                    const employees = { cashier, stocker, barista, manager, salesperson };
-                    for (const empKey in employees) {
-                        if (unlocks.employees[empKey]) {
-                            employees[empKey].onBreak = true;
-                        }
-                    }
-
-                    if (activePanel === 'employees') {
-                        openEmployeesPanel();
-                    }
-
-                    setTimeout(() => {
-                        isMandatoryBreak = false;
-                        for (const empKey in employees) {
-                            if (unlocks.employees[empKey]) {
-                                if (!employees[empKey].playerInitiatedBreak) {
-                                    employees[empKey].onBreak = false;
-                                }
-                            }
-                        }
-                        if (activePanel === 'employees') {
-                            openEmployeesPanel();
-                        }
-                        spawnFloatingText("Break's over!", canvas.width / 2, 120, '#22c55e');
-                    }, 20000);
-                }
-
-                if (dayTimer > OPEN_DURATION + CLOSING_DURATION) {
-                    dayPhase = 'opening';
-                } else if (dayTimer > CLOSING_DURATION) {
-                    dayPhase = 'open';
-                } else if (dayTimer > 0) {
-                    dayPhase = 'closing';
+                if (dayTimer > 0) {
+                    dayPhase = currentSegment.base; // Map new segment to old phase for AI logic
                 } else {
                     dayPhase = 'pre-open';
                     nextDay();
@@ -3390,7 +3558,7 @@
                 name: customer.name,
                 typeKey: customer.customerType,
                 requestedItems: customer.requestedItems,
-                purchasedItems: [...customer.order],
+                purchasedItems: customer.order.map(item => item.itemName),
                 waitTime: Math.round(customer.waitTimer),
                 patienceChange: customer.profile.patience - customer.initialPatience,
                 discount: customer.discount,
@@ -3412,11 +3580,18 @@
                 return;
             }
 
-            let totalCost = 0;
-            customer.order.forEach(item => {
-                totalCost += items[item].cost;
+            let salePrice = 0;
+            customer.order.forEach(orderItem => {
+                const baseCost = items[orderItem.itemName].cost;
+                let itemPrice = Math.ceil(baseCost * 1.5);
+                 if (orderItem.shelfType === 'SALES') {
+                    itemPrice = Math.ceil(itemPrice * 0.85); // 15% off
+                } else if (orderItem.shelfType === 'SPECIALS') {
+                    itemPrice = Math.ceil(itemPrice * 1.25); // 25% on top
+                }
+                salePrice += itemPrice;
             });
-            let salePrice = Math.ceil(totalCost * 1.5);
+
 
             // Apply discount if applicable
             if (customer.discount > 0) {
@@ -3441,20 +3616,21 @@
                 spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
 
                 // Track popularity of sold items
-                customer.order.forEach(item => {
-                    itemPopularity[item] = (itemPopularity[item] || 0) + 1;
+                customer.order.forEach(orderItem => {
+                    itemPopularity[orderItem.itemName] = (itemPopularity[orderItem.itemName] || 0) + 1;
                 });
 
             } else {
-                customer.order.forEach(item => {
-                    const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === item) || s.items.some(i => i.assignedItem === null));
+                customer.order.forEach(orderItem => {
+                    const itemName = orderItem.itemName;
+                    const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === itemName) || s.items.some(i => i.assignedItem === null));
                     if(shelfToReturn) {
-                        let slot = shelfToReturn.items.find(i => i && i.assignedItem === item);
+                        let slot = shelfToReturn.items.find(i => i && i.assignedItem === itemName);
                         if(slot) slot.quantity++;
                         else {
                             const emptySlot = shelfToReturn.items.find(i => i.assignedItem === null);
                             if(emptySlot) {
-                                emptySlot.assignedItem = item;
+                                emptySlot.assignedItem = itemName;
                                 emptySlot.quantity = 1;
                             }
                         }
@@ -3727,6 +3903,15 @@
                         customerProfiles[type][name].visitedToday = false;
                     }
                 }
+
+                // Reset manual break override for the new day
+                const employees = { cashier, stocker, barista, manager, salesperson };
+                for (const empKey in employees) {
+                    if (unlocks.employees[empKey]) {
+                        employees[empKey].playerInitiatedBreak = false;
+                    }
+                }
+
                 Object.keys(inventory).forEach(item => {
                     if (inventory[item] < 5) inventory[item] += 1;
                 });
@@ -3821,31 +4006,32 @@
             const shelfWidth = 60, shelfHeight = 120;
             const shelfY = desk.y - shelfHeight + 40;
 
-            const numShelves = 6;
+            const numShelves = 8;
             const shelfPadding = 20;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
             const startX = storeShiftX + 250;
-            if (shelves.length === 0) {
-                for (let i = 0; i < numShelves; i++) {
-                    const shelf = {
-                        rect: { x: startX + i * (shelfWidth + shelfPadding), y: shelfY, w: shelfWidth, h: shelfHeight },
-                        items: [
-                            { assignedItem: null, quantity: 0 },
-                            { assignedItem: null, quantity: 0 },
-                            { assignedItem: null, quantity: 0 },
-                            { assignedItem: null, quantity: 0 }
-                        ],
-                        y: shelfY + shelfHeight,
-                        draw: drawShelf
-                    };
-                    shelves.push(shelf);
+
+            // Ensure shelves array is populated up to numShelves, adding any missing from older saves
+            while (shelves.length < numShelves) {
+                const i = shelves.length;
+                shelves.push({
+                    items: [
+                        { assignedItem: null, quantity: 0 },
+                        { assignedItem: null, quantity: 0 },
+                        { assignedItem: null, quantity: 0 },
+                        { assignedItem: null, quantity: 0 }
+                    ],
+                });
+            }
+
+            // Loop through all shelves to update positions and ensure properties are correctly assigned
+            for (let i = 0; i < numShelves; i++) {
+                shelves[i].rect = { x: startX + i * (shelfWidth + shelfPadding), y: shelfY, w: shelfWidth, h: shelfHeight };
+                shelves[i].y = shelfY + shelfHeight;
+                shelves[i].draw = drawShelf; // Ensure draw function is always attached
+                if (!shelves[i].type) { // Assign type if missing (for older saves)
+                    shelves[i].type = i === 6 ? 'SALES' : i === 7 ? 'SPECIALS' : 'NORMAL';
                 }
-            } else {
-                 for (let i = 0; i < shelves.length; i++) {
-                     shelves[i].rect.x = startX + i * (shelfWidth + shelfPadding);
-                     shelves[i].rect.y = shelfY;
-                     shelves[i].y = shelfY + shelfHeight;
-                 }
             }
             const startY = cashierCounter.y + cashierCounter.h / 2;
 
@@ -3894,14 +4080,40 @@
         // --- REFACTOR: Standalone Shelf Drawing Function ---
         function drawShelf() {
             const shelfIndex = shelves.indexOf(this);
-             if (!unlocks.shelves[shelfIndex]) {
+
+            ctx.save();
+            // Base shelf drawing
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+
+            // Apply tint based on type, regardless of lock state
+            if (this.type === 'SALES') {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            } else if (this.type === 'SPECIALS') {
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.2)';
+                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            }
+
+            // Draw shelf name if applicable, regardless of lock state
+            if (this.type === 'SALES' || this.type === 'SPECIALS') {
+                ctx.fillStyle = '#f7e7d8';
+                ctx.font = 'bold 18px "Patrick Hand"';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.type, this.rect.x + this.rect.w / 2, this.rect.y - 10);
+            }
+
+            // Check lock state
+            if (!unlocks.shelves[shelfIndex]) {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
                 drawLockIcon(this.rect.x + this.rect.w / 2 - 25, this.rect.y + this.rect.h / 2 - 25, 50, 50);
+                ctx.restore();
                 return;
             }
-            ctx.fillStyle = '#8d6e63';
-            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+
+
+            // Shelf details
             ctx.strokeStyle = '#4e342e';
             ctx.lineWidth = 4;
             ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
@@ -3922,6 +4134,8 @@
             ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 3);
             ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 3);
             ctx.stroke();
+
+            // Draw items on shelf
             const itemWidth = this.rect.w - 20;
             const itemHeight = (this.rect.h - 40) / 4;
             for (let i = 0; i < this.items.length; i++) {
@@ -3940,6 +4154,7 @@
                     ctx.fillText(item.assignedItem.substring(0, 8), stackX + itemWidth / 2, stackY + itemHeight / 2);
                 }
             }
+             ctx.restore();
         }
 
 
@@ -3993,6 +4208,15 @@
             const worldX = (x - cameraX);
             const worldY = (y - cameraY);
 
+            // Check for manager's computer click
+            if (worldX >= managersComputer.x && worldX <= managersComputer.x + managersComputer.w &&
+                worldY >= managersComputer.y && worldY <= managersComputer.y + managersComputer.h) {
+                if (Math.hypot(player.x - (managersComputer.x + managersComputer.w / 2), player.y - (managersComputer.y + managersComputer.h / 2)) < 150) {
+                    openSchedulePanel();
+                    return;
+                }
+            }
+
             // Check for clicks on packages in the loading dock
             if (worldY >= loadingDock.y) {
                  if (Math.hypot(player.x - worldX, player.y - worldY) < 150) {
@@ -4011,14 +4235,28 @@
             const clickedCell = storageCells.find(c => worldX >= c.rect.x && worldX <= c.rect.x + c.rect.w && worldY >= c.rect.y && worldY <= c.rect.y + c.rect.h);
             if (clickedCell) {
                 if (Math.hypot(player.x - (clickedCell.rect.x + clickedCell.rect.w/2), player.y - (clickedCell.rect.y + clickedCell.rect.h)) < 150) {
-                    openStorageCell(clickedCell); return;
+                    const cellIndex = storageCells.indexOf(clickedCell);
+                    if (unlocks.storage[cellIndex]) {
+                        openClipboardPanel();
+                        openStorageCell(clickedCell);
+                    } else {
+                        const cost = unlockCosts.storage[cellIndex];
+                        showMessage(`This is the ${clickedCell.label} storage. It costs ${cost} points to unlock.`);
+                    }
+                    return;
                 }
             }
             const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
             if (clickedShelf) {
                 if (Math.hypot(player.x - (clickedShelf.rect.x + clickedShelf.rect.w/2), player.y - (clickedShelf.rect.y + clickedShelf.rect.h/2)) < 150) {
-                    openClipboardPanel();
-                    openShelfPanel(clickedShelf);
+                    const shelfIndex = shelves.indexOf(clickedShelf);
+                    if (unlocks.shelves[shelfIndex]) {
+                        openClipboardPanel();
+                        openShelfPanel(clickedShelf);
+                    } else {
+                        const cost = unlockCosts.shelves[shelfIndex];
+                        showMessage(`This is Shelf ${shelfIndex + 1}. It costs ${cost} points to unlock.`);
+                    }
                     return;
                 }
             }
@@ -4093,12 +4331,15 @@
 
                         if (allStockedItems.length > 0) {
                             const randomItem = allStockedItems[Math.floor(Math.random() * allStockedItems.length)];
-                            nearbyCustomer.order.push(randomItem);
-                            nearbyCustomer.profile.patience -= 10; // Small patience hit
-                            nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
-                            nearbyCustomer.state = 'queuing';
-                            nearbyCustomer.request = `Alright, I'll take a ${randomItem} then.`;
-                            spawnFloatingText("Convinced!", nearbyCustomer.x, nearbyCustomer.y - 90, '#f59e0b');
+                            const shelfWithItem = shelves.find(s => s.items.some(slot => slot.assignedItem === randomItem && slot.quantity > 0));
+                            if (shelfWithItem) {
+                                nearbyCustomer.order.push({ itemName: randomItem, shelfType: shelfWithItem.type });
+                                nearbyCustomer.profile.patience -= 10; // Small patience hit
+                                nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                                nearbyCustomer.state = 'queuing';
+                                nearbyCustomer.request = `Alright, I'll take a ${randomItem} then.`;
+                                spawnFloatingText("Convinced!", nearbyCustomer.x, nearbyCustomer.y - 90, '#f59e0b');
+                            }
                         } else {
                             // No items in stock, so they just leave.
                             nearbyCustomer.profile.patience -= 30; // Large patience hit
@@ -4131,18 +4372,22 @@
             }
 
             if (nearbyCustomer.behaviorType === 'needsAssistance' && !nearbyCustomer.needsAssistanceFulfilled) {
-                const neededItems = nearbyCustomer.requestedItems.filter(item => !nearbyCustomer.order.includes(item));
-                const playerBasketCounts = player.basket.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
+                const purchasedItemNames = nearbyCustomer.order.map(orderItem => orderItem.itemName);
+                const neededItems = nearbyCustomer.requestedItems.filter(item => !purchasedItemNames.includes(item));
+                const playerBasketCounts = player.basket.reduce((acc, item) => { acc[item.itemName] = (acc[item.itemName] || 0) + 1; return acc; }, {});
                 const neededItemsCounts = neededItems.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
                 const canFulfill = Object.keys(neededItemsCounts).every(item => (playerBasketCounts[item] || 0) >= neededItemsCounts[item]);
 
                 if (canFulfill && neededItems.length > 0) {
-                    neededItems.forEach(item => {
-                        const index = player.basket.indexOf(item);
-                        player.basket.splice(index, 1);
-                        nearbyCustomer.order.push(item);
+                    neededItems.forEach(itemName => {
+                        const index = player.basket.findIndex(basketItem => basketItem.itemName === itemName);
+                        if (index > -1) {
+                            const [removedItem] = player.basket.splice(index, 1);
+                            nearbyCustomer.order.push(removedItem);
+                        }
                     });
 
+                    updateStaticBasketDisplay();
                     nearbyCustomer.waitTimer = 0; // Reset wait timer
                     nearbyCustomer.state = 'queuing';
                     nearbyCustomer.needsAssistanceFulfilled = true;
@@ -4343,10 +4588,6 @@
                         openEmployeesPanel();
                         saveGame();
                     });
-
-                    if (isMandatoryBreak) {
-                        toggle.disabled = true;
-                    }
                 }
             }
 
@@ -4356,30 +4597,35 @@
             showAppScreen('employees-panel');
         }
 
-        function openBasketPanel() {
-            const basketGrid = document.getElementById('basket-grid');
-            basketGrid.innerHTML = '';
+        function updateStaticBasketDisplay() {
+            const basketItemsContainer = document.getElementById('static-basket-items');
+            const basketCount = document.getElementById('static-basket-count');
 
-            if (player.basket.length === 0) {
-                basketGrid.innerHTML = `<p class="text-center p-4">Your basket is empty.</p>`;
-            } else {
-                const itemCounts = player.basket.reduce((acc, item) => {
-                    acc[item] = (acc[item] || 0) + 1;
-                    return acc;
-                }, {});
+            const basket = player.basket;
+            basketCount.textContent = basket.length;
 
-                for (const item in itemCounts) {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'p-2 border-b border-amber-800/20 flex justify-between items-center';
-                    itemDiv.innerHTML = `
-                        <span class="text-lg">${item}</span>
-                        <span class="font-handwritten text-xl">x${itemCounts[item]}</span>
-                    `;
-                    basketGrid.appendChild(itemDiv);
-                }
+            basketItemsContainer.innerHTML = ''; // Clear current items
+
+            if (basket.length === 0) {
+                basketItemsContainer.innerHTML = '<div class="text-sm text-center p-2">Empty</div>';
+                return;
             }
 
-            showAppScreen('basket-panel');
+            const itemCounts = basket.reduce((acc, basketItem) => {
+                const itemName = basketItem.itemName;
+                acc[itemName] = (acc[itemName] || 0) + 1;
+                return acc;
+            }, {});
+
+            for (const itemName in itemCounts) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center text-sm p-1';
+                itemDiv.innerHTML = `
+                    <span>${itemName}</span>
+                    <span class="font-handwritten text-base">x${itemCounts[itemName]}</span>
+                `;
+                basketItemsContainer.appendChild(itemDiv);
+            }
         }
 
         function openShelfAssignmentPanel() {
@@ -4489,11 +4735,12 @@
             }
             const pkg = loadingDockPackages[packageIndex];
             if (pkg && pkg.quantity > 0) {
-                player.basket.push(pkg.itemName);
+                player.basket.push({ itemName: pkg.itemName, shelfType: 'NORMAL' });
                 pkg.quantity--;
                 if (pkg.quantity <= 0) {
                     loadingDockPackages.splice(packageIndex, 1);
                 }
+                updateStaticBasketDisplay();
             }
         }
 
@@ -4511,7 +4758,6 @@
 
             const apps = [
                 { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
-                { name: 'Basket', icon: '🧺', panelId: 'basket-panel', action: openBasketPanel },
                 { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
                 { name: 'Items', icon: '💡', panelId: 'items-panel', action: openItemsPanel },
                 { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
@@ -4630,8 +4876,10 @@
             } else if (type === 'shelf') {
                 key = parseInt(key);
                 cost = unlockCosts.shelves[key];
-                if (key > 0 && !unlocks.shelves[key - 1]) {
-                    prerequisite = false;
+                if (key < 6) { // Prerequisite only for normal shelves
+                    if (key > 0 && !unlocks.shelves[key - 1]) {
+                        prerequisite = false;
+                    }
                 }
             } else if (type === 'facility') {
                 cost = unlockCosts.facilities[key];
@@ -4738,12 +4986,21 @@
                 const cost = developerMode ? 0 : unlockCosts.shelves[i];
                 const isUnlocked = unlocks.shelves[i];
                 const canAfford = shopPoints >= cost;
-                const prerequisiteMet = unlocks.shelves[i - 1];
+                let prerequisiteMet;
+                if (i >= 6) { // Sales and Specials shelves have no prerequisite
+                    prerequisiteMet = true;
+                } else { // Regular shelves unlock sequentially
+                    prerequisiteMet = unlocks.shelves[i - 1];
+                }
+                let shelfName = `Shelf ${i + 1}`;
+                if (i === 6) shelfName = 'Sales Shelf';
+                if (i === 7) shelfName = 'Specials Shelf';
+
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 div.innerHTML = `
                     <div>
-                        <span class="text-lg">Shelf ${i + 1}</span>
+                        <span class="text-lg">${shelfName}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                     </div>
                     <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet || !canAfford ? 'disabled' : ''}>
@@ -4929,15 +5186,20 @@
             activeStorageCell = cell;
             const storageGrid = document.getElementById('storage-grid');
             document.getElementById('storage-title').textContent = cell.label;
-            storageGrid.innerHTML = '';
+            storageGrid.innerHTML = ''; // Clear previous content
+
             if (cell.allowedItems.length === 0) {
                 storageGrid.innerHTML = `<p class="col-span-4 text-center">No items are stored here.</p>`;
+                showAppScreen('storage-panel');
+                return;
             }
+
             cell.allowedItems.forEach(itemName => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `p-2 text-center border-2 border-amber-900 rounded-lg bg-white shadow-sm`;
-                const inStock = cell.items[itemName] > 0;
+                const inStock = cell.items[itemName] && cell.items[itemName] > 0;
                 const canPutBack = player.basket.includes(itemName);
+
                 itemDiv.innerHTML = `
                     <div class="font-handwritten text-xl">${itemName}</div>
                     <div class="text-xs">In Stock: ${cell.items[itemName] || 0}</div>
@@ -4948,6 +5210,8 @@
                 `;
                 storageGrid.appendChild(itemDiv);
             });
+
+            // Add event listeners to the buttons
             storageGrid.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const action = e.target.dataset.action;
@@ -4959,7 +5223,34 @@
                     }
                 });
             });
+
             showAppScreen('storage-panel');
+        }
+
+        function takeItemFromStorage(itemName, cell) {
+            if (player.basket.length < MAX_BASKET_SIZE) {
+                if (cell.items[itemName] > 0) {
+                    cell.items[itemName]--;
+                    player.basket.push({ itemName: itemName, shelfType: 'NORMAL' });
+                    updateStaticBasketDisplay();
+                    saveGame();
+                    openStorageCell(cell); // Refresh panel
+                }
+            } else {
+                showMessage("Your basket is full!");
+            }
+        }
+
+        function putItemInStorage(itemName, cell) {
+            const itemIndex = player.basket.findIndex(item => item.itemName === itemName);
+            if (itemIndex > -1) {
+                player.basket.splice(itemIndex, 1);
+                if (!cell.items[itemName]) cell.items[itemName] = 0;
+                cell.items[itemName]++;
+                updateStaticBasketDisplay();
+                saveGame();
+                openStorageCell(cell); // Refresh panel
+            }
         }
 
 function openProductAssignmentForShelf(shelf, slotIndex) {
@@ -5114,7 +5405,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 let content = '';
 
                 if (slot.assignedItem) {
-                    const canPlaceMore = player.basket.includes(slot.assignedItem) && slot.quantity < MAX_SHELF_STACK;
+                    const canPlaceMore = player.basket.some(item => item.itemName === slot.assignedItem) && slot.quantity < MAX_SHELF_STACK;
                     const canTake = slot.quantity > 0 && player.basket.length < MAX_BASKET_SIZE;
                     content = `
                         <div>
@@ -5144,15 +5435,17 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     const targetSlot = targetShelf.items[slotIndex];
 
                     if (action === 'take') {
-                        player.basket.push(targetSlot.assignedItem);
+                        player.basket.push({ itemName: targetSlot.assignedItem, shelfType: targetShelf.type });
                         targetSlot.quantity--;
+                        updateStaticBasketDisplay();
                         saveGame();
                         openShelfPanel(targetShelf);
                     } else if (action === 'place') {
-                        const itemIndex = player.basket.indexOf(targetSlot.assignedItem);
+                        const itemIndex = player.basket.findIndex(item => item.itemName === targetSlot.assignedItem);
                         if (itemIndex > -1) {
                             player.basket.splice(itemIndex, 1);
                             targetSlot.quantity++;
+                            updateStaticBasketDisplay();
                             saveGame();
                             openShelfPanel(targetShelf);
                         }
@@ -5182,7 +5475,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             backButton.onclick = () => openShelfPanel(shelf);
             assignmentGrid.appendChild(backButton);
 
-            const uniqueItemsInBasket = [...new Set(player.basket)];
+            const uniqueItemsInBasket = [...new Set(player.basket.map(item => item.itemName))];
 
             uniqueItemsInBasket.forEach(itemName => {
                 const button = document.createElement('button');
@@ -5190,11 +5483,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 button.textContent = itemName;
                 button.onclick = () => {
                     const targetSlot = shelf.items[slotIndex];
-                    const itemIndexInBasket = player.basket.indexOf(itemName);
+                    const itemIndexInBasket = player.basket.findIndex(item => item.itemName === itemName);
 
                     if (itemIndexInBasket > -1) {
                         // Remove item from basket
                         player.basket.splice(itemIndexInBasket, 1);
+                        updateStaticBasketDisplay();
 
                         // Assign to shelf and set quantity to 1
                         targetSlot.assignedItem = itemName;
@@ -5210,31 +5504,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             showAppScreen('assignment-panel');
         }
 
-        function takeItemFromStorage(itemName, cell) {
-            if (player.basket.length < MAX_BASKET_SIZE) {
-                if (cell.items[itemName] > 0) {
-                    cell.items[itemName]--;
-                    player.basket.push(itemName);
-                    saveGame();
-                    openStorageCell(cell); // Refresh panel
-                }
-            } else {
-                showMessage("Your basket is full!");
-            }
-        }
-
-        function putItemInStorage(itemName, cell) {
-            const itemIndex = player.basket.indexOf(itemName);
-            if (itemIndex > -1) {
-                player.basket.splice(itemIndex, 1);
-                if (!cell.items[itemName]) cell.items[itemName] = 0;
-                cell.items[itemName]++;
-                saveGame();
-                openStorageCell(cell); // Refresh panel
-            }
-        }
-
-
         let activePanel = null; // DEPRECATED: Will be replaced by phone-specific logic
         let activePhoneScreen = null; // Tracks the currently open app screen inside the phone
         let isPhoneOpen = false;
@@ -5246,6 +5515,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             clipboardPanel.classList.remove('open');
             isPhoneOpen = false;
             activePhoneScreen = null;
+            activeStorageCell = null;
+            activeShelf = null;
         }
 
         function showAppGrid() {
@@ -5393,14 +5664,120 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             closeClipboard();
         }
 
+        function openSchedulePanel() {
+            const schedulePanel = document.getElementById('employee-schedule-panel');
+            const scheduleList = document.getElementById('employee-schedule-list');
+            scheduleList.innerHTML = ''; // Clear previous entries
+
+            const employees = { cashier, stocker, barista, manager, salesperson };
+            let anyUnlocked = false;
+
+            for (const empKey in unlocks.employees) {
+                if (unlocks.employees[empKey]) {
+                    anyUnlocked = true;
+                    const employee = employees[empKey];
+                    const empDiv = document.createElement('div');
+                    empDiv.className = 'p-4 border-2 border-amber-800/50 rounded-lg bg-white/50';
+                    empDiv.dataset.empKey = empKey;
+
+                    const isDayBreak = employee.breakPreference === 'Day';
+                    const isEveBreak = employee.breakPreference === 'Eve';
+
+                    // Main employee info
+                    let content = `<div class="flex justify-between items-center border-b-2 border-amber-800/20 pb-2 mb-3">
+                                     <h3 class="text-xl font-handwritten">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</h3>
+                                     <span class="text-sm px-2 py-1 rounded ${employee.onBreak ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'}">${employee.onBreak ? 'On Break' : 'Working'}</span>
+                                   </div>`;
+
+                    // Break Assignment
+                    content += `<div class="flex items-center justify-between mb-2">
+                                  <label class="text-lg">Break Assignment:</label>
+                                  <div class="flex items-center space-x-2">
+                                    <button class="btn-style text-sm px-3 py-1 ${isDayBreak ? 'bg-amber-600' : ''}" data-action="set_break" data-value="Day">Day</button>
+                                    <button class="btn-style text-sm px-3 py-1 ${isEveBreak ? 'bg-amber-600' : ''}" data-action="set_break" data-value="Eve">Eve</button>
+                                  </div>
+                                </div>`;
+
+                    // Openers/Closers Toggles
+                    content += `<div class="flex items-center justify-between">
+                                  <label class="text-lg">Special Shifts:</label>
+                                  <div class="flex items-center space-x-4">
+                                     <div class="flex items-center">
+                                        <label for="openers-toggle-${empKey}" class="mr-2">Openers</label>
+                                        <input type="checkbox" id="openers-toggle-${empKey}" class="toggle-checkbox schedule-toggle" data-action="toggle_opener" ${employee.isOpener ? 'checked' : ''} />
+                                     </div>
+                                     <div class="flex items-center">
+                                        <label for="closers-toggle-${empKey}" class="mr-2">Closers</label>
+                                        <input type="checkbox" id="closers-toggle-${empKey}" class="toggle-checkbox schedule-toggle" data-action="toggle_closer" ${employee.isCloser ? 'checked' : ''} />
+                                     </div>
+                                  </div>
+                                </div>`;
+
+                    empDiv.innerHTML = content;
+                    scheduleList.appendChild(empDiv);
+                }
+            }
+
+            if (!anyUnlocked) {
+                scheduleList.innerHTML = `<p class="text-center p-4">No employees hired yet.</p>`;
+            }
+
+            // Add event listeners after populating
+            scheduleList.querySelectorAll('button[data-action="set_break"]').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const empKey = e.target.closest('[data-emp-key]').dataset.empKey;
+                    const value = e.target.dataset.value;
+                    employees[empKey].breakPreference = value;
+                    saveGame();
+                    openSchedulePanel(); // Refresh panel
+                });
+            });
+
+            scheduleList.querySelectorAll('.schedule-toggle').forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    const empKey = e.target.closest('[data-emp-key]').dataset.empKey;
+                    const action = e.target.dataset.action;
+                    if (action === 'toggle_opener') {
+                        employees[empKey].isOpener = e.target.checked;
+                    } else if (action === 'toggle_closer') {
+                        employees[empKey].isCloser = e.target.checked;
+                    }
+                    saveGame();
+                    openSchedulePanel(); // Refresh panel
+                });
+            });
+
+
+            schedulePanel.classList.remove('hidden');
+        }
+
+        function closeSchedulePanel() {
+            const schedulePanel = document.getElementById('employee-schedule-panel');
+            schedulePanel.classList.add('hidden');
+        }
+
         function saveGame() {
+            const employees = { cashier, stocker, barista, manager, salesperson };
+            const employeeSchedules = {};
+            for (const empKey in employees) {
+                if (unlocks.employees[empKey]) {
+                    const emp = employees[empKey];
+                    employeeSchedules[empKey] = {
+                        breakPreference: emp.breakPreference,
+                        isOpener: emp.isOpener,
+                        isCloser: emp.isCloser,
+                        playerInitiatedBreak: emp.playerInitiatedBreak
+                    };
+                }
+            }
+
             const gameState = {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
                 customerProfiles, enabledItems,
                 currentWeeklyAccruedBill, currentWeeklyLaborCost,
-                employeeWorkTimers
+                employeeWorkTimers, employeeSchedules
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -5421,12 +5798,31 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     if (!unlocks.facilities) {
                         unlocks.facilities = { coffeeShop: false };
                     }
+                    // PATCH: Ensure unlocks.shelves is the correct length for saved games
+                    if (unlocks.shelves.length < 8) {
+                        for (let i = unlocks.shelves.length; i < 8; i++) {
+                            unlocks.shelves.push(false);
+                        }
+                    }
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
                     enabledItems = gameState.enabledItems || enabledItems;
                     currentWeeklyAccruedBill = gameState.currentWeeklyAccruedBill || 0;
                     currentWeeklyLaborCost = gameState.currentWeeklyLaborCost || 0;
                     employeeWorkTimers = gameState.employeeWorkTimers || { cashier: 0, stocker: 0, barista: 0, manager: 0, salesperson: 0 };
+
+                    if (gameState.employeeSchedules) {
+                        const employees = { cashier, stocker, barista, manager, salesperson };
+                        for (const empKey in gameState.employeeSchedules) {
+                            if (employees[empKey]) {
+                                const savedSchedule = gameState.employeeSchedules[empKey];
+                                employees[empKey].breakPreference = savedSchedule.breakPreference || 'Day';
+                                employees[empKey].isOpener = savedSchedule.isOpener || false;
+                                employees[empKey].isCloser = savedSchedule.isCloser || false;
+                                employees[empKey].playerInitiatedBreak = savedSchedule.playerInitiatedBreak || false;
+                            }
+                        }
+                    }
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {
@@ -5618,6 +6014,15 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             continuousToggle.addEventListener('change', (e) => {
                 continuousMode = e.target.checked;
             });
+
+            // Static Basket Logic
+            const staticBasketIcon = document.getElementById('static-basket-icon');
+            const staticBasketItems = document.getElementById('static-basket-items');
+
+            staticBasketIcon.addEventListener('click', () => {
+                staticBasketItems.classList.toggle('open');
+            });
+            updateStaticBasketDisplay();
 
             loadSpriteSheet(); // Generate and load player spritesheet
             updateUI();

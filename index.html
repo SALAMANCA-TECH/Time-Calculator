@@ -340,6 +340,20 @@
         <button id="message-ok-btn" class="btn-style mt-4 px-4 py-2 rounded-lg">OK</button>
     </div>
 
+    <!-- New Game Screen -->
+    <div id="new-game-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <h2 class="text-3xl font-handwritten text-center mb-6">Start a New Game</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="new-game-standard" class="btn-style p-4 text-xl col-span-2">Standard</button>
+                <button id="new-game-dev" class="btn-style p-4 text-xl">Developer Mode</button>
+                <button id="new-game-family" class="btn-style p-4 text-xl">Family Store</button>
+                <button id="new-game-casual" class="btn-style p-4 text-xl">Casual</button>
+                <button id="new-game-specialty" class="btn-style p-4 text-xl">Specialty Store</button>
+            </div>
+        </div>
+    </div>
+
     <!-- End of Day Report Panel -->
     <div id="end-of-day-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
         <div class="bg-amber-100 w-full max-w-4xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 90vh;">
@@ -5502,10 +5516,81 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function startNewGame() {
-            if (confirm("Are you sure you want to start a new game? All your progress will be lost.")) {
-                localStorage.removeItem('artEmporiumSave');
-                window.location.reload();
-            }
+            document.getElementById('new-game-screen').classList.remove('hidden');
+        }
+
+        function choseNewGameOption(mode) {
+            // TODO: Implement different game modes.
+            document.getElementById('new-game-screen').classList.add('hidden');
+            localStorage.removeItem('artEmporiumSave');
+            resetGameState();
+            // The start-day-btn is now the single source of truth for starting a day's logic
+            document.getElementById('start-day-btn').click();
+        }
+
+        function resetGameState() {
+            cash = 100;
+            day = 1;
+            shopPoints = 0;
+            itemPopularity = {};
+            customers = [];
+            customerDemand = {};
+            running = true;
+            dayStarted = false;
+            developerMode = false;
+            continuousMode = false;
+            isMandatoryBreak = false;
+            midDayBreakTriggered = false;
+            currentWeeklyAccruedBill = 0;
+            currentWeeklyLaborCost = 0;
+            currentWeeklyRentCost = 0;
+            currentWeeklyStorageCost = 0;
+            currentWeeklyCoffeeCost = 0;
+            dayTimer = DAY_DURATION;
+            dayPhase = 'pre-open';
+            zone1PointTimer = 0;
+            coffeeShopBehindCounterTimer = 0;
+            timeSinceLastCustomer = 0;
+            floatingTexts = [];
+            clipboardUpdateTimer = 0;
+            dailySalesReport = [];
+            startingDayInventory = {};
+            dailySupplyOrders = [];
+            dailyLaborCosts = {};
+            dailyEmployeeWorkTimes = {};
+            cameraState = 'store';
+
+            unlocks = {
+                employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
+                shelves: [true, false, false, false, false, false],
+                facilities: { coffeeShop: false },
+                storage: [false, false, false, false, false, false]
+            };
+
+            inventory = {};
+            Object.keys(items).forEach(item => inventory[item] = 5);
+            enabledItems = {};
+            Object.keys(items).forEach(item => enabledItems[item] = true);
+
+            player.basket = [];
+
+            Object.assign(stocker, { basket: [], task: null, onBreak: false, playerInitiatedBreak: false });
+            Object.assign(cashier, { basket: [], task: null, onBreak: false, playerInitiatedBreak: false });
+            Object.assign(barista, { basket: [], task: null, onBreak: false, playerInitiatedBreak: false });
+            Object.assign(manager, { task: null, onBreak: false, playerInitiatedBreak: false, canOrder: true, lastOrderQuarter: -1, hasPlacedMorningOrder: false });
+            Object.assign(salesperson, { basket: [], task: null, onBreak: false, playerInitiatedBreak: false });
+
+            loadingDockPackages = [];
+            currentRestockOrder = {};
+
+            shelves = [];
+            storageCells = [];
+            initializeLayout();
+
+            updateUI();
+            updateRestockTotal();
+
+            closeClipboard();
         }
 
         function openSchedulePanel() {
@@ -5693,12 +5778,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     shelves.forEach(shelf => {
                          shelf.draw = drawShelf; // REFACTOR: Assign the single draw function
                     });
-
+                    return true; // Game loaded successfully
                 } catch (e) {
                     console.error("Failed to parse saved game data:", e);
                     localStorage.removeItem('artEmporiumSave'); // Clear corrupted save
                 }
             }
+            return false; // No save game found
         }
 
         function init() {
@@ -5707,7 +5793,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             pieClockCanvas = document.getElementById('pie-clock-canvas');
             pieClockCtx = pieClockCanvas.getContext('2d');
 
-            loadGame(); // Load game state before resizing/initializing layout
+            const gameLoaded = loadGame(); // Load game state before resizing/initializing layout
+
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
 
@@ -5740,6 +5827,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
             document.getElementById('close-schedule-panel-btn').addEventListener('click', closeSchedulePanel);
+
+            // New Game Screen Button Listeners
+            document.getElementById('new-game-standard').addEventListener('click', () => choseNewGameOption('standard'));
+            document.getElementById('new-game-dev').addEventListener('click', () => choseNewGameOption('dev'));
+            document.getElementById('new-game-family').addEventListener('click', () => choseNewGameOption('family'));
+            document.getElementById('new-game-casual').addEventListener('click', () => choseNewGameOption('casual'));
+            document.getElementById('new-game-specialty').addEventListener('click', () => choseNewGameOption('specialty'));
 
             // Order Quantity Modal Logic
             const quantityInput = document.getElementById('order-quantity-input');
@@ -5841,7 +5935,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             loadSpriteSheet(); // Generate and load player spritesheet
             updateUI();
             requestAnimationFrame(gameLoop);
-            document.getElementById('start-day-btn').click();
+
+            if (gameLoaded) {
+                document.getElementById('start-day-btn').click();
+            } else {
+                startNewGame();
+            }
         }
 
         window.addEventListener('load', init);

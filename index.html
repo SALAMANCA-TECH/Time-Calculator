@@ -686,7 +686,10 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
-            playerInitiatedBreak: false
+            playerInitiatedBreak: false,
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const cashier = {
@@ -699,7 +702,10 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            basket: []
+            basket: [],
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const barista = {
@@ -712,7 +718,10 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
-            playerInitiatedBreak: false
+            playerInitiatedBreak: false,
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
         const manager = {
             x: 200, y: 300, width: 50, height: 50, speed: 150,
@@ -726,7 +735,10 @@
             playerInitiatedBreak: false,
             canOrder: true,
             lastOrderQuarter: -1,
-                hasPlacedMorningOrder: false,
+            hasPlacedMorningOrder: false,
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const salesperson = {
@@ -739,7 +751,10 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            basket: []
+            basket: [],
+            breakPreference: 'Day',
+            isOpener: false,
+            isCloser: false
         };
 
         const breakSpots = {
@@ -3083,6 +3098,33 @@
             return daySegments[daySegments.length - 1]; // Return last segment if timer is at 0
         }
 
+        function isEmployeeWorking(employee, currentSegment) {
+            const segmentName = currentSegment.name;
+
+            // Rule 1: Handle assigned breaks
+            if ((segmentName === 'Day Break' && employee.breakPreference === 'Day') ||
+                (segmentName === 'Eve Break' && employee.breakPreference === 'Eve')) {
+                return false; // On their assigned break
+            }
+
+            // Rule 2: Handle special shifts
+            if (segmentName === 'Openers') {
+                return employee.isOpener; // Work only if they are an opener
+            }
+            if (segmentName === 'Closers') {
+                return employee.isCloser; // Work only if they are a closer
+            }
+
+            // Rule 3: They work during all other standard segments, including the break they are not assigned to.
+            const standardWorkSegments = ['Shift Start', 'Day Shift', 'Day Break', 'Eve Break', 'Night Shift', 'Shift End'];
+            if (standardWorkSegments.includes(segmentName)) {
+                return true;
+            }
+
+            // Default to not working for any other case (e.g., pre-day)
+            return false;
+        }
+
         function gameLoop(timestamp) {
             if (!running || !lastTimestamp) {
                 lastTimestamp = timestamp;
@@ -3095,8 +3137,22 @@
             if (dayStarted) {
                 dayTimer -= deltaTime;
 
-                // Track employee work time
                 const employees = { cashier, stocker, barista, manager, salesperson };
+                const currentSegment = dayTimer > 0 ? getCurrentSegment(dayTimer) : null;
+
+                // Update employee onBreak status based on schedule
+                if (currentSegment) {
+                    for (const empKey in employees) {
+                        if (unlocks.employees[empKey]) {
+                            const employee = employees[empKey];
+                            if (!employee.playerInitiatedBreak) {
+                                employee.onBreak = !isEmployeeWorking(employee, currentSegment);
+                            }
+                        }
+                    }
+                }
+
+                // Track employee work time
                 for (const empKey in employees) {
                     if (unlocks.employees[empKey] && !employees[empKey].onBreak) {
                         employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + deltaTime;
@@ -3104,7 +3160,6 @@
                 }
 
                 if (dayTimer > 0) {
-                    const currentSegment = getCurrentSegment(dayTimer);
                     dayPhase = currentSegment.base; // Map new segment to old phase for AI logic
                 } else {
                     dayPhase = 'pre-open';
@@ -3644,6 +3699,15 @@
                         customerProfiles[type][name].visitedToday = false;
                     }
                 }
+
+                // Reset manual break override for the new day
+                const employees = { cashier, stocker, barista, manager, salesperson };
+                for (const empKey in employees) {
+                    if (unlocks.employees[empKey]) {
+                        employees[empKey].playerInitiatedBreak = false;
+                    }
+                }
+
                 Object.keys(inventory).forEach(item => {
                     if (inventory[item] < 5) inventory[item] += 1;
                 });
@@ -5240,6 +5304,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     const employee = employees[empKey];
                     const empDiv = document.createElement('div');
                     empDiv.className = 'p-4 border-2 border-amber-800/50 rounded-lg bg-white/50';
+                    empDiv.dataset.empKey = empKey;
+
+                    const isDayBreak = employee.breakPreference === 'Day';
+                    const isEveBreak = employee.breakPreference === 'Eve';
 
                     // Main employee info
                     let content = `<div class="flex justify-between items-center border-b-2 border-amber-800/20 pb-2 mb-3">
@@ -5251,8 +5319,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     content += `<div class="flex items-center justify-between mb-2">
                                   <label class="text-lg">Break Assignment:</label>
                                   <div class="flex items-center space-x-2">
-                                    <button class="btn-style text-sm px-3 py-1" disabled>Day</button>
-                                    <button class="btn-style text-sm px-3 py-1" disabled>Eve</button>
+                                    <button class="btn-style text-sm px-3 py-1 ${isDayBreak ? 'bg-amber-600' : ''}" data-action="set_break" data-value="Day">Day</button>
+                                    <button class="btn-style text-sm px-3 py-1 ${isEveBreak ? 'bg-amber-600' : ''}" data-action="set_break" data-value="Eve">Eve</button>
                                   </div>
                                 </div>`;
 
@@ -5262,11 +5330,11 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                                   <div class="flex items-center space-x-4">
                                      <div class="flex items-center">
                                         <label for="openers-toggle-${empKey}" class="mr-2">Openers</label>
-                                        <input type="checkbox" id="openers-toggle-${empKey}" class="toggle-checkbox" disabled />
+                                        <input type="checkbox" id="openers-toggle-${empKey}" class="toggle-checkbox schedule-toggle" data-action="toggle_opener" ${employee.isOpener ? 'checked' : ''} />
                                      </div>
                                      <div class="flex items-center">
                                         <label for="closers-toggle-${empKey}" class="mr-2">Closers</label>
-                                        <input type="checkbox" id="closers-toggle-${empKey}" class="toggle-checkbox" disabled />
+                                        <input type="checkbox" id="closers-toggle-${empKey}" class="toggle-checkbox schedule-toggle" data-action="toggle_closer" ${employee.isCloser ? 'checked' : ''} />
                                      </div>
                                   </div>
                                 </div>`;
@@ -5280,6 +5348,32 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 scheduleList.innerHTML = `<p class="text-center p-4">No employees hired yet.</p>`;
             }
 
+            // Add event listeners after populating
+            scheduleList.querySelectorAll('button[data-action="set_break"]').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const empKey = e.target.closest('[data-emp-key]').dataset.empKey;
+                    const value = e.target.dataset.value;
+                    employees[empKey].breakPreference = value;
+                    saveGame();
+                    openSchedulePanel(); // Refresh panel
+                });
+            });
+
+            scheduleList.querySelectorAll('.schedule-toggle').forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    const empKey = e.target.closest('[data-emp-key]').dataset.empKey;
+                    const action = e.target.dataset.action;
+                    if (action === 'toggle_opener') {
+                        employees[empKey].isOpener = e.target.checked;
+                    } else if (action === 'toggle_closer') {
+                        employees[empKey].isCloser = e.target.checked;
+                    }
+                    saveGame();
+                    openSchedulePanel(); // Refresh panel
+                });
+            });
+
+
             schedulePanel.classList.remove('hidden');
         }
 
@@ -5289,13 +5383,27 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function saveGame() {
+            const employees = { cashier, stocker, barista, manager, salesperson };
+            const employeeSchedules = {};
+            for (const empKey in employees) {
+                if (unlocks.employees[empKey]) {
+                    const emp = employees[empKey];
+                    employeeSchedules[empKey] = {
+                        breakPreference: emp.breakPreference,
+                        isOpener: emp.isOpener,
+                        isCloser: emp.isCloser,
+                        playerInitiatedBreak: emp.playerInitiatedBreak
+                    };
+                }
+            }
+
             const gameState = {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
                 customerProfiles, enabledItems,
                 currentWeeklyAccruedBill, currentWeeklyLaborCost,
-                employeeWorkTimers
+                employeeWorkTimers, employeeSchedules
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -5322,6 +5430,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     currentWeeklyAccruedBill = gameState.currentWeeklyAccruedBill || 0;
                     currentWeeklyLaborCost = gameState.currentWeeklyLaborCost || 0;
                     employeeWorkTimers = gameState.employeeWorkTimers || { cashier: 0, stocker: 0, barista: 0, manager: 0, salesperson: 0 };
+
+                    if (gameState.employeeSchedules) {
+                        const employees = { cashier, stocker, barista, manager, salesperson };
+                        for (const empKey in gameState.employeeSchedules) {
+                            if (employees[empKey]) {
+                                const savedSchedule = gameState.employeeSchedules[empKey];
+                                employees[empKey].breakPreference = savedSchedule.breakPreference || 'Day';
+                                employees[empKey].isOpener = savedSchedule.isOpener || false;
+                                employees[empKey].isCloser = savedSchedule.isCloser || false;
+                                employees[empKey].playerInitiatedBreak = savedSchedule.playerInitiatedBreak || false;
+                            }
+                        }
+                    }
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {

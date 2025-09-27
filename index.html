@@ -553,6 +553,9 @@
         let midDayBreakTriggered = false;
         let currentWeeklyAccruedBill = 0;
         let currentWeeklyLaborCost = 0;
+        let currentWeeklyRentCost = 0;
+        let currentWeeklyStorageCost = 0;
+        let currentWeeklyCoffeeCost = 0;
 
         const OPENING_DURATION = 60000; // 1 minute
         const OPEN_DURATION = 180000; // 3 minutes
@@ -572,6 +575,7 @@
         let startingDayInventory = {};
         let dailySupplyOrders = [];
         let dailyLaborCosts = {};
+        let dailyEmployeeWorkTimes = {};
 
         // Camera and zoom variables
         let cameraX = 0;
@@ -3419,9 +3423,12 @@
             // 1. Calculate and pay daily labor costs
             let dailyLaborCost = 0;
             dailyLaborCosts = {}; // Reset for the report
+            dailyEmployeeWorkTimes = {}; // Reset for the report
             for (const employee in unlocks.employees) {
                 if (unlocks.employees[employee]) {
-                    const workTimeInSeconds = (employeeWorkTimers[employee] || 0) / 1000;
+                    const workTimeInMillis = employeeWorkTimers[employee] || 0;
+                    dailyEmployeeWorkTimes[employee] = workTimeInMillis; // Store for report
+                    const workTimeInSeconds = workTimeInMillis / 1000;
                     const payRatePerSecond = employeePayRates[employee] / 60;
                     const cost = Math.ceil(workTimeInSeconds * payRatePerSecond);
                     dailyLaborCosts[employee] = cost;
@@ -3433,12 +3440,16 @@
             currentWeeklyLaborCost += dailyLaborCost;
 
             // 2. Calculate and accrue daily rentable costs
-            let dailyAccruedAmount = dailyOperatingCosts.rent;
+            const dailyRent = dailyOperatingCosts.rent;
             const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
-            dailyAccruedAmount += (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
-            if (unlocks.facilities.coffeeShop) {
-                dailyAccruedAmount += dailyOperatingCosts.coffeeShop;
-            }
+            const dailyStorage = (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
+            const dailyCoffee = unlocks.facilities.coffeeShop ? dailyOperatingCosts.coffeeShop : 0;
+
+            currentWeeklyRentCost += dailyRent;
+            currentWeeklyStorageCost += dailyStorage;
+            currentWeeklyCoffeeCost += dailyCoffee;
+
+            let dailyAccruedAmount = dailyRent + dailyStorage + dailyCoffee;
             currentWeeklyAccruedBill += dailyAccruedAmount;
 
             // 3. Handle End-of-Week Billing
@@ -3455,6 +3466,9 @@
                 // Reset for the next week
                 currentWeeklyAccruedBill = 0;
                 currentWeeklyLaborCost = 0;
+                currentWeeklyRentCost = 0;
+                currentWeeklyStorageCost = 0;
+                currentWeeklyCoffeeCost = 0;
             }
 
             const dailyTotalExpenses = dailyLaborCost + dailyAccruedAmount;
@@ -3535,7 +3549,12 @@
             if (Object.keys(dailyLaborCosts).length > 0) {
                  for (const employee in dailyLaborCosts) {
                     const cost = dailyLaborCosts[employee];
-                    billsHtml += `<p class="flex justify-between text-base"><span>- ${employee.charAt(0).toUpperCase() + employee.slice(1)}'s Salary:</span> <span>-$${cost.toFixed(2)}</span></p>`;
+                    const workTime = dailyEmployeeWorkTimes[employee] || 0;
+                    const totalSeconds = Math.floor(workTime / 1000);
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    billsHtml += `<p class="flex justify-between text-base"><span>- ${employee.charAt(0).toUpperCase() + employee.slice(1)}'s Salary (${formattedTime}):</span> <span>-$${cost.toFixed(2)}</span></p>`;
                 }
             } else {
                 billsHtml += `<p class="text-base text-gray-500">No labor costs today.</p>`;
@@ -3546,8 +3565,18 @@
             // Weekly Summary section
             billsHtml += `<div><h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Week-to-Date Summary</h3>`;
             billsHtml += `<div class="space-y-1 text-lg">`;
-            billsHtml += `<p class="flex justify-between"><span>Total Accrued Bill (Due Day ${Math.ceil(day / 7) * 7}):</span> <span class="font-bold text-red-600">-$${currentWeeklyAccruedBill.toFixed(2)}</span></p>`;
             billsHtml += `<p class="flex justify-between"><span>Total Labor Paid This Week:</span> <span>-$${currentWeeklyLaborCost.toFixed(2)}</span></p>`;
+            billsHtml += `<p class="flex justify-between"><span>Total Accrued Bill (Due Day ${Math.ceil(day / 7) * 7}):</span> <span class="font-bold text-red-600">-$${currentWeeklyAccruedBill.toFixed(2)}</span></p>`;
+            // Weekly Accrual Breakdown
+            billsHtml += `<div class="pl-4 text-base border-l-2 border-amber-800/30 ml-2 space-y-1 my-1">`;
+            billsHtml += `<p class="flex justify-between"><span>Rent:</span> <span>-$${currentWeeklyRentCost.toFixed(2)}</span></p>`;
+            if (currentWeeklyStorageCost > 0) {
+                billsHtml += `<p class="flex justify-between"><span>Storage Units:</span> <span>-$${currentWeeklyStorageCost.toFixed(2)}</span></p>`;
+            }
+            if (currentWeeklyCoffeeCost > 0) {
+                billsHtml += `<p class="flex justify-between"><span>Coffee Shop:</span> <span>-$${currentWeeklyCoffeeCost.toFixed(2)}</span></p>`;
+            }
+            billsHtml += `</div>`;
             billsHtml += `</div></div>`;
 
             billsHtml += `</div>`;

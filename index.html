@@ -3943,28 +3943,28 @@
             const shelfPadding = 20;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
             const startX = storeShiftX + 250;
-            if (shelves.length === 0) {
-                for (let i = 0; i < numShelves; i++) {
-                    const shelf = {
-                        rect: { x: startX + i * (shelfWidth + shelfPadding), y: shelfY, w: shelfWidth, h: shelfHeight },
-                        items: [
-                            { assignedItem: null, quantity: 0 },
-                            { assignedItem: null, quantity: 0 },
-                            { assignedItem: null, quantity: 0 },
-                            { assignedItem: null, quantity: 0 }
-                        ],
-                        y: shelfY + shelfHeight,
-                        draw: drawShelf,
-                        type: i === 6 ? 'SALES' : i === 7 ? 'SPECIALS' : 'NORMAL'
-                    };
-                    shelves.push(shelf);
+
+            // Ensure shelves array is populated up to numShelves, adding any missing from older saves
+            while (shelves.length < numShelves) {
+                const i = shelves.length;
+                shelves.push({
+                    items: [
+                        { assignedItem: null, quantity: 0 },
+                        { assignedItem: null, quantity: 0 },
+                        { assignedItem: null, quantity: 0 },
+                        { assignedItem: null, quantity: 0 }
+                    ],
+                });
+            }
+
+            // Loop through all shelves to update positions and ensure properties are correctly assigned
+            for (let i = 0; i < numShelves; i++) {
+                shelves[i].rect = { x: startX + i * (shelfWidth + shelfPadding), y: shelfY, w: shelfWidth, h: shelfHeight };
+                shelves[i].y = shelfY + shelfHeight;
+                shelves[i].draw = drawShelf; // Ensure draw function is always attached
+                if (!shelves[i].type) { // Assign type if missing (for older saves)
+                    shelves[i].type = i === 6 ? 'SALES' : i === 7 ? 'SPECIALS' : 'NORMAL';
                 }
-            } else {
-                 for (let i = 0; i < shelves.length; i++) {
-                     shelves[i].rect.x = startX + i * (shelfWidth + shelfPadding);
-                     shelves[i].rect.y = shelfY;
-                     shelves[i].y = shelfY + shelfHeight;
-                 }
             }
             const startY = cashierCounter.y + cashierCounter.h / 2;
 
@@ -4013,19 +4013,13 @@
         // --- REFACTOR: Standalone Shelf Drawing Function ---
         function drawShelf() {
             const shelfIndex = shelves.indexOf(this);
-             if (!unlocks.shelves[shelfIndex]) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                drawLockIcon(this.rect.x + this.rect.w / 2 - 25, this.rect.y + this.rect.h / 2 - 25, 50, 50);
-                return;
-            }
 
             ctx.save();
             // Base shelf drawing
             ctx.fillStyle = '#8d6e63';
             ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
 
-            // Apply tint based on type
+            // Apply tint based on type, regardless of lock state
             if (this.type === 'SALES') {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
                 ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
@@ -4033,6 +4027,24 @@
                 ctx.fillStyle = 'rgba(0, 0, 255, 0.2)';
                 ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
             }
+
+            // Draw shelf name if applicable, regardless of lock state
+            if (this.type === 'SALES' || this.type === 'SPECIALS') {
+                ctx.fillStyle = '#f7e7d8';
+                ctx.font = 'bold 18px "Patrick Hand"';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.type, this.rect.x + this.rect.w / 2, this.rect.y - 10);
+            }
+
+            // Check lock state
+            if (!unlocks.shelves[shelfIndex]) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                drawLockIcon(this.rect.x + this.rect.w / 2 - 25, this.rect.y + this.rect.h / 2 - 25, 50, 50);
+                ctx.restore();
+                return;
+            }
+
 
             // Shelf details
             ctx.strokeStyle = '#4e342e';
@@ -4076,14 +4088,6 @@
                 }
             }
              ctx.restore();
-
-            // Draw shelf name if applicable
-            if (this.type === 'SALES' || this.type === 'SPECIALS') {
-                ctx.fillStyle = '#f7e7d8';
-                ctx.font = 'bold 18px "Patrick Hand"';
-                ctx.textAlign = 'center';
-                ctx.fillText(this.type, this.rect.x + this.rect.w / 2, this.rect.y - 10);
-            }
         }
 
 
@@ -4913,7 +4917,12 @@
                 const cost = developerMode ? 0 : unlockCosts.shelves[i];
                 const isUnlocked = unlocks.shelves[i];
                 const canAfford = shopPoints >= cost;
-                const prerequisiteMet = unlocks.shelves[i - 1];
+                let prerequisiteMet;
+                if (i >= 6) { // Sales and Specials shelves have no prerequisite
+                    prerequisiteMet = true;
+                } else { // Regular shelves unlock sequentially
+                    prerequisiteMet = unlocks.shelves[i - 1];
+                }
                 let shelfName = `Shelf ${i + 1}`;
                 if (i === 6) shelfName = 'Sales Shelf';
                 if (i === 7) shelfName = 'Specials Shelf';

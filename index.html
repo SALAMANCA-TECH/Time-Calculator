@@ -202,10 +202,6 @@
                                 <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Storage</h3>
                                 <div id="unlocks-storage" class="space-y-2"></div>
                             </div>
-                            <div>
-                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Upgrades</h3>
-                                <div id="unlocks-upgrades" class="space-y-2"></div>
-                            </div>
                         </div>
                     </div>
 
@@ -562,7 +558,7 @@
         const desk = { x: 0, y: 0, width: 0, height: 30 };
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
         const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
-        const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 }, draw: drawCoffeeShop };
+        const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 } };
         const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
         const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone2 = { x: 0, y: 0, w: 0, h: 0 };
@@ -586,15 +582,13 @@
         let unlocks = {
             employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
             shelves: [true, false, false, false, false, false],
-            storage: [false, false, false, false, false, false],
-            coffeeShop: false
+            storage: [false, false, false, false, false, false]
         };
 
         const unlockCosts = {
             employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
             shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
-            storage: [10, 20, 30, 40, 50, 60],
-            coffeeShop: 100
+            storage: [10, 20, 30, 40, 50, 60]
         };
 
         const dailyOperatingCosts = {
@@ -1046,26 +1040,6 @@
                         this.targetY = desk.y + 75;
                         this.moveTowardsTarget(deltaTime);
                         break;
-                    case 'goingForCoffee':
-                        this.targetX = coffeeShop.rect.x + coffeeShop.rect.w / 2;
-                        this.targetY = coffeeShop.collisionLineY + 30; // Stand in front of the counter
-                        if(this.moveTowardsTarget(deltaTime)) {
-                            this.state = 'orderingCoffee';
-                            this.stateTimer = 2000; // Wait 2 seconds
-                        }
-                        break;
-                    case 'orderingCoffee':
-                        this.stateTimer -= deltaTime;
-                        if(this.stateTimer <= 0) {
-                            cash += 10;
-                            this.boughtCoffee = true;
-                            spawnFloatingText("+$10", this.x, this.y - 90, '#22c55e');
-                            barista.state = 'transaction';
-                            barista.stateTimer = 2000;
-                            logCustomerToSalesReport(this); // Now log the full sale
-                            this.state = 'leaving';
-                        }
-                        break;
                 }
             }
 
@@ -1431,10 +1405,7 @@
             drawLoadingDock();
             drawManagersOffice();
 
-            // Initialize Coffee Shop properties and draw its background
-            if (unlocks.coffeeShop) {
-                drawCoffeeShopBackground(coffeeShop.rect.x, coffeeShop.rect.y, coffeeShop.rect.w, coffeeShop.rect.h);
-            }
+            // The coffee shop is now drawn as a dynamic entity, so no background drawing here.
         }
 
         function drawStaticUI() {
@@ -2222,23 +2193,13 @@
             updateCharacterAnimation(barista, deltaTime);
             barista.stateTimer -= deltaTime;
 
-            switch(barista.state) {
-                case 'transaction':
-                    // The barista is busy serving coffee. The timer is set externally.
-                    if(barista.stateTimer <= 0) {
-                        barista.state = 'idle';
-                    }
-                    break;
-                case 'idle':
-                default:
-                    // The barista's only job is to go to their idle spot.
-                    if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
-                        barista.state = 'walk';
-                        moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
-                    } else {
-                        barista.state = 'idle';
-                    }
-                    break;
+            // The barista's only job is to go to their idle spot for now.
+            // Coffee selling logic will be added later.
+            if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
+                barista.state = 'walk';
+                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
+            } else {
+                barista.state = 'idle';
             }
         }
 
@@ -3345,6 +3306,14 @@
                 cash += salePrice;
                 shopPoints += customer.discount > 0 ? 1 : 3; // Less points for discounted sales
 
+                if (unlocks.employees.barista && Math.random() < 0.33) {
+                    cash += 10;
+                    customer.boughtCoffee = true;
+                    spawnFloatingText("Coffee! +$10", customer.x, customer.y - 120, '#654321');
+                }
+
+                customer.leaving = true;
+                customer.state = 'leaving';
                 const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
                 spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
 
@@ -3352,19 +3321,6 @@
                 customer.order.forEach(item => {
                     itemPopularity[item] = (itemPopularity[item] || 0) + 1;
                 });
-
-                // NEW COFFEE LOGIC
-                if (unlocks.coffeeShop && unlocks.employees.barista && Math.random() < 0.5) { // 50% chance to buy coffee
-                    customer.request = "A coffee would be nice.";
-                    customer.showSpeechBubble = true;
-                    customer.speechBubbleTimer = 3000;
-                    customer.state = 'goingForCoffee';
-                    // We will log the sale after they get coffee
-                } else {
-                    customer.leaving = true;
-                    customer.state = 'leaving';
-                    logCustomerToSalesReport(customer);
-                }
 
             } else {
                 customer.order.forEach(item => {
@@ -3385,8 +3341,8 @@
                 customer.leaving = true;
                 customer.state = 'leaving';
                 spawnFloatingText('Too Expensive!', customer.x, customer.y - 80, '#ef4444');
-                logCustomerToSalesReport(customer);
             }
+            logCustomerToSalesReport(customer);
             updateUI();
             populateInStoreCustomers();
             saveGame();
@@ -3536,7 +3492,7 @@
             ];
 
             // NEW COFFEE SHOP LOGIC
-            if (unlocks.coffeeShop) {
+            if (shelves.length > 5) {
                 const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
@@ -3647,7 +3603,7 @@
             }
 
             barista.idleX = coffeeShop.rect.x + (coffeeShop.rect.w / 2);
-            barista.idleY = coffeeShop.rect.y + coffeeShop.rect.h - 93; // Moved down 15px
+            barista.idleY = coffeeShop.rect.y + (coffeeShop.rect.h * 0.7);
             if (barista.state === 'idle' && !barista.task) {
                 barista.x = barista.idleX;
                 barista.y = barista.idleY;
@@ -4391,14 +4347,9 @@
         function purchaseUnlock(type, key) {
             let cost = 0;
             let prerequisite = true;
-            let prerequisiteMessage = "You must unlock the previous tier first!";
 
             if (type === 'employee') {
                 cost = unlockCosts.employees[key];
-                if (key === 'barista' && !unlocks.coffeeShop) {
-                    prerequisite = false;
-                    prerequisiteMessage = "You must unlock the Coffee Shop first!";
-                }
             } else if (type === 'shelf') {
                 key = parseInt(key);
                 cost = unlockCosts.shelves[key];
@@ -4411,9 +4362,6 @@
                 if (key > 0 && !unlocks.storage[key - 1]) {
                     prerequisite = false;
                 }
-            } else if (type === 'coffeeShop') {
-                cost = unlockCosts.coffeeShop;
-                // Prerequisite removed
             }
 
             if (developerMode) {
@@ -4421,7 +4369,7 @@
             }
 
             if (!prerequisite) {
-                showMessage("You must unlock the prerequisite tier first!");
+                showMessage("You must unlock the previous tier first!");
                 return;
             }
 
@@ -4433,14 +4381,11 @@
                     unlocks.shelves[key] = true;
                 } else if (type === 'storage') {
                     unlocks.storage[key] = true;
-                } else if (type === 'coffeeShop') {
-                    unlocks.coffeeShop = true;
                 }
 
                 spawnFloatingText('Unlocked!', player.x, player.y - 90, '#f59e0b');
                 updateUI();
                 saveGame();
-                initializeLayout(); // Recalculate layout to show new items
                 openUnlocksPanel(); // Refresh the panel
             } else {
                 showMessage(`You need ${cost} points to unlock this.`);
@@ -4451,35 +4396,24 @@
             const empContainer = document.getElementById('unlocks-employees');
             const shelvesContainer = document.getElementById('unlocks-shelves');
             const storageContainer = document.getElementById('unlocks-storage');
-            const upgradesContainer = document.getElementById('unlocks-upgrades');
             empContainer.innerHTML = '';
             shelvesContainer.innerHTML = '';
             storageContainer.innerHTML = '';
-            upgradesContainer.innerHTML = '';
 
             // Employees
             for (const emp in unlockCosts.employees) {
                 const cost = developerMode ? 0 : unlockCosts.employees[emp];
                 const isUnlocked = unlocks.employees[emp];
                 const canAfford = shopPoints >= cost;
-                let prerequisiteMet = true;
-                let prerequisiteText = '';
-
-                if (emp === 'barista' && !unlocks.coffeeShop) {
-                    prerequisiteMet = false;
-                    prerequisiteText = '<span class="text-xs text-red-600 block">Requires Coffee Shop</span>';
-                }
-
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 div.innerHTML = `
                     <div>
                         <span class="text-lg">${emp.charAt(0).toUpperCase() + emp.slice(1)}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
-                        ${prerequisiteText}
                     </div>
-                    <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
-                        ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
+                    <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
+                        ${isUnlocked ? 'Unlocked' : 'Buy'}
                     </button>
                 `;
                 empContainer.appendChild(div);
@@ -4524,25 +4458,6 @@
                 `;
                 storageContainer.appendChild(div);
             }
-
-            // Upgrades
-            const coffeeCost = developerMode ? 0 : unlockCosts.coffeeShop;
-            const coffeeUnlocked = unlocks.coffeeShop;
-            const coffeeCanAfford = shopPoints >= coffeeCost;
-            const coffeePrerequisite = true; // Prerequisite removed
-            const coffeeDiv = document.createElement('div');
-            coffeeDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-            coffeeDiv.innerHTML = `
-                <div>
-                    <span class="text-lg">Coffee Shop</span>
-                    <span class="text-sm text-amber-800/80 block">Cost: ${coffeeCost} Points</span>
-                </div>
-                <button class="btn-style px-4 py-1" data-type="coffeeShop" data-key="coffeeShop" ${coffeeUnlocked ? 'disabled' : ''} ${!coffeeCanAfford && !coffeeUnlocked ? 'disabled' : ''}>
-                    ${coffeeUnlocked ? 'Unlocked' : 'Buy'}
-                </button>
-            `;
-            upgradesContainer.appendChild(coffeeDiv);
-
 
             document.getElementById('unlocks-panel').querySelectorAll('button[data-type]').forEach(button => {
                 button.addEventListener('click', (e) => {
@@ -5103,6 +5018,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 // Ensure all idle states are correct before starting
                 if (!stocker.task) stocker.state = 'idle';
                 if (!cashier.task) cashier.state = 'idle';
+                if (!loader.task) loader.state = 'idle';
                 if (!manager.task) manager.state = 'idle';
                 if (!salesperson.task) salesperson.state = 'idle';
             });

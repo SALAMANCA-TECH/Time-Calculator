@@ -2745,13 +2745,6 @@
         }
 
         function findRestockingTask() {
-            const fullCell = storageCells.find((c, i) => {
-                if (!unlocks.storage[i] || !c.items) return false;
-                const currentFill = Object.values(c.items).reduce((a, b) => a + b, 0);
-                return currentFill >= c.capacity;
-            });
-
-            // OBSOLETE: Deadlock logic for the removed 'loader' role.
             const availableStock = new Map();
             storageCells.forEach((cell, index) => {
                 if (unlocks.storage[index] && cell.items) {
@@ -4353,7 +4346,8 @@
             } else if (type === 'shelf') {
                 key = parseInt(key);
                 cost = unlockCosts.shelves[key];
-                if (key > 0 && !unlocks.shelves[key - 1]) {
+                // The coffee shop (index 5) does not have a prerequisite
+                if (key > 0 && key !== 5 && !unlocks.shelves[key - 1]) {
                     prerequisite = false;
                 }
             } else if (type === 'storage') {
@@ -4379,6 +4373,7 @@
                     unlocks.employees[key] = true;
                 } else if (type === 'shelf') {
                     unlocks.shelves[key] = true;
+                    initializeLayout(); // Redraw layout after unlocking a shelf
                 } else if (type === 'storage') {
                     unlocks.storage[key] = true;
                 }
@@ -5095,7 +5090,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('start-day-btn').click();
         }
 
-        window.addEventListener('DOMContentLoaded', init);
+        window.addEventListener('load', init);
     </script>
 </body>
 </html>

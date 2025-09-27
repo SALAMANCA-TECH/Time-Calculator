@@ -116,6 +116,23 @@
         .toggle-checkbox:checked + .toggle-label {
             background-color: #f7e7d8;
         }
+
+        /* Static Basket Styles */
+        #static-basket-items {
+            width: 200px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            z-index: 1000;
+            /* Start hidden, no 'hidden' class needed */
+            display: none;
+        }
+
+        #static-basket-items.open {
+            max-height: 300px;
+            overflow-y: auto;
+            display: block; /* Become visible when open */
+        }
     </style>
 </head>
 <body class="p-4 flex flex-col items-center justify-center h-screen">
@@ -137,6 +154,15 @@
              </div>
              <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">Start Day</button>
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
+            <div id="static-basket-container" class="relative">
+                <div id="static-basket-icon" class="p-2 text-4xl cursor-pointer">
+                    <span>🧺</span>
+                    <span id="static-basket-count" class="absolute top-0 right-0 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center border-2 border-white">0</span>
+                </div>
+                <div id="static-basket-items" class="absolute top-full left-0 mt-2 p-2 bg-amber-100/95 border-2 border-amber-900 rounded-lg shadow-md">
+                    <!-- Items will be populated here -->
+                </div>
+            </div>
         </div>
 
         <!-- Canvas for the game -->
@@ -237,11 +263,6 @@
                         </div>
                     </div>
 
-                    <!-- Basket Panel -->
-                    <div id="basket-panel" class="phone-app-screen hidden">
-                        <h2 class="text-3xl font-handwritten mb-4">Your Basket</h2>
-                        <div id="basket-grid" class="space-y-2"></div>
-                    </div>
 
                     <!-- Shelf Assignment Panel -->
                     <div id="shelf-assignment-panel" class="phone-app-screen hidden">
@@ -789,10 +810,6 @@
                  // Legacy keybind, now opens phone to orders
                 openClipboardPanel();
                 showAppScreen('restock-panel');
-            } else if (e.code === 'KeyG') {
-                // Legacy keybind, now opens phone to basket
-                openClipboardPanel();
-                showAppScreen('basket-panel');
             } else if (e.code === 'KeyT') {
                 // Legacy keybind, now opens phone to unlocks
                 openClipboardPanel();
@@ -4167,6 +4184,7 @@
                         nearbyCustomer.order.push(item);
                     });
 
+                    updateStaticBasketDisplay();
                     nearbyCustomer.waitTimer = 0; // Reset wait timer
                     nearbyCustomer.state = 'queuing';
                     nearbyCustomer.needsAssistanceFulfilled = true;
@@ -4376,30 +4394,34 @@
             showAppScreen('employees-panel');
         }
 
-        function openBasketPanel() {
-            const basketGrid = document.getElementById('basket-grid');
-            basketGrid.innerHTML = '';
+        function updateStaticBasketDisplay() {
+            const basketItemsContainer = document.getElementById('static-basket-items');
+            const basketCount = document.getElementById('static-basket-count');
 
-            if (player.basket.length === 0) {
-                basketGrid.innerHTML = `<p class="text-center p-4">Your basket is empty.</p>`;
-            } else {
-                const itemCounts = player.basket.reduce((acc, item) => {
-                    acc[item] = (acc[item] || 0) + 1;
-                    return acc;
-                }, {});
+            const basket = player.basket;
+            basketCount.textContent = basket.length;
 
-                for (const item in itemCounts) {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'p-2 border-b border-amber-800/20 flex justify-between items-center';
-                    itemDiv.innerHTML = `
-                        <span class="text-lg">${item}</span>
-                        <span class="font-handwritten text-xl">x${itemCounts[item]}</span>
-                    `;
-                    basketGrid.appendChild(itemDiv);
-                }
+            basketItemsContainer.innerHTML = ''; // Clear current items
+
+            if (basket.length === 0) {
+                basketItemsContainer.innerHTML = '<div class="text-sm text-center p-2">Empty</div>';
+                return;
             }
 
-            showAppScreen('basket-panel');
+            const itemCounts = basket.reduce((acc, item) => {
+                acc[item] = (acc[item] || 0) + 1;
+                return acc;
+            }, {});
+
+            for (const item in itemCounts) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center text-sm p-1';
+                itemDiv.innerHTML = `
+                    <span>${item}</span>
+                    <span class="font-handwritten text-base">x${itemCounts[item]}</span>
+                `;
+                basketItemsContainer.appendChild(itemDiv);
+            }
         }
 
         function openShelfAssignmentPanel() {
@@ -4514,6 +4536,7 @@
                 if (pkg.quantity <= 0) {
                     loadingDockPackages.splice(packageIndex, 1);
                 }
+                updateStaticBasketDisplay();
             }
         }
 
@@ -4531,7 +4554,6 @@
 
             const apps = [
                 { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
-                { name: 'Basket', icon: '🧺', panelId: 'basket-panel', action: openBasketPanel },
                 { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
                 { name: 'Items', icon: '💡', panelId: 'items-panel', action: openItemsPanel },
                 { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
@@ -5166,6 +5188,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     if (action === 'take') {
                         player.basket.push(targetSlot.assignedItem);
                         targetSlot.quantity--;
+                        updateStaticBasketDisplay();
                         saveGame();
                         openShelfPanel(targetShelf);
                     } else if (action === 'place') {
@@ -5173,6 +5196,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         if (itemIndex > -1) {
                             player.basket.splice(itemIndex, 1);
                             targetSlot.quantity++;
+                            updateStaticBasketDisplay();
                             saveGame();
                             openShelfPanel(targetShelf);
                         }
@@ -5215,6 +5239,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     if (itemIndexInBasket > -1) {
                         // Remove item from basket
                         player.basket.splice(itemIndexInBasket, 1);
+                        updateStaticBasketDisplay();
 
                         // Assign to shelf and set quantity to 1
                         targetSlot.assignedItem = itemName;
@@ -5235,6 +5260,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 if (cell.items[itemName] > 0) {
                     cell.items[itemName]--;
                     player.basket.push(itemName);
+                    updateStaticBasketDisplay();
                     saveGame();
                     openStorageCell(cell); // Refresh panel
                 }
@@ -5249,6 +5275,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 player.basket.splice(itemIndex, 1);
                 if (!cell.items[itemName]) cell.items[itemName] = 0;
                 cell.items[itemName]++;
+                updateStaticBasketDisplay();
                 saveGame();
                 openStorageCell(cell); // Refresh panel
             }
@@ -5638,6 +5665,15 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             continuousToggle.addEventListener('change', (e) => {
                 continuousMode = e.target.checked;
             });
+
+            // Static Basket Logic
+            const staticBasketIcon = document.getElementById('static-basket-icon');
+            const staticBasketItems = document.getElementById('static-basket-items');
+
+            staticBasketIcon.addEventListener('click', () => {
+                staticBasketItems.classList.toggle('open');
+            });
+            updateStaticBasketDisplay();
 
             loadSpriteSheet(); // Generate and load player spritesheet
             updateUI();

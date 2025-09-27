@@ -934,8 +934,8 @@
         }
 
         const animations = {
-            'idle': { frames: 3 },
-            'walk': { frames: 3 }
+            'idle': { startFrame: 0, frames: 3, cols: 3 },
+            'walk': { startFrame: 3, frames: 3, cols: 3 }
         };
 
         const keys = {};
@@ -1102,7 +1102,12 @@
                     this.request = "Oh, it's closing time! I'll come back another day.";
                 }
 
-                updateCharacterAnimation(this, deltaTime);
+                const anim = animations[this.state === 'idle' || this.state === 'waitingAtCounter' || (this.state === 'waitingForInteraction' && this.hasReachedWaitingPoint) ? 'idle' : 'walk'];
+                this.lastFrameTime += deltaTime;
+                if (this.lastFrameTime >= this.animationSpeed) {
+                    this.currentFrame = (this.currentFrame + 1) % anim.frames;
+                    this.lastFrameTime = 0;
+                }
                 if (this.speechBubbleTimer > 0) {
                     this.speechBubbleTimer -= deltaTime;
                     if (this.speechBubbleTimer <= 0) {
@@ -1447,151 +1452,106 @@
         }
 
         function drawManagersOffice() {
-            const p = (size) => Math.round(size * 2);
-            const wallColor = '#a1887f';
-            const wallDark = '#795548';
-            const deskColor = '#8d6e63';
-            const deskDark = '#5d4037';
-
-            // Office Walls
-            ctx.fillStyle = wallColor;
+            ctx.fillStyle = '#a1887f';
             ctx.fillRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
-            ctx.strokeStyle = wallDark;
-            ctx.lineWidth = p(2);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
             ctx.strokeRect(managersOffice.x, managersOffice.y, managersOffice.w, managersOffice.h);
-
-            // "OFFICE" text
-            ctx.fillStyle = wallDark;
-            ctx.font = 'bold 24px "VT323", monospace';
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '14px "Indie Flower", cursive';
             ctx.textAlign = 'center';
-            ctx.fillText("OFFICE", managersOffice.x + managersOffice.w / 2, managersOffice.y + p(10));
+            ctx.fillText("Manager's", managersOffice.x + managersOffice.w / 2, managersOffice.y + 20);
+            ctx.fillText("Office", managersOffice.x + managersOffice.w / 2, managersOffice.y + 35);
 
             // Desk
-            const deskW = managersOffice.w * 0.6;
-            const deskH = p(15);
-            const deskX = managersOffice.x + (managersOffice.w - deskW) / 2;
-            const deskY = managersOffice.y + managersOffice.h * 0.5;
-            ctx.fillStyle = deskColor;
-            ctx.fillRect(deskX, deskY, deskW, deskH);
-            ctx.strokeStyle = deskDark;
-            ctx.strokeRect(deskX, deskY, deskW, deskH);
-            // Desk legs
-            ctx.fillStyle = deskDark;
-            ctx.fillRect(deskX + p(2), deskY + deskH, p(3), p(10));
-            ctx.fillRect(deskX + deskW - p(5), deskY + deskH, p(3), p(10));
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
+            ctx.strokeRect(managersOffice.x + 20, managersOffice.y + 50, 60, 30);
         }
 
         function drawOfficeZones() {
-            const p = (size) => Math.round(size * 2);
-            const deskColor = '#8d6e63';
-            const deskDark = '#5d4037';
-            const pcColor = '#424242';
-            const pcScreen = '#757575';
-            const couchColor = '#a1887f';
-            const couchDark = '#795548';
-            const tableColor = '#8d6e63';
-            const chairColor = '#a1887f';
-
-            // --- Player's Desk Area (Zone 1) ---
-            const deskW1 = p(8);
-            const deskH1 = officeZone1.h * 0.8;
-            const deskX1 = officeZone1.x + officeZone1.w - deskW1 - p(3);
-            const deskY1 = officeZone1.y + (officeZone1.h - deskH1) / 2;
+            // Player's Desk Area (Zone 1) - Rotated Desk
+            const deskWidth = 15;
+            const deskHeight = officeZone1.h * 0.8;
+            const deskX = officeZone1.x + officeZone1.w - deskWidth - 5; // Move slightly left
+            const deskY = officeZone1.y + (officeZone1.h - deskHeight) / 2;
 
             // Desk
-            ctx.fillStyle = deskColor;
-            ctx.fillRect(deskX1, deskY1, deskW1, deskH1);
-            ctx.strokeStyle = deskDark;
-            ctx.strokeRect(deskX1, deskY1, deskW1, deskH1);
+            ctx.fillStyle = '#8d6e63'; // Brown color
+            ctx.fillRect(deskX, deskY, deskWidth, deskHeight);
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(deskX, deskY, deskWidth, deskHeight);
 
             // Computer
-            const pcW = p(12);
-            const pcH = p(15);
-            const pcX = deskX1 - pcW + p(2);
-            const pcY = deskY1 + (deskH1 - pcH) / 2;
-            ctx.fillStyle = pcColor;
-            ctx.fillRect(pcX, pcY, pcW, pcH);
-            ctx.fillStyle = pcScreen;
-            ctx.fillRect(pcX + p(1), pcY + p(1), pcW - p(2), pcH - p(4));
-            ctx.fillStyle = pcColor;
-            ctx.fillRect(pcX, pcY + pcH - p(2), pcW, p(2)); // Stand
+            const pcWidth = 25;
+            const pcHeight = 30;
+            const pcX = deskX - pcWidth + 5; // Positioned to the left of the desk
+            const pcY = deskY + (deskHeight - pcHeight) / 2;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(pcX, pcY, pcWidth, pcHeight);
+            ctx.fillStyle = '#555'; // Screen
+            ctx.fillRect(pcX + 3, pcY + 3, pcWidth - 8, pcHeight - 6);
 
-            // --- Lounge Area (Zone 2) ---
-            const couchW2 = officeZone2.h * 0.9;
-            const couchH2 = officeZone2.w * 0.4;
-            const couchX2 = officeZone2.x + (officeZone2.w - couchH2) / 2;
-            const couchY2 = officeZone2.y + (officeZone2.h - couchW2) / 2;
-            ctx.fillStyle = couchColor;
-            ctx.fillRect(couchX2, couchY2, couchH2, couchW2);
-            ctx.fillStyle = couchDark;
-            ctx.fillRect(couchX2, couchY2, couchH2, p(4)); // Top arm
-            ctx.fillRect(couchX2, couchY2, p(4), couchW2); // Left arm
-            ctx.fillRect(couchX2 + couchH2 - p(4), couchY2, p(4), couchW2); // Right arm
 
-            // --- Break Room (Zone 3) ---
-            const tableW3 = officeZone3.w * 0.6;
-            const tableH3 = p(5);
-            const tableX3 = officeZone3.x + (officeZone3.w - tableW3) / 2;
-            const tableY3 = officeZone3.y + (officeZone3.h - tableH3) / 2;
-            ctx.fillStyle = tableColor;
-            ctx.fillRect(tableX3, tableY3, tableW3, tableH3);
-            ctx.strokeStyle = deskDark;
-            ctx.strokeRect(tableX3, tableY3, tableW3, tableH3);
+            // Lounge Area (Zone 2) - Rotated Couch
+            const couchWidth = officeZone2.h * 0.9; // Swapped w/h for rotation
+            const couchHeight = officeZone2.w * 0.4;
+            const couchX = officeZone2.x + (officeZone2.w - couchHeight) / 2;
+            const couchY = officeZone2.y + (officeZone2.h - couchWidth) / 2;
+            ctx.fillStyle = '#a1887f'; // Lighter brown for couch
+            ctx.fillRect(couchX, couchY, couchHeight, couchWidth);
+            ctx.fillStyle = '#795548'; // Darker brown for details
+            ctx.fillRect(couchX, couchY, couchHeight, 8); // Top arm (was base)
+            ctx.fillRect(couchX, couchY, 8, couchWidth); // Left arm (was left arm)
+            ctx.fillRect(couchX + couchHeight - 8, couchY, 8, couchWidth); // Right arm
+
+
+            // Break Room (Zone 3)
+            const tableWidth = officeZone3.w * 0.6;
+            const tableHeight = 10;
+            const tableX = officeZone3.x + (officeZone3.w - tableWidth) / 2;
+            const tableY = officeZone3.y + (officeZone3.h - tableHeight) / 2;
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(tableX, tableY, tableWidth, tableHeight);
+            ctx.strokeRect(tableX, tableY, tableWidth, tableHeight);
 
             // Chairs
-            const chairW3 = p(8);
-            const chairH3 = p(9);
+            const chairWidth = 15;
+            const chairHeight = 18;
             // Chair 1 (Top)
-            ctx.fillStyle = chairColor;
-            ctx.fillRect(tableX3 + p(5), tableY3 - chairH3 + p(2), chairW3, chairH3);
-            ctx.fillStyle = deskDark;
-            ctx.fillRect(tableX3 + p(5), tableY3 - chairH3 + p(2), chairW3, p(2)); // Backrest
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(tableX + 10, tableY - chairHeight + 5, chairWidth, chairHeight);
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(tableX + 10, tableY - chairHeight + 5, chairWidth, 4); // Backrest
             // Chair 2 (Bottom)
-            ctx.fillStyle = chairColor;
-            ctx.fillRect(tableX3 + tableW3 - p(12), tableY3 + tableH3 - p(2), chairW3, chairH3);
-            ctx.fillStyle = deskDark;
-            ctx.fillRect(tableX3 + tableW3 - p(12), tableY3 + tableH3 + chairH3 - p(4), chairW3, p(2)); // Backrest
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(tableX + tableWidth - 25, tableY + tableHeight - 5, chairWidth, chairHeight);
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(tableX + tableWidth - 25, tableY + tableHeight + chairHeight - 9, chairWidth, 4); // Backrest
+
         }
 
         function drawPackage(pkg, x, y) {
-            const p = (size) => Math.round(size * 2);
-            const boxColor = '#d2b48c';
-            const boxDark = '#a0522d';
-            const tapeColor = '#b59a6a';
-
-            // Main box shape
-            ctx.fillStyle = boxColor;
+            ctx.fillStyle = '#b9936c';
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 2;
             ctx.fillRect(x, y, PACKAGE_WIDTH, PACKAGE_HEIGHT);
-
-            // Outline
-            ctx.strokeStyle = boxDark;
-            ctx.lineWidth = p(1);
             ctx.strokeRect(x, y, PACKAGE_WIDTH, PACKAGE_HEIGHT);
 
-            // Highlights and shadows for 3D effect
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.fillRect(x + p(1), y + p(1), PACKAGE_WIDTH - p(2), p(1)); // Top highlight
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.fillRect(x + p(1), y + PACKAGE_HEIGHT - p(1), PACKAGE_WIDTH - p(2), p(1)); // Bottom shadow
+            // Tape
+            ctx.fillStyle = 'rgba(160, 120, 80, 0.7)';
+            ctx.fillRect(x + PACKAGE_WIDTH/2 - 5, y, 10, PACKAGE_HEIGHT);
+            ctx.fillRect(x, y + PACKAGE_HEIGHT/2 - 5, PACKAGE_WIDTH, 10);
 
-            // Pixel tape
-            ctx.fillStyle = tapeColor;
-            ctx.fillRect(x + PACKAGE_WIDTH/2 - p(2), y, p(4), PACKAGE_HEIGHT);
-            ctx.fillRect(x, y + PACKAGE_HEIGHT/2 - p(2), PACKAGE_WIDTH, p(4));
-
-            // Pixel label
+            // Label
             ctx.fillStyle = 'white';
-            ctx.fillRect(x + p(2), y + p(2), PACKAGE_WIDTH - p(4), p(8));
-            ctx.strokeStyle = '#ccc';
-            ctx.strokeRect(x + p(2), y + p(2), PACKAGE_WIDTH - p(4), p(8));
-
-            // Text on label
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 14px "VT323", monospace';
+            ctx.fillRect(x + 5, y + 5, PACKAGE_WIDTH - 10, 20);
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '14px "Patrick Hand"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(`${pkg.itemName.substring(0,10)}`, x + PACKAGE_WIDTH/2, y + p(5));
-            ctx.fillText(`(x${pkg.quantity})`, x + PACKAGE_WIDTH/2, y + p(9));
+            ctx.fillText(`${pkg.itemName} (${pkg.quantity})`, x + PACKAGE_WIDTH/2, y + 15);
         }
 
         function drawPackages() {
@@ -1603,117 +1563,81 @@
         }
 
         function drawStoreBackground() {
-            const p = (size) => Math.round(size * 2);
-            const wallColor = '#f4a261';
-            const floorColor1 = '#e9c46a';
-            const floorColor2 = '#e76f51';
-            const wallTrimColor = '#d48c42';
-            const storageColor = '#2a9d8f';
-            const storageOutline = '#264653';
-
-            // Draw Wall
-            ctx.fillStyle = wallColor;
+            ctx.fillStyle = '#bcaaa4';
+            ctx.fillRect(0, 0, worldWidth, canvas.height);
+            ctx.fillStyle = '#a1887f';
             ctx.fillRect(0, 0, worldWidth, desk.y + desk.height);
-
-            // Draw Wall Trim
-            ctx.fillStyle = wallTrimColor;
-            ctx.fillRect(0, desk.y + desk.height - p(4), worldWidth, p(4));
-
-            // Draw Checkerboard Floor
-            const tileSize = 40;
-            for (let y = desk.y + desk.height; y < canvas.height; y += tileSize) {
-                for (let x = 0; x < worldWidth; x += tileSize) {
-                    ctx.fillStyle = ((x / tileSize) % 2 === (y / tileSize) % 2) ? floorColor1 : floorColor2;
-                    ctx.fillRect(x, y, tileSize, tileSize);
-                }
-            }
-
             storageCells.forEach((cell, index) => {
-                const r = cell.rect;
                 if (!unlocks.storage[index]) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                    const r = cell.rect;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
                     ctx.fillRect(r.x, r.y, r.w, r.h);
-                    drawLockIcon(r.x + r.w / 2 - 25, r.y + r.h / 2 - 25, 50, 50);
+                    drawLockIcon(r.x + r.w/2 - 25, r.y + r.h/2 - 25, 50, 50);
                     return;
                 }
 
-                // Draw flat storage cell
-                ctx.fillStyle = storageColor;
+                const r = cell.rect;
+                const perspective = 0.25;
+                const insetX = r.w * perspective;
+                const insetY = r.h * perspective;
+
+                const backWall = {
+                    x: r.x + insetX,
+                    y: r.y + insetY,
+                    w: r.w - insetX * 2,
+                    h: r.h - insetY * 2
+                };
+
+                ctx.fillStyle = '#d7ccc8';
                 ctx.fillRect(r.x, r.y, r.w, r.h);
-                ctx.strokeStyle = storageOutline;
-                ctx.lineWidth = p(1);
+
+                ctx.fillStyle = '#bcaaa4';
+                ctx.fillRect(backWall.x, backWall.y, backWall.w, backWall.h);
+
+                ctx.strokeStyle = '#5d4037';
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                ctx.moveTo(r.x, r.y); ctx.lineTo(backWall.x, backWall.y);
+                ctx.moveTo(r.x + r.w, r.y); ctx.lineTo(backWall.x + backWall.w, backWall.y);
+                ctx.moveTo(r.x, r.y + r.h); ctx.lineTo(backWall.x, backWall.y + backWall.h);
+                ctx.moveTo(r.x + r.w, r.y + r.h); ctx.lineTo(backWall.x + backWall.w, backWall.y + backWall.h);
+                ctx.stroke();
+
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
+                ctx.strokeRect(backWall.x, backWall.y, backWall.w, backWall.h);
 
                 // Capacity Bar
                 const currentFill = Object.values(cell.items).reduce((a, b) => a + b, 0);
                 const fillPercent = Math.min(1, currentFill / cell.capacity);
-                const barH = p(4);
-                const barY = r.y + r.h - barH - p(2);
-                ctx.fillStyle = '#264653'; // Dark background for bar
-                ctx.fillRect(r.x + p(2), barY, r.w - p(4), barH);
-                ctx.fillStyle = '#e9c46a'; // Yellow fill for bar
-                ctx.fillRect(r.x + p(2), barY, (r.w - p(4)) * fillPercent, barH);
+                ctx.fillStyle = '#eeeeee';
+                ctx.fillRect(backWall.x + 5, backWall.y + backWall.h - 15, backWall.w - 10, 10);
+                ctx.fillStyle = '#76ff03';
+                ctx.fillRect(backWall.x + 5, backWall.y + backWall.h - 15, (backWall.w - 10) * fillPercent, 10);
+                ctx.strokeStyle = '#5d4037';
+                ctx.strokeRect(backWall.x + 5, backWall.y + backWall.h - 15, backWall.w - 10, 10);
 
-                // Cell Label
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px "VT323", monospace';
+                ctx.fillStyle = '#5d4037';
+                ctx.font = '18px "Indie Flower", cursive';
                 ctx.textAlign = 'center';
-                ctx.fillText(cell.label, cell.rect.x + cell.rect.w / 2, cell.rect.y + p(8));
+                ctx.fillText(cell.label, cell.rect.x + cell.rect.w / 2, cell.rect.y + cell.rect.h + 20);
             });
 
-            // Draw Cashier Counter - Pixel Style
-            const counterWood = '#a0522d';
-            const counterWoodDark = '#8b4513';
-            const counterWoodLight = '#cd853f';
-
-            // Main body
-            ctx.fillStyle = counterWood;
+            // Draw Cashier Counter
+            ctx.fillStyle = '#8d6e63';
             ctx.fillRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
-
-            // Outline
-            ctx.strokeStyle = counterWoodDark;
-            ctx.lineWidth = p(1);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
             ctx.strokeRect(cashierCounter.x, cashierCounter.y, cashierCounter.w, cashierCounter.h);
-
-            // Left side shadow/darker part
-            ctx.fillStyle = counterWoodDark;
-            ctx.fillRect(cashierCounter.x, cashierCounter.y, p(4), cashierCounter.h);
-
-            // Top surface highlight
-            ctx.fillStyle = counterWoodLight;
-            ctx.fillRect(cashierCounter.x + p(4), cashierCounter.y, cashierCounter.w - p(4), p(4));
-
-            // Horizontal wood grain lines
-            ctx.fillStyle = counterWoodDark;
-            for (let i = 0; i < 3; i++) {
-                const y = cashierCounter.y + p(10) + i * p(15);
-                ctx.fillRect(cashierCounter.x + p(1), y, cashierCounter.w - p(2), p(1));
-            }
+            ctx.fillStyle = '#6d4c41'; // Darker top
+            ctx.fillRect(cashierCounter.x, cashierCounter.y, 10, cashierCounter.h);
 
 
-            // Desk / Counter Front - New Pixel Style
-            const deskWood = '#a0522d';
-            const deskWoodDark = '#8b4513';
-            const deskWoodLight = '#cd853f';
-            const p = (size) => Math.round(size * 2);
-
-            // Main desk body
-            ctx.fillStyle = deskWood;
+            ctx.fillStyle = '#8d6e63';
             ctx.fillRect(desk.x, desk.y, desk.width, desk.height);
-
-            // Top highlight/edge
-            ctx.fillStyle = deskWoodLight;
-            ctx.fillRect(desk.x, desk.y, desk.width, p(2));
-
-            // Bottom shadow/edge
-            ctx.fillStyle = deskWoodDark;
-            ctx.fillRect(desk.x, desk.y + desk.height - p(2), desk.width, p(2));
-
-            // Vertical planks
-            ctx.fillStyle = deskWoodDark;
-            for (let i = 0; i < desk.width; i += 80) {
-                ctx.fillRect(desk.x + i, desk.y, p(1), desk.height);
-            }
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(desk.x, desk.y, desk.width, desk.height);
 
             drawLoadingDock();
             drawManagersOffice();
@@ -1779,195 +1703,155 @@
         }
 
         function drawLockIcon(x, y, w, h) {
-            const p = (size) => Math.round(size * 0.2); // Smaller pixel size for icon
-            const lockBody = '#e9ecef';
-            const lockShackle = '#adb5bd';
-            const lockOutline = '#495057';
+            ctx.strokeStyle = '#f5f5f5';
+            ctx.lineWidth = 4;
 
-            // Shackle
-            ctx.fillStyle = lockShackle;
-            ctx.fillRect(x + w * 0.3, y, w * 0.4, h * 0.5);
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(x + w * 0.3 + p(1), y, w * 0.4 - p(2), h * 0.5 - p(1));
+            // Shackle (the U part)
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.25, y + h * 0.4);
+            ctx.lineTo(x + w * 0.25, y + h * 0.2);
+            ctx.arc(x + w * 0.5, y + h * 0.2, w * 0.25, Math.PI, 0);
+            ctx.lineTo(x + w * 0.75, y + h * 0.4);
+            ctx.stroke();
 
-            // Body
-            ctx.fillStyle = lockBody;
+            // Body (the square part)
+            ctx.fillStyle = '#f5f5f5';
             ctx.fillRect(x, y + h * 0.4, w, h * 0.6);
-
-            // Outline
-            ctx.strokeStyle = lockOutline;
-            ctx.lineWidth = p(1);
-            ctx.strokeRect(x, y + h * 0.4, w, h * 0.6);
-            ctx.strokeRect(x + w * 0.3, y, w * 0.4, h * 0.5);
         }
 
         function drawPhoneIcon(x, y, w, h) {
-            const p = (size) => Math.round(size * 0.1); // Pixel size for the icon
-            const body = '#e9ecef';
-            const screen = '#343a40';
-            const outline = '#495057';
+            ctx.fillStyle = '#f5f5f5';
+            ctx.strokeStyle = '#f5f5f5';
+            ctx.lineWidth = 3;
 
-            // Body
-            ctx.fillStyle = body;
-            ctx.fillRect(x + p(1), y, w - p(2), h);
-            ctx.fillRect(x, y + p(1), w, h - p(2));
+            // Phone body
+            ctx.beginPath();
+            ctx.roundRect(x + w * 0.15, y, w * 0.7, h, 8);
+            ctx.fill();
 
             // Screen
-            ctx.fillStyle = screen;
-            ctx.fillRect(x + p(2), y + p(2), w - p(4), h - p(8));
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x + w * 0.25, y + 8, w * 0.5, h - 24);
 
             // Home button
-            ctx.fillStyle = body;
-            ctx.fillRect(x + w/2 - p(1), y + h - p(4), p(2), p(2));
-
-            // Outline
-            ctx.strokeStyle = outline;
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x + p(1), y, w - p(2), h);
-            ctx.strokeRect(x, y + p(1), w, h - p(2));
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x + w * 0.5, y + h - 8, 4, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
         // --- START: Sprite Sheet Generation Code ---
 
         // This function generates the original flower-headed sprite for the player and NPCs
         function generateOriginalSpriteSheet(canvas, ctx) {
-            const frameSize = 90;
-            const sheetSize = 270;
-            const p = (size) => Math.round(size * 1.5); // Pixel size multiplier
-
-            const colors = {
-                skin: '#f2d3b3', skin_dark: '#d8b899',
-                petal: '#ffc0cb', petal_dark: '#f4a8b8',
-                flower_center: '#ffee00', flower_center_dark: '#eac600',
-                shirt: '#f8f8f8', shirt_dark: '#e0e0e0',
-                shorts: '#6E98D9', shorts_dark: '#587eb5',
-                shoes: '#4a4a4a', shoes_light: '#6b6b6b'
-            };
-
-            function drawMap(map, startX, startY, colorMap) {
-                map.forEach((row, r) => {
-                    row.split('').forEach((char, c) => {
-                        if (char !== ' ') {
-                            ctx.fillStyle = colorMap[char];
-                            ctx.fillRect(startX + c * p(1), startY + r * p(1), p(1), p(1));
-                        }
-                    });
-                });
-            }
-
-            function drawFlowerHead(x, y, isSideView) {
-                const startX = x + p(22);
-                const startY = y + p(8);
-                const colorMap = { 'p': colors.petal, 'P': colors.petal_dark, 'c': colors.flower_center, 'C': colors.flower_center_dark };
-
-                if (isSideView) {
-                    const map = [
-                        "  pP   ",
-                        " pPpP  ",
-                        "pPpCPp ",
-                        "pPCCPp ",
-                        " pPCp  ",
-                        "  pP   "
-                    ];
-                    drawMap(map, startX, startY, colorMap);
-                } else {
-                    const map = [
-                        "  pP pP  ",
-                        " pPpppPp ",
-                        "pPpCpCPpp",
-                        "pPpCCCPpp",
-                        " pPCCPp  ",
-                        "  pPpp   ",
-                        "   pP    "
-                    ];
-                    drawMap(map, startX - p(2), startY, colorMap);
-                }
-            }
-
-            function drawBody(x, y, bob, isSideView) {
-                const startX = x + p(22);
-                const startY = y + p(22) + bob;
-                const colorMap = { 't': colors.shirt, 'T': colors.shirt_dark, 's': colors.shorts, 'S': colors.shorts_dark };
-
-                if (isSideView) {
-                    const map = [
-                        "  tT   ",
-                        " tTt   ",
-                        " tTtt  ",
-                        "  ss   ",
-                        " sS s  ",
-                        " sS s  "
-                    ];
-                    drawMap(map, startX, startY, colorMap);
-                } else {
-                    const map = [
-                        "  tTt  ",
-                        " tTTTt ",
-                        "tTTTTTt",
-                        " tTTTt ",
-                        " sSsSs ",
-                        "sS s Ss",
-                        "sS s Ss"
-                    ];
-                    drawMap(map, startX, startY, colorMap);
-                }
-            }
-
-            function drawLegs(x, y, bob, frame, isSideView) {
-                const startX = x + p(24);
-                const startY = y + p(32) + bob;
-                const colorMap = { 'k': colors.skin, 'K': colors.skin_dark, 'h': colors.shoes, 'H': colors.shoes_light };
-
-                let map;
-                if (isSideView) {
-                    map = frame === 1 ? [
-                        " k k ",
-                        " K K ",
-                        " h h ",
-                        "Hh Hh"
-                    ] : [
-                        " k k ",
-                        " K K ",
-                        " h h ",
-                        "hH hH"
-                    ];
-                } else {
-                    if (frame === 1) { // Idle
-                        map = [ "kK kK", "kK kK", "hH hH", "hHhHh" ];
-                    } else if (frame === 2) { // Walk step 1
-                        map = [ " kK k", " kK k", " hH h", " hHhh" ];
-                    } else { // Walk step 2
-                        map = [ "k kK ", "k kK ", "h hH ", "hhhH " ];
-                    }
-                }
-                drawMap(map, startX, startY, colorMap);
-            }
-
-
+             const frameSize = 90;
+             const sheetSize = 270;
+             const colors = {
+                 skin: '#f2d3b3', petal: '#ffc0cb', flowerCenter: '#ffee00',
+                 top: '#f8f8f8', shorts: '#6E98D9', shoes: '#2d2d2d',
+                 white: '#ffffff', outline: '#333333'
+             };
+             function drawFlowerHead(x, y, isSideView = false) {
+                 const centerX = x + frameSize / 2;
+                 const centerY = y + 25;
+                 const petalRadius = 14;
+                 const centerRadius = 5;
+                 ctx.strokeStyle = colors.outline;
+                 ctx.lineWidth = 1.5;
+                 ctx.fillStyle = colors.petal;
+                 if (isSideView) {
+                     const sidePetals = [
+                         { angle: Math.PI / 2, xOff: 0, yOff: -3, size: 1.1 },
+                         { angle: Math.PI * 0.1, xOff: 5, yOff: 2, size: 1.0 },
+                         { angle: Math.PI * 0.9, xOff: -5, yOff: 2, size: 1.0 },
+                     ];
+                     sidePetals.forEach(p => {
+                         ctx.beginPath();
+                         ctx.ellipse(centerX + p.xOff, centerY + p.yOff, 5 * p.size, 8 * p.size, p.angle, 0, Math.PI * 2);
+                         ctx.fill();
+                         ctx.stroke();
+                     });
+                 } else {
+                     const numPetals = 6;
+                     for (let i = 0; i < numPetals; i++) {
+                         const angle = (i / numPetals) * Math.PI * 2;
+                         const px = centerX + Math.cos(angle) * petalRadius;
+                         const py = centerY + Math.sin(angle) * petalRadius;
+                         ctx.beginPath();
+                         ctx.ellipse(px, py, 6, 10, angle + Math.PI / 2, 0, Math.PI * 2);
+                         ctx.fill();
+                         ctx.stroke();
+                     }
+                 }
+                 ctx.fillStyle = colors.flowerCenter;
+                 ctx.beginPath();
+                 ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
+                 ctx.fill();
+                 ctx.stroke();
+             }
+             function drawBody(x, y, bob = 0) {
+                 ctx.fillStyle = colors.top;
+                 ctx.strokeStyle = colors.outline;
+                 ctx.lineWidth = 1.5;
+                 ctx.beginPath();
+                 ctx.moveTo(x + 38, y + 40 + bob);
+                 ctx.lineTo(x + 52, y + 40 + bob);
+                 ctx.lineTo(x + 55, y + 55 + bob);
+                 ctx.lineTo(x + 35, y + 55 + bob);
+                 ctx.closePath();
+                 ctx.fill();
+                 ctx.stroke();
+                 ctx.fillStyle = colors.shorts;
+                 ctx.beginPath();
+                 ctx.rect(x + 35, y + 55 + bob, 20, 10);
+                 ctx.fill();
+                 ctx.stroke();
+             }
+             function drawLegs(x, y, frame = 1, bob = 0, isSideView = false) {
+                 const legY = y + 65 + bob;
+                 ctx.fillStyle = colors.skin;
+                 ctx.strokeStyle = colors.outline;
+                 ctx.lineWidth = 1.5;
+                 let leftLegX = x + 38, rightLegX = x + 48, leftLegYOffset = 0, rightLegYOffset = 0;
+                 if (isSideView) {
+                     leftLegX = x + 42; rightLegX = x + 46;
+                     if (frame === 1) { leftLegYOffset = 5; rightLegYOffset = 0; }
+                     else if (frame === 2) { leftLegYOffset = 0; rightLegYOffset = 5; }
+                 } else {
+                     if (frame === 2) { rightLegYOffset = 2; }
+                     else if (frame !== 1) { leftLegYOffset = 2; }
+                 }
+                 ctx.beginPath(); ctx.rect(rightLegX, legY + rightLegYOffset, 4, 15); ctx.fill(); ctx.stroke();
+                 drawShoe(rightLegX, legY + 15 + rightLegYOffset, isSideView);
+                 ctx.beginPath(); ctx.rect(leftLegX, legY + leftLegYOffset, 4, 15); ctx.fill(); ctx.stroke();
+                 drawShoe(leftLegX, legY + 15 + leftLegYOffset, isSideView);
+             }
+             function drawShoe(x, y, isSideView) {
+                 ctx.fillStyle = colors.shoes; ctx.strokeStyle = colors.outline; ctx.lineWidth = 1.5;
+                 ctx.beginPath();
+                 if(isSideView){ ctx.rect(x-3, y, 8, 5); } else { ctx.rect(x - 2, y, 8, 5); }
+                 ctx.fill(); ctx.stroke();
+                 ctx.fillStyle = colors.white;
+                 ctx.beginPath();
+                 if(isSideView){ ctx.rect(x+5, y, 2, 5); } else { ctx.rect(x - 2, y, 8, 2); }
+                 ctx.fill();
+             }
              function drawIdleFrame(col, row) {
                  const x = col * frameSize, y = row * frameSize;
-                 const bob = (col === 1) ? p(1) : 0;
-                 drawBody(x, y, bob, false);
-                 drawLegs(x, y, bob, 1, false);
-                 drawFlowerHead(x, y, false);
+                 const bob = (col === 1) ? 1 : 0;
+                 drawBody(x, y, bob); drawLegs(x, y, 1, bob); drawFlowerHead(x, y);
              }
              function drawWalkDownFrame(col, row) {
                  const x = col * frameSize, y = row * frameSize;
-                 const bob = (col % 2 !== 0) ? p(1) : 0;
-                 const frame = (col === 0) ? 1 : (col === 1 ? 2 : 3);
-                 drawBody(x, y, bob, false);
-                 drawLegs(x, y, bob, frame, false);
-                 drawFlowerHead(x, y, false);
+                 const frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
+                 drawBody(x, y); drawLegs(x, y, frame); drawFlowerHead(x, y);
              }
              function drawWalkRightFrame(col, row) {
                  const x = col * frameSize, y = row * frameSize;
-                 const bob = (col % 2 !== 0) ? p(1) : 0;
-                 const frame = (col === 0) ? 1 : (col === 1 ? 2 : 3);
-                 drawBody(x, y, bob, true);
-                 drawLegs(x, y, bob, frame, true);
-                 drawFlowerHead(x, y, true);
+                 const frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
+                 drawBody(x, y); drawLegs(x, y, frame, 0, true); drawFlowerHead(x, y, true);
              }
-
              ctx.clearRect(0, 0, sheetSize, sheetSize);
              for (let row = 0; row < 3; row++) {
                  for (let col = 0; col < 3; col++) {
@@ -1982,167 +1866,206 @@
         function generateBeeSpriteSheet(canvas, ctx, artistType) {
             const frameSize = 90;
             const sheetSize = 270;
-            const p = (size) => Math.round(size * 1.5); // Pixel size multiplier
-
             const colors = {
-                yellow: '#fcc419', yellow_dark: '#e5a50a', yellow_light: '#ffd766',
-                black: '#343a40', black_light: '#495057',
-                white: '#ffffff',
-                wing: 'rgba(165, 216, 255, 0.8)', wing_dark: 'rgba(116, 192, 252, 0.8)', wing_highlight: 'rgba(220, 240, 255, 0.8)',
-                // Accessories
-                beret: '#e03131', beret_dark: '#c92a2a',
-                paint_blue: '#339af0', paint_red: '#f03e3e', paint_green: '#51cf66', palette: '#9c6644', palette_dark: '#7d5131',
-                glasses: '#868e96', glasses_shine: '#ced4da',
-                apron: '#1971c2', apron_dark: '#1864ab',
-                saw: '#adb5bd', saw_dark: '#868e96', wood: '#b08968',
-                clay: '#ced4da', tool: '#a87e6f',
-                smock: '#e9ecef', smock_dark: 'rgba(0,0,0,0.1)',
-                bag: '#a57e65', bag_dark: '#8a6953', paper: '#f1f3f5'
+                beeYellow: '#ffdd00', beeBlack: '#4a4a4a', wingBlue: 'rgba(169, 214, 229, 0.8)',
+                outline: '#333333', beretRed: '#c0392b', paintBlue: '#3498db', paintRed: '#e74c3c',
+                paintGreen: '#2ecc71', paletteBrown: '#8d6e63', glassesGray: '#7f8c8d', lightYellow: '#f1c40f',
+                apronBlue: '#2c3e50', sawGray: '#bdc3c7', woodBrown: '#a0522d', clayGray: '#95a5a6',
+                toolBrown: '#8B4513', smockGray: '#bdc3c7', bagBrown: '#8B5A2B', paperWhite: '#f5f5f5'
             };
 
-            function drawMap(map, startX, startY, colorMap) {
-                map.forEach((row, r) => {
-                    row.split('').forEach((char, c) => {
-                        if (char !== ' ' && colorMap[char]) {
-                            ctx.fillStyle = colorMap[char];
-                            ctx.fillRect(startX + c * p(1), startY + r * p(1), p(1), p(1));
-                        }
-                    });
-                });
-            }
-
-            function drawBee(x, y, bob, frame, isSideView, currentArtistType) {
-                const startX = x + p(20);
-                const startY = y + p(15) + bob;
-                const colorMap = {
-                    'y': colors.yellow, 'Y': colors.yellow_dark, 'l': colors.yellow_light,
-                    'b': colors.black, 'B': colors.black_light, 'w': colors.white,
-                    'W': colors.wing, 'V': colors.wing_dark, 'h': colors.wing_highlight
-                };
-
-                // WINGS
-                let wingMap;
-                const wingX = isSideView ? startX : startX - p(5);
-                const wingY = startY - p(3);
-                if (isSideView) {
-                    wingMap = frame % 2 === 0 ? [
-                        "  hWV  ",
-                        " hWWV  ",
-                        "hWWV   ",
-                        "hVV    "
-                    ] : [
-                        "  hWV  ",
-                        " hWWV  ",
-                        "hWWV   ",
-                        " V V   "
-                    ];
-                    drawMap(wingMap, wingX, wingY, colorMap);
+            function drawBeeHead(ctx, x, y, isSideView = false, currentArtistType = '') {
+                const centerX = x + frameSize / 2;
+                const centerY = y + 30;
+                ctx.strokeStyle = colors.outline;
+                ctx.lineWidth = 1.5;
+                ctx.fillStyle = colors.beeYellow;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 15, 14, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = colors.beeBlack;
+                if(currentArtistType === 'modelMaker'){
+                    ctx.fillStyle = colors.glassesGray;
+                    ctx.strokeStyle = colors.outline;
+                    ctx.lineWidth = 1;
+                    if(isSideView){
+                        ctx.beginPath();
+                        ctx.arc(centerX + 6, centerY, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.beeBlack;
+                        ctx.beginPath();
+                        ctx.arc(centerX + 6, centerY, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(centerX - 7, centerY, 6, 0, Math.PI * 2);
+                        ctx.arc(centerX + 7, centerY, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.beeBlack;
+                        ctx.beginPath();
+                        ctx.arc(centerX - 7, centerY, 4, 0, Math.PI * 2);
+                        ctx.arc(centerX + 7, centerY, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = colors.glassesGray;
+                    ctx.fillRect(centerX - 5, centerY - 22, 10, 4);
+                    ctx.strokeRect(centerX - 5, centerY - 22, 10, 4);
+                    ctx.fillStyle = colors.lightYellow;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY - 20, 2, 0, Math.PI*2);
+                    ctx.fill();
                 } else {
-                    wingMap = frame % 2 === 0 ? [
-                        "  hWV  ",
-                        " hWWV V",
-                        "hWWV V ",
-                        " V V   "
-                    ] : [
-                        "  hWV  ",
-                        " hWWV  ",
-                        "hWWV   ",
-                        "hVV    "
-                    ];
-                    drawMap(wingMap, wingX, wingY, colorMap); // Left Wing
-                    ctx.save();
-                    ctx.scale(-1, 1);
-                    drawMap(wingMap, -(wingX + p(22)), wingY, colorMap); // Right Wing
-                    ctx.restore();
+                    ctx.beginPath();
+                    if (isSideView) {
+                        ctx.ellipse(centerX + 6, centerY, 3, 4, 0, 0, Math.PI * 2);
+                    } else {
+                        ctx.ellipse(centerX - 7, centerY, 3, 4, 0, 0, Math.PI * 2);
+                        ctx.ellipse(centerX + 7, centerY, 3, 4, 0, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
                 }
-
-                // BODY
-                const bodyMap = [
-                    "   BbybB   ", "  bylylyb  ", " bylylylyb ", "bYlylylylyb", "bYlylylylyb",
-                    "bYlylylylyb", " BbbbbbbbB ", " bylylylyb ", " bylylylyb ", "  bylylyb  ", "   BbbbB   "
-                ];
-                drawMap(bodyMap, startX, startY, colorMap);
-
-                // LEGS
-                let legMap = isSideView
-                    ? (frame === 1 ? [" B   B ", "b   b  "] : [" B   B ", " B   b "])
-                    : (frame === 2 ? [" B   B ", "b   b  "] : (frame === 3 ? [" B   B ", "  b   b"] : [" B   B ", "b   b "]));
-                drawMap(legMap, startX + p(2), startY + p(12), colorMap);
-
-
-                // HEAD & FACE
-                const headMap = ["   BbbB   ", "  bylyyb  ", " bylwylwb ", "byBwylwBb", "bylylylyb", " BbbbbbbB "];
-                const sideHeadMap = ["   Bbb   ", "  bylyb  ", " bylwb  ", "byBwylb ", "bylylyb ", " Bbbbb  "];
-                drawMap(isSideView ? sideHeadMap : headMap, startX + p(1), startY - p(6), colorMap);
-
-                // ANTENNAE
-                const antennaeMap = ["b   b", "b   b", " B B "];
-                const sideAntennaeMap = [" B", " b", "b "];
-                drawMap(isSideView ? sideAntennaeMap : antennaeMap, startX + p(3), startY - p(9), colorMap);
-
-                // ACCESSORIES
-                drawAccessories(startX, startY, isSideView, currentArtistType, frame);
+                ctx.strokeStyle = colors.beeBlack;
+                ctx.beginPath();
+                if(isSideView){
+                    ctx.moveTo(centerX, centerY - 12);
+                    ctx.quadraticCurveTo(centerX + 5, centerY - 22, centerX + 8, centerY - 20);
+                } else {
+                    ctx.moveTo(centerX - 5, centerY - 12);
+                    ctx.quadraticCurveTo(centerX - 10, centerY - 22, centerX - 4, centerY - 20);
+                    ctx.moveTo(centerX + 5, centerY - 12);
+                    ctx.quadraticCurveTo(centerX + 10, centerY - 22, centerX + 4, centerY - 20);
+                }
+                ctx.stroke();
+                if(currentArtistType === 'student'){
+                    ctx.fillStyle = colors.beretRed;
+                    ctx.beginPath();
+                    ctx.ellipse(isSideView ? centerX + 4 : centerX, centerY - 15, 12, 6, isSideView ? 0.2 : 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
             }
 
-            function drawAccessories(x, y, isSideView, type, frame) {
-                const accColorMap = {
-                    'r': colors.beret, 'R': colors.beret_dark,
-                    'L': colors.paint_blue, 'E': colors.paint_red, 'G': colors.paint_green,
-                    'p': colors.palette, 'P': colors.palette_dark,
-                    'g': colors.glasses, 'G': colors.glasses_shine,
-                    'a': colors.apron, 'A': colors.apron_dark,
-                    's': colors.saw, 'S': colors.saw_dark, 'w': colors.wood,
-                    'c': colors.clay, 't': colors.tool,
-                    'm': colors.smock, 'M': colors.smock_dark,
-                    'b': colors.bag, 'B': colors.bag_dark, 'p': colors.paper
-                };
-                let map, mapX = x, mapY = y;
-
-                switch(type) {
-                    case 'student': // Beret
-                        map = isSideView ? ["  rRr ", " Rrrrr", "Rrrrr "] : [" RrrrrR ", "rrrrrrr"];
-                        mapX += p(1); mapY -= p(8);
+            function drawAccessories(ctx, currentArtistType, x, y, bob, isSideView) {
+                const centerX = x + frameSize / 2;
+                const centerY = y + 55 + bob;
+                ctx.strokeStyle = colors.outline;
+                ctx.lineWidth = 1.5;
+                switch(currentArtistType) {
+                    case 'painter':
+                        ctx.fillStyle = colors.paletteBrown;
+                        ctx.beginPath();
+                        ctx.ellipse(isSideView ? centerX + 20 : centerX - 20, centerY + 10, 8, 6, 0, 0, Math.PI*2);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.paintBlue; ctx.beginPath(); ctx.arc(isSideView ? centerX+18 : centerX-22, centerY+8, 1.5, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = colors.paintRed; ctx.beginPath(); ctx.arc(isSideView ? centerX+22 : centerX-18, centerY+8, 1.5, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = colors.paintGreen; ctx.beginPath(); ctx.arc(isSideView ? centerX+20 : centerX-20, centerY+12, 1.5, 0, Math.PI*2); ctx.fill();
+                        ctx.strokeStyle = colors.beeBlack; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(isSideView ? centerX-20 : centerX+20, centerY+5); ctx.lineTo(isSideView ? centerX-28 : centerX+28, centerY); ctx.stroke();
                         break;
-                    case 'painter': // Palette and brush
+                    case 'woodworker':
+                        ctx.lineWidth = 1;
+                        ctx.fillStyle = colors.sawGray;
+                        ctx.beginPath();
+                        ctx.moveTo(isSideView ? centerX-20 : centerX+20, centerY);
+                        ctx.lineTo(isSideView ? centerX-28 : centerX+28, centerY+10);
+                        ctx.lineTo(isSideView ? centerX-18 : centerX+18, centerY+12);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = colors.woodBrown;
+                        ctx.fillRect(isSideView ? centerX+15 : centerX-25, centerY+5, 10, 10);
+                        ctx.strokeRect(isSideView ? centerX+15 : centerX-25, centerY+5, 10, 10);
+                        break;
+                    case 'sculptor':
+                        ctx.lineWidth = 1;
+                        ctx.fillStyle = colors.clayGray;
+                        ctx.beginPath();
+                        ctx.ellipse(isSideView ? centerX + 22 : centerX - 20, centerY + 8, 5, 6, 0, 0, Math.PI*2);
+                        ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = colors.toolBrown;
+                        ctx.fillRect(isSideView ? centerX - 25 : centerX + 15, centerY + 5, 12, 3);
+                        ctx.strokeRect(isSideView ? centerX - 25 : centerX + 15, centerY + 5, 12, 3);
+                        break;
+                    case 'architect':
                         if (isSideView) {
-                            map = ["  P", " pPp", " pLp", " pEp", " ppp", "  p"]; mapX += p(13); mapY += p(3);
-                            drawMap(map, mapX, accColorMap);
-                            map = ["b", "b"]; mapX = x - p(3); mapY = y + p(5);
+                            ctx.fillStyle = colors.bagBrown; ctx.beginPath();
+                            ctx.rect(centerX - 20, centerY - 5, 12, 14); ctx.fill(); ctx.stroke();
+                            ctx.fillStyle = colors.paperWhite; ctx.strokeStyle = colors.beeBlack; ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.rect(centerX - 18, centerY - 11, 4, 7); ctx.fill(); ctx.stroke();
+                            ctx.beginPath(); ctx.rect(centerX - 13, centerY - 11, 4, 7); ctx.fill(); ctx.stroke();
                         } else {
-                            map = ["  P  ", " pPp ", "pLpEp", " pGp ", "  p  "]; mapX -= p(7); mapY += p(4);
-                             drawMap(map, mapX, accColorMap);
-                            map = ["b", "b", "b"]; mapX = x + p(15); mapY += p(3);
-                        }
-                        break;
-                    case 'modelMaker': // Glasses
-                         map = isSideView ? [" gGg", "g g g", " ggg"] : ["gGg gGg", "g g g g", "ggg ggg"];
-                         mapX += isSideView ? p(3) : p(1);
-                         mapY -= p(4);
-                         break;
-                    case 'woodworker': // Apron and saw
-                        if (!isSideView) {
-                            map = [" aAa ", "aAAAAa", "aAAAAa", "aAAAAa", " a a "]; mapX += p(2); mapY += p(5);
-                            drawMap(map, mapX, accColorMap);
-                        }
-                        map = frame % 2 === 0 ? [" sSs", "s  s", " S s"] : [" SSS", "s  s", " s S"];
-                        mapX = isSideView ? x - p(3) : x + p(14); mapY = y + p(4);
-                        break;
-                    case 'sculptor': // Smock and tool
-                        if (!isSideView) {
-                             map = [" m M ", "mMMMm", "mMMMm", "mMMMm", " M M "]; mapX += p(2); mapY += p(5);
-                             drawMap(map, mapX, accColorMap);
-                        }
-                        map = ["t", "t", "t"]; mapX = isSideView ? x - p(3) : x + p(14); mapY += p(3);
-                        break;
-                     case 'architect': // Bag with scrolls
-                        if (isSideView) {
-                            map = ["bBbB", "bPpb", "bPpb", "bbbb"]; mapX -= p(5); mapY += p(3);
-                        } else {
-                            map = ["bBbB", "bPpb", "bPpb", "bbbb"]; mapX += p(13); mapY += p(4);
+                            ctx.strokeStyle = colors.bagBrown; ctx.lineWidth = 3;
+                            ctx.beginPath(); ctx.moveTo(centerX - 12, centerY - 10); ctx.lineTo(centerX + 12, centerY + 8); ctx.stroke();
+                            ctx.fillStyle = colors.bagBrown; ctx.lineWidth = 1.5; ctx.strokeStyle = colors.outline;
+                            ctx.beginPath(); ctx.rect(centerX + 8, centerY, 14, 16); ctx.fill(); ctx.stroke();
+                            ctx.fillStyle = colors.paperWhite; ctx.strokeStyle = colors.beeBlack; ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.rect(centerX + 10, centerY - 6, 5, 8); ctx.fill(); ctx.stroke();
+                            ctx.beginPath(); ctx.rect(centerX + 16, centerY - 6, 5, 8); ctx.fill(); ctx.stroke();
                         }
                         break;
                 }
-                if (map) drawMap(map, mapX, mapY, accColorMap);
+            }
+
+            function drawBeeBody(ctx, currentArtistType, x, y, bob = 0, frame = 0, isSideView = false) {
+                const centerX = x + frameSize / 2;
+                const centerY = y + 55 + bob;
+                ctx.strokeStyle = colors.outline;
+                ctx.lineWidth = 1.5;
+                const wingY = frame === 1 ? -5 : 0;
+                ctx.fillStyle = colors.wingBlue;
+                ctx.beginPath();
+                if(isSideView){
+                    ctx.ellipse(centerX - 12, centerY - 8 + wingY, 12, 7, -0.8, 0, Math.PI * 2);
+                } else {
+                    ctx.ellipse(centerX - 15, centerY - 8 + wingY, 12, 7, -0.8, 0, Math.PI * 2);
+                    ctx.ellipse(centerX + 15, centerY - 8 + wingY, 12, 7, 0.8, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = colors.beeYellow;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 15, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = colors.beeBlack;
+                ctx.beginPath();
+                ctx.rect(centerX - 15, centerY - 5, 30, 5);
+                ctx.rect(centerX - 12, centerY + 5, 24, 4);
+                ctx.fill();
+                if(!isSideView) {
+                    if(currentArtistType === 'woodworker') {
+                        ctx.fillStyle = colors.apronBlue;
+                        ctx.beginPath(); ctx.moveTo(centerX-8,centerY-10); ctx.lineTo(centerX+8,centerY-10); ctx.lineTo(centerX+10, centerY+14); ctx.lineTo(centerX-10, centerY+14); ctx.closePath(); ctx.fill(); ctx.stroke();
+                    } else if (currentArtistType === 'sculptor') {
+                        ctx.fillStyle = colors.smockGray;
+                        ctx.beginPath(); ctx.moveTo(centerX - 10, centerY - 8); ctx.lineTo(centerX + 10, centerY - 8); ctx.lineTo(centerX + 12, centerY + 12); ctx.lineTo(centerX - 12, centerY + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.fillRect(centerX - 5, centerY, 2, 2); ctx.fillRect(centerX + 3, centerY + 5, 2, 2);
+                    }
+                }
+                drawAccessories(ctx, currentArtistType, x, y, bob, isSideView);
+            }
+
+            function drawBeeLegs(ctx, x, y, frame = 1, bob = 0, isSideView = false) {
+                const legY = y + 72 + bob;
+                ctx.strokeStyle = colors.beeBlack;
+                ctx.lineWidth = 2;
+                let leftLegX = x + 38; let rightLegX = x + 52;
+                let leftLegYOffset = 0; let rightLegYOffset = 0;
+                if (isSideView) {
+                    leftLegX = x + 42; rightLegX = x + 48;
+                    if (frame === 1) { leftLegYOffset = 3; }
+                    else if (frame === 2) { rightLegYOffset = 3; }
+                } else {
+                    if (frame === 2) { rightLegYOffset = 2; }
+                    else if (frame === 3) { leftLegYOffset = 2; }
+                }
+                ctx.beginPath(); ctx.moveTo(rightLegX, legY); ctx.lineTo(rightLegX, legY + 8 + rightLegYOffset); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(leftLegX, legY); ctx.lineTo(leftLegX, legY + 8 + leftLegYOffset); ctx.stroke();
             }
 
             ctx.clearRect(0, 0, sheetSize, sheetSize);
@@ -2152,17 +2075,16 @@
                     const y = row * frameSize;
                     let bob = 0, frame = 1, isSideView = false;
                     if (row === 0) { // Idle
-                        bob = (col === 1) ? p(1) : 0;
-                        frame = col + 1; // Use 1, 2, 3 for subtle idle variations
+                        bob = (col === 1) ? 1 : 0;
                     } else if (row === 1) { // Walk Down
-                        bob = (col % 2 !== 0) ? p(1) : 0;
-                        frame = col + 1;
+                        frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
                     } else if (row === 2) { // Walk Right
                         isSideView = true;
-                        bob = (col % 2 !== 0) ? p(1) : 0;
-                        frame = col + 1;
+                        frame = (col % 2 === 0) ? (col === 0 ? 3 : 1) : 2;
                     }
-                    drawBee(x, y, bob, frame, isSideView, artistType);
+                    drawBeeBody(ctx, artistType, x, y, bob, col, isSideView);
+                    drawBeeLegs(ctx, x, y, frame, bob, isSideView);
+                    drawBeeHead(ctx, x, y, isSideView, artistType);
                 }
             }
         }
@@ -2210,13 +2132,24 @@
         function drawCharacter(character, image, name, filter = '', drawName = true) {
             if (!image || !image.complete) return;
 
-            // Determine animation row based on direction and animState (set in updateCharacterAnimation)
-            let row = 0; // idle animation is on row 0
-            if (character.animState === 'walk') {
-                row = (character.facing === 'left' || character.facing === 'right') ? 2 : 1; // 2 for side, 1 for down
+            // Determine animation state (idle or walking)
+            let animState = 'idle';
+            if (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing', 'interacting'].includes(character.state)) {
+                animState = 'walk';
             }
 
-            const col = character.currentFrame;
+            const anim = animations[animState];
+            if (!anim) return;
+
+            // Determine animation row based on direction
+            let animRow = 0;
+            if (animState === 'walk') {
+                animRow = (character.facing === 'left' || character.facing === 'right') ? 2 : 1;
+            }
+
+            const frameIndex = (animRow * anim.cols) + character.currentFrame;
+            const col = frameIndex % anim.cols;
+            const row = Math.floor(frameIndex / anim.cols);
             const sourceX = col * character.frameWidth;
             const sourceY = row * character.frameHeight;
 
@@ -2288,8 +2221,8 @@
 
         // --- START REFACTOR: Generic NPC Logic ---
         function updateCharacterAnimation(character, deltaTime) {
-            character.animState = (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing', 'interacting'].includes(character.state)) ? 'walk' : 'idle';
-            const anim = animations[character.animState];
+            const animState = (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing', 'interacting'].includes(character.state)) ? 'walk' : 'idle';
+            const anim = animations[animState];
             if (!anim) return;
 
             character.lastFrameTime += deltaTime;
@@ -4097,85 +4030,47 @@
         // --- REFACTOR: Standalone Shelf Drawing Function ---
         function drawShelf() {
             const shelfIndex = shelves.indexOf(this);
-            const p = (size) => Math.round(size * 2);
-
-            // Colors for the new pixel style
-            const wood = '#a0522d';
-            const wood_dark = '#8b4513';
-            const wood_highlight = '#cd853f';
-            const wood_grain = '#8b4513';
-
-            if (!unlocks.shelves[shelfIndex]) {
+             if (!unlocks.shelves[shelfIndex]) {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
                 drawLockIcon(this.rect.x + this.rect.w / 2 - 25, this.rect.y + this.rect.h / 2 - 25, 50, 50);
                 return;
             }
-
-            // Main shelf body
-            ctx.fillStyle = wood;
+            ctx.fillStyle = '#8d6e63';
             ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-
-            // Outline
-            ctx.strokeStyle = wood_dark;
-            ctx.lineWidth = p(1);
+            ctx.strokeStyle = '#4e342e';
+            ctx.lineWidth = 4;
             ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-
-            // Highlight
-            ctx.fillStyle = wood_highlight;
-            ctx.fillRect(this.rect.x + p(1), this.rect.y + p(1), this.rect.w - p(2), p(1));
-
-            // Wood grain details
-            ctx.fillStyle = wood_grain;
-            for (let i = 0; i < 5; i++) {
-                const grainX = this.rect.x + p(2) + Math.random() * (this.rect.w - p(4));
-                const grainY = this.rect.y + p(4) + Math.random() * (this.rect.h - p(8));
-                ctx.fillRect(grainX, grainY, p(2), p(1));
-                ctx.fillRect(grainX + p(1), grainY - p(1), p(1), p(3));
-            }
-
-
-            // Shelf dividers
-            const slotHeight = this.rect.h / 4;
-            for (let i = 1; i < 4; i++) {
-                const y = this.rect.y + slotHeight * i;
-                ctx.fillStyle = wood_dark;
-                ctx.fillRect(this.rect.x, y - p(1), this.rect.w, p(2));
-                ctx.fillStyle = wood_highlight;
-                ctx.fillRect(this.rect.x, y - p(1), this.rect.w, p(1));
-            }
-
-
-            // Draw items on the shelf
-            const itemWidth = this.rect.w - p(8);
-            const itemHeight = slotHeight - p(6);
+            ctx.fillStyle = '#6d4c41';
+            ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, 10);
+            ctx.strokeStyle = '#6d4c41';
+            ctx.lineWidth = 2;
+            const slotHeight = (this.rect.h - 10) / 4;
+            ctx.beginPath();
+            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight);
+            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 2);
+            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 3);
+            ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 3);
+            ctx.stroke();
+            const itemWidth = this.rect.w - 20;
+            const itemHeight = (this.rect.h - 40) / 4;
             for (let i = 0; i < this.items.length; i++) {
                 if (this.items[i] && this.items[i].assignedItem) {
                     const item = this.items[i];
-                    const stackX = this.rect.x + p(4);
-                    const stackY = this.rect.y + i * slotHeight + p(3);
-
-                    // Background for the item stack
-                    ctx.fillStyle = '#e0e0e0';
-                    ctx.fillRect(stackX, stackY, itemWidth, itemHeight);
-                    ctx.strokeStyle = '#bdbdbd';
+                    const stackX = this.rect.x + 10;
+                    const stackY = this.rect.y + 15 + i * (itemHeight + 5);
+                    ctx.fillStyle = '#f5f5f5';
+                    ctx.fillRect(stackX, stackY, itemWidth * (item.quantity / MAX_SHELF_STACK), itemHeight);
+                    ctx.strokeStyle = '#5d4037';
                     ctx.strokeRect(stackX, stackY, itemWidth, itemHeight);
-
-
-                    // Draw the stack of items
-                    ctx.fillStyle = '#a1887f'; // A generic item color
-                    const filledWidth = itemWidth * (item.quantity / MAX_SHELF_STACK);
-                    ctx.fillRect(stackX, stackY, filledWidth, itemHeight);
-
-                    // Add a little 3D effect to the stack
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                    ctx.fillRect(stackX, stackY, filledWidth, p(1));
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(stackX, stackY + itemHeight - p(1), filledWidth, p(1));
-
-
-                    ctx.fillStyle = '#333';
-                    ctx.font = 'bold 14px "VT323", monospace';
+                    ctx.fillStyle = '#5d4037';
+                    ctx.font = '12px "Patrick Hand", cursive';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(item.assignedItem.substring(0, 8), stackX + itemWidth / 2, stackY + itemHeight / 2);
@@ -6097,6 +5992,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             loadSpriteSheet(); // Generate and load player spritesheet
             updateUI();
             requestAnimationFrame(gameLoop);
+            document.getElementById('start-day-btn').click();
         }
 
         window.addEventListener('load', init);

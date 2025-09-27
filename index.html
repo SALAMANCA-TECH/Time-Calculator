@@ -2065,22 +2065,6 @@
                         stocker.task = null;
                     }
                     break;
-                case 'fetching_dock':
-                    if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
-                        const pkg = loadingDockPackages[stocker.task.packageIndex];
-                        if (pkg && pkg.itemName === stocker.task.item) {
-                            while(stocker.basket.length < STOCKER_BASKET_SIZE && pkg.quantity > 0) {
-                                stocker.basket.push(pkg.itemName);
-                                pkg.quantity--;
-                            }
-                            if (pkg.quantity <= 0) {
-                                loadingDockPackages.splice(stocker.task.packageIndex, 1);
-                            }
-                        }
-                        stocker.state = 'stocking';
-                        stocker.task = null;
-                    }
-                    break;
                 case 'stocking':
                     if (!stocker.task) {
                         if (stocker.basket.length === 0) {
@@ -2178,6 +2162,21 @@
             }
         }
 
+        function findBaristaTask() {
+            if (loadingDockPackages.length > 0) {
+                const packageIndex = 0; // Just take the first one for now
+                const pkg = loadingDockPackages[packageIndex];
+                const packageX = loadingDock.x + 10 + packageIndex * (PACKAGE_WIDTH + 10) + PACKAGE_WIDTH / 2;
+                return {
+                    action: 'fetching_dock',
+                    item: pkg.itemName,
+                    packageIndex: packageIndex,
+                    target: { x: packageX, y: loadingDock.y - 40 }
+                };
+            }
+            return null;
+        }
+
         function updateBarista(deltaTime) {
             if (!unlocks.employees.barista) return;
 
@@ -2197,13 +2196,79 @@
             updateCharacterAnimation(barista, deltaTime);
             barista.stateTimer -= deltaTime;
 
-            // The barista's only job is to go to their idle spot for now.
-            // Coffee selling logic will be added later.
-            if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
-                barista.state = 'walk';
-                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
-            } else {
-                barista.state = 'idle';
+            switch(barista.state) {
+                case 'idle':
+                    if (barista.stateTimer <= 0) {
+                        const task = findBaristaTask();
+                        if (task) {
+                            barista.task = task;
+                            barista.state = task.action;
+                        } else {
+                            barista.stateTimer = 3000;
+                            if(Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
+                                barista.task = { target: {x: barista.idleX, y: barista.idleY} };
+                                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
+                            } else {
+                                barista.task = null;
+                            }
+                        }
+                    }
+                    break;
+                case 'fetching_dock':
+                    if (moveCharacterTowards(barista, barista.task.target.x, barista.task.target.y, deltaTime)) {
+                        const pkg = loadingDockPackages[barista.task.packageIndex];
+                        if (pkg && pkg.itemName === barista.task.item) {
+                            while(barista.basket.length < BARISTA_BASKET_SIZE && pkg.quantity > 0) {
+                                barista.basket.push(pkg.itemName);
+                                pkg.quantity--;
+                            }
+                            if (pkg.quantity <= 0) {
+                                loadingDockPackages.splice(barista.task.packageIndex, 1);
+                            }
+                        }
+                        barista.state = 'storing';
+                        barista.task = null;
+                    }
+                    break;
+                case 'storing':
+                     if (barista.basket.length === 0) {
+                        barista.state = 'idle';
+                        barista.task = { target: {x: barista.idleX, y: barista.idleY} };
+                        break;
+                     }
+
+                     if (!barista.task) {
+                        const itemToStore = barista.basket[0];
+                        const targetCell = storageCells.find(c => c.allowedItems.includes(itemToStore) && unlocks.storage[storageCells.indexOf(c)]);
+                        if (targetCell) {
+                            barista.task = { action: 'place', item: itemToStore, cell: targetCell, target: {x: targetCell.rect.x + targetCell.rect.w / 2, y: targetCell.rect.y + targetCell.rect.h + 10} };
+                        } else {
+                            // Cannot find a storage cell for this item. Maybe it's not unlocked. Discard.
+                            barista.basket.shift();
+                        }
+                    }
+                    if (barista.task && moveCharacterTowards(barista, barista.task.target.x, barista.task.target.y, deltaTime)) {
+                        const cell = barista.task.cell;
+                        const itemToStore = barista.task.item;
+
+                        const itemIndexInBasket = barista.basket.indexOf(itemToStore);
+                        if(itemIndexInBasket > -1) {
+                            // Check for capacity
+                            const currentFill = Object.values(cell.items).reduce((a, b) => a + b, 0);
+                            if (currentFill < cell.capacity) {
+                                barista.basket.splice(itemIndexInBasket, 1);
+                                if (!cell.items[itemToStore]) cell.items[itemToStore] = 0;
+                                cell.items[itemToStore]++;
+                            } else {
+                                // Cell is full, can't store. Go idle and try again later.
+                                barista.state = 'idle';
+                                barista.stateTimer = 5000; // Wait before trying another task
+                            }
+                        }
+
+                        barista.task = null; // Find a new task (for the next item in basket)
+                    }
+                    break;
             }
         }
 
@@ -2811,19 +2876,6 @@
                             action: 'fetching',
                             item: itemToFetch,
                             target: { x: storageCellWithItem.rect.x + storageCellWithItem.rect.w / 2, y: storageCellWithItem.rect.y + storageCellWithItem.rect.h + 10 }
-                        };
-                    }
-                }
-
-                if (stockLocation.fromDock > 0) {
-                    const packageIndex = loadingDockPackages.findIndex(p => p.itemName === itemToFetch);
-                    if (packageIndex !== -1) {
-                        const packageX = loadingDock.x + 10 + packageIndex * (PACKAGE_WIDTH + 10) + PACKAGE_WIDTH / 2;
-                        return {
-                            action: 'fetching_dock',
-                            item: itemToFetch,
-                            packageIndex: packageIndex,
-                            target: { x: packageX, y: loadingDock.y - 40 }
                         };
                     }
                 }

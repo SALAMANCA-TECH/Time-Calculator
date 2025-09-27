@@ -3040,14 +3040,38 @@
             let newY = player.y;
 
             if (dx !== 0 || dy !== 0) {
-                const newX = player.x + dx * player.speed * (deltaTime / 1000);
-                const newY = player.y + dy * player.speed * (deltaTime / 1000);
-                player.y = newY;
-                player.x = newX;
+                // Keyboard movement overrides click-to-move
+                player.targetX = null;
+                player.targetY = null;
+
+                newX = player.x + dx * player.speed * (deltaTime / 1000);
+                newY = player.y + dy * player.speed * (deltaTime / 1000);
 
                 player.state = 'walk';
                 if (dx < 0) player.facing = 'left';
                 if (dx > 0) player.facing = 'right';
+
+            } else if (player.targetX !== null && player.targetY !== null) {
+                // Click-to-move logic
+                const targetDx = player.targetX - player.x;
+                const targetDy = player.targetY - player.y;
+                const dist = Math.hypot(targetDx, targetDy);
+
+                if (dist < 5) { // Threshold to stop
+                    player.targetX = null;
+                    player.targetY = null;
+                    player.state = 'idle';
+                } else {
+                    const moveX = (targetDx / dist) * player.speed * (deltaTime / 1000);
+                    const moveY = (targetDy / dist) * player.speed * (deltaTime / 1000);
+                    newX = player.x + moveX;
+                    newY = player.y + moveY;
+
+                    if (Math.abs(targetDx) > Math.abs(targetDy)) {
+                        player.facing = moveX > 0 ? 'right' : 'left';
+                    }
+                    player.state = 'walk';
+                }
             } else {
                 player.state = 'idle';
             }
@@ -4169,6 +4193,16 @@
                     return;
                 }
             }
+
+            // If no specific object was clicked, set the player's target destination.
+            player.targetX = worldX;
+            player.targetY = worldY;
+
+        }
+
+        function isPlayerInZone(zone) {
+            return player.x > zone.x && player.x < zone.x + zone.w &&
+                   player.y > zone.y && player.y < zone.y + zone.h;
         }
 
         function handleInteraction() {

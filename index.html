@@ -4809,8 +4809,10 @@
             } else if (type === 'shelf') {
                 key = parseInt(key);
                 cost = unlockCosts.shelves[key];
-                if (key > 0 && !unlocks.shelves[key - 1]) {
-                    prerequisite = false;
+                if (key < 6) { // Prerequisite only for normal shelves
+                    if (key > 0 && !unlocks.shelves[key - 1]) {
+                        prerequisite = false;
+                    }
                 }
             } else if (type === 'facility') {
                 cost = unlockCosts.facilities[key];

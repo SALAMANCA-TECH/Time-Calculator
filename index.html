@@ -276,6 +276,12 @@
                         <div id="shelf-grid" class="grid grid-cols-1 gap-4"></div>
                     </div>
 
+                    <!-- Storage Panel -->
+                    <div id="storage-panel" class="phone-app-screen hidden">
+                        <h2 id="storage-title" class="text-3xl font-handwritten mb-4">Manage Storage</h2>
+                        <div id="storage-grid" class="grid grid-cols-2 gap-4"></div>
+                    </div>
+
                     <!-- Assignment Panel -->
                     <div id="assignment-panel" class="phone-app-screen hidden">
                         <h2 id="assignment-title" class="text-2xl font-handwritten mb-4">Assign Item</h2>
@@ -4052,7 +4058,9 @@
             const clickedCell = storageCells.find(c => worldX >= c.rect.x && worldX <= c.rect.x + c.rect.w && worldY >= c.rect.y && worldY <= c.rect.y + c.rect.h);
             if (clickedCell) {
                 if (Math.hypot(player.x - (clickedCell.rect.x + clickedCell.rect.w/2), player.y - (clickedCell.rect.y + clickedCell.rect.h)) < 150) {
-                    openStorageCell(clickedCell); return;
+                    openClipboardPanel();
+                    openStorageCell(clickedCell);
+                    return;
                 }
             }
             const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
@@ -5004,6 +5012,32 @@
             showAppScreen('storage-panel');
         }
 
+        function takeItemFromStorage(itemName, cell) {
+            if (player.basket.length < MAX_BASKET_SIZE) {
+                if (cell.items[itemName] > 0) {
+                    cell.items[itemName]--;
+                    player.basket.push(itemName);
+                    updateStaticBasketDisplay();
+                    saveGame();
+                    openStorageCell(cell); // Refresh panel
+                }
+            } else {
+                showMessage("Your basket is full!");
+            }
+        }
+
+        function putItemInStorage(itemName, cell) {
+            const itemIndex = player.basket.indexOf(itemName);
+            if (itemIndex > -1) {
+                player.basket.splice(itemIndex, 1);
+                if (!cell.items[itemName]) cell.items[itemName] = 0;
+                cell.items[itemName]++;
+                updateStaticBasketDisplay();
+                saveGame();
+                openStorageCell(cell); // Refresh panel
+            }
+        }
+
 function openProductAssignmentForShelf(shelf, slotIndex) {
             const assignmentGrid = document.getElementById('assignment-grid');
             const assignmentTitle = document.getElementById('assignment-title');
@@ -5255,33 +5289,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             showAppScreen('assignment-panel');
         }
 
-        function takeItemFromStorage(itemName, cell) {
-            if (player.basket.length < MAX_BASKET_SIZE) {
-                if (cell.items[itemName] > 0) {
-                    cell.items[itemName]--;
-                    player.basket.push(itemName);
-                    updateStaticBasketDisplay();
-                    saveGame();
-                    openStorageCell(cell); // Refresh panel
-                }
-            } else {
-                showMessage("Your basket is full!");
-            }
-        }
-
-        function putItemInStorage(itemName, cell) {
-            const itemIndex = player.basket.indexOf(itemName);
-            if (itemIndex > -1) {
-                player.basket.splice(itemIndex, 1);
-                if (!cell.items[itemName]) cell.items[itemName] = 0;
-                cell.items[itemName]++;
-                updateStaticBasketDisplay();
-                saveGame();
-                openStorageCell(cell); // Refresh panel
-            }
-        }
-
-
         let activePanel = null; // DEPRECATED: Will be replaced by phone-specific logic
         let activePhoneScreen = null; // Tracks the currently open app screen inside the phone
         let isPhoneOpen = false;
@@ -5293,6 +5300,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             clipboardPanel.classList.remove('open');
             isPhoneOpen = false;
             activePhoneScreen = null;
+            activeStorageCell = null;
+            activeShelf = null;
         }
 
         function showAppGrid() {

@@ -422,6 +422,52 @@
         </div>
     </div>
 
+    <!-- Specialty Store Options Screen -->
+    <div id="specialty-store-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <h2 class="text-3xl font-handwritten text-center mb-6">Specialty Store Options</h2>
+            <div class="space-y-4 mb-6">
+                <!-- Dropdowns -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col space-y-2">
+                        <label for="specialty-one-select" class="text-lg">Primary Specialty</label>
+                        <select id="specialty-one-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80"></select>
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <label for="specialty-two-select" class="text-lg">Secondary Specialty</label>
+                        <select id="specialty-two-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80"></select>
+                    </div>
+                </div>
+                <!-- Toggles -->
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="specialty-costs-label" for="specialty-costs-toggle" class="text-lg">-10% Prices</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="specialty-costs-toggle" id="specialty-costs-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="specialty-costs-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="specialty-coffee-label" for="specialty-coffee-toggle" class="text-lg">No Coffee Shop</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="specialty-coffee-toggle" id="specialty-coffee-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="specialty-coffee-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="specialty-customers-label" for="specialty-customers-toggle" class="text-lg">Increase Customer Pool</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="specialty-customers-toggle" id="specialty-customers-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="specialty-customers-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center">
+                <button id="specialty-back-btn" class="btn-style p-4 text-xl">Back</button>
+                <button id="specialty-start-game-btn" class="btn-style bg-green-700 hover:bg-green-600 p-4 text-xl">Start Game</button>
+            </div>
+        </div>
+    </div>
+
     <!-- End of Day Report Panel -->
     <div id="end-of-day-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
         <div class="bg-amber-100 w-full max-w-4xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 90vh;">
@@ -676,7 +722,7 @@
         let zone1PointTimer = 0;
         let coffeeShopBehindCounterTimer = 0;
 
-        const CUSTOMER_SPAWN_INTERVAL = 8000;
+        let CUSTOMER_SPAWN_INTERVAL = 8000;
         let timeSinceLastCustomer = 0;
         let floatingTexts = [];
         let clipboardUpdateTimer = 0;
@@ -5356,6 +5402,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function resetGameState() {
+            CUSTOMER_SPAWN_INTERVAL = 8000;
             // Restore original costs before anything else
             Object.keys(items).forEach(key => {
                 items[key].cost = originalItemCosts[key];
@@ -5466,6 +5513,47 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
                 if (options.family.freeEmployee) {
                     unlocks.employees[options.family.freeEmployee] = true;
+                }
+            }
+
+            if (options.specialty) {
+                const { primary, secondary, goodCosts, noCoffee, moreCustomers } = options.specialty;
+                const chosenSpecialties = [primary];
+                if (secondary) {
+                    chosenSpecialties.push(secondary);
+                }
+
+                // Unlock only selected specialties' storage
+                unlocks.storage.fill(false);
+                storageCells.forEach((cell, index) => {
+                    if (chosenSpecialties.includes(cell.label)) {
+                        unlocks.storage[index] = true;
+                    }
+                });
+
+                // Disable all items not in the chosen specialties
+                const allowedItemsSet = new Set();
+                storageCells.forEach((cell, index) => {
+                    if (unlocks.storage[index]) { // Check if this specialty is chosen
+                        cell.allowedItems.forEach(item => allowedItemsSet.add(item));
+                    }
+                });
+
+                Object.keys(enabledItems).forEach(item => {
+                    enabledItems[item] = allowedItemsSet.has(item);
+                });
+
+                // Apply other toggles
+                if (goodCosts) {
+                     Object.keys(items).forEach(key => {
+                        items[key].cost = Math.floor(items[key].cost * 0.9);
+                    });
+                }
+                if (noCoffee) {
+                    unlocks.facilities.coffeeShop = false;
+                }
+                if (moreCustomers) {
+                    CUSTOMER_SPAWN_INTERVAL = 4000; // Faster customer spawns
                 }
             }
 
@@ -5596,6 +5684,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 hideScreen('new-game-screen');
                 showScreen('family-store-screen');
             });
+            document.getElementById('new-game-specialty').addEventListener('click', () => {
+                hideScreen('new-game-screen');
+                showScreen('specialty-store-screen');
+            });
             document.getElementById('close-new-game-screen').addEventListener('click', () => {
                 if (localStorage.getItem('artEmporiumSave')) {
                     hideScreen('new-game-screen');
@@ -5615,6 +5707,81 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         freeUnlocks: document.getElementById('dev-unlocks-toggle').checked,
                         freeSupplies: document.getElementById('dev-supplies-toggle').checked,
                         startWithDebt: document.getElementById('dev-debt-toggle').checked
+                    }
+                };
+                startGame(options);
+            });
+
+            // --- Specialty Store Screen Logic ---
+            const specialtyOneSelect = document.getElementById('specialty-one-select');
+            const specialtyTwoSelect = document.getElementById('specialty-two-select');
+            const artTypes = storageCells.map(cell => cell.label);
+
+            function populateSpecialtyDropdowns() {
+                specialtyOneSelect.innerHTML = '';
+                specialtyTwoSelect.innerHTML = '';
+
+                artTypes.forEach(type => {
+                    const option1 = document.createElement('option');
+                    option1.value = type;
+                    option1.textContent = type;
+                    specialtyOneSelect.appendChild(option1);
+
+                    const option2 = document.createElement('option');
+                    option2.value = type;
+                    option2.textContent = type;
+                    specialtyTwoSelect.appendChild(option2);
+                });
+
+                const noneOption = document.createElement('option');
+                noneOption.value = 'None';
+                noneOption.textContent = 'None';
+                specialtyTwoSelect.prepend(noneOption);
+                specialtyTwoSelect.value = 'None';
+            }
+
+            if (specialtyOneSelect.options.length === 0) {
+                populateSpecialtyDropdowns();
+            }
+
+            function handleSpecialtyChange() {
+                // Disable the selected option in the other dropdown
+                const primaryValue = specialtyOneSelect.value;
+                const secondaryValue = specialtyTwoSelect.value;
+
+                for (let i = 0; i < specialtyTwoSelect.options.length; i++) {
+                    specialtyTwoSelect.options[i].disabled = (specialtyTwoSelect.options[i].value === primaryValue);
+                }
+
+                for (let i = 0; i < specialtyOneSelect.options.length; i++) {
+                    specialtyOneSelect.options[i].disabled = (specialtyOneSelect.options[i].value === secondaryValue);
+                }
+
+                // If the change resulted in a conflict, auto-select a valid option
+                if (primaryValue === secondaryValue) {
+                    specialtyTwoSelect.value = 'None';
+                }
+            }
+
+            specialtyOneSelect.addEventListener('change', handleSpecialtyChange);
+            specialtyTwoSelect.addEventListener('change', handleSpecialtyChange);
+
+            // Initial setup
+            handleSpecialtyChange();
+
+            document.getElementById('specialty-back-btn').addEventListener('click', () => {
+                hideScreen('specialty-store-screen');
+                showScreen('new-game-screen');
+            });
+
+            document.getElementById('specialty-start-game-btn').addEventListener('click', () => {
+                const options = {
+                    specialty: {
+                        primary: specialtyOneSelect.value,
+                        secondary: specialtyTwoSelect.value === 'None' ? null : specialtyTwoSelect.value,
+                        goodCosts: document.getElementById('specialty-costs-toggle').checked,
+                        noCoffee: document.getElementById('specialty-coffee-toggle').checked,
+                        moreCustomers: document.getElementById('specialty-customers-toggle').checked,
                     }
                 };
                 startGame(options);

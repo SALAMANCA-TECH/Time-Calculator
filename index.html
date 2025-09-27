@@ -367,6 +367,19 @@
         </div>
     </div>
 
+    <!-- Employee Scheduling Panel -->
+    <div id="employee-schedule-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="max-height: 90vh;">
+            <h2 class="text-3xl font-handwritten text-center mb-4 flex-shrink-0">Employee Work Schedule</h2>
+            <div id="employee-schedule-list" class="flex-grow overflow-y-auto p-2 bg-white/30 rounded-md border space-y-4">
+                <!-- Employee schedule details will be populated here -->
+            </div>
+            <div class="text-center mt-4 flex-shrink-0">
+                <button id="close-schedule-panel-btn" class="btn-style px-8 py-3 text-xl">Close</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         function showMessage(text, callback) {
@@ -549,18 +562,24 @@
         let dayStarted = false;
         let developerMode = false;
         let continuousMode = false;
-        let isMandatoryBreak = false;
-        let midDayBreakTriggered = false;
         let currentWeeklyAccruedBill = 0;
         let currentWeeklyLaborCost = 0;
         let currentWeeklyRentCost = 0;
         let currentWeeklyStorageCost = 0;
         let currentWeeklyCoffeeCost = 0;
 
-        const OPENING_DURATION = 60000; // 1 minute
-        const OPEN_DURATION = 180000; // 3 minutes
-        const CLOSING_DURATION = 60000; // 1 minute
-        const DAY_DURATION = OPENING_DURATION + OPEN_DURATION + CLOSING_DURATION; // Total 5 minutes
+        const daySegments = [
+            { name: 'Openers', duration: 15000, color: '#ffffcc', base: 'opening' }, // Lighter Yellow
+            { name: 'Shift Start', duration: 15000, color: '#facc15', base: 'opening' }, // Yellow
+            { name: 'Day Shift', duration: 30000, color: '#22c55e', base: 'open' },    // Green
+            { name: 'Day Break', duration: 30000, color: '#e0e0e0', base: 'open' },    // Light Grey
+            { name: 'Eve Break', duration: 30000, color: '#a0a0a0', base: 'open' },    // Dark Grey
+            { name: 'Night Shift', duration: 30000, color: '#22c55e', base: 'open' },  // Green
+            { name: 'Shift End', duration: 15000, color: '#ef4444', base: 'closing' }, // Red
+            { name: 'Closers', duration: 15000, color: '#b91c1c', base: 'closing' }  // Darker Red
+        ];
+
+        const DAY_DURATION = daySegments.reduce((acc, seg) => acc + seg.duration, 0);
         let dayTimer = DAY_DURATION;
         let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'open', 'closing'
         let zone1PointTimer = 0;
@@ -599,6 +618,7 @@
         const shoppingBasket = { x: 0, y: 0, width: 60, height: 50 };
         const lockIcon = { x: 0, y: 0, width: 50, height: 50 };
         const phoneIcon = { x: 0, y: 0, width: 50, height: 50 };
+        const managersComputer = { x: 0, y: 0, w: 0, h: 0 };
         let storageCells = [];
         let shelves = [];
         const MAX_BASKET_SIZE = 5;
@@ -1294,10 +1314,14 @@
             const pcHeight = 30;
             const pcX = deskX - pcWidth + 5; // Positioned to the left of the desk
             const pcY = deskY + (deskHeight - pcHeight) / 2;
+            managersComputer.x = pcX;
+            managersComputer.y = pcY;
+            managersComputer.w = pcWidth;
+            managersComputer.h = pcHeight;
             ctx.fillStyle = '#333';
-            ctx.fillRect(pcX, pcY, pcWidth, pcHeight);
+            ctx.fillRect(managersComputer.x, managersComputer.y, managersComputer.w, managersComputer.h);
             ctx.fillStyle = '#555'; // Screen
-            ctx.fillRect(pcX + 3, pcY + 3, pcWidth - 8, pcHeight - 6);
+            ctx.fillRect(managersComputer.x + 3, managersComputer.y + 3, managersComputer.w - 8, managersComputer.h - 6);
 
 
             // Lounge Area (Zone 2) - Rotated Couch
@@ -2990,45 +3014,28 @@
             const radius = Math.min(centerX, centerY) - 2;
             pieClockCtx.clearRect(0, 0, pieClockCanvas.width, pieClockCanvas.height);
 
-            const startAngle = -Math.PI / 2;
-            const openingAngle = (OPENING_DURATION / DAY_DURATION) * 2 * Math.PI;
-            const openAngle = (OPEN_DURATION / DAY_DURATION) * 2 * Math.PI;
+            let currentAngle = -Math.PI / 2;
+            const overlayColor = 'rgba(93, 64, 55, 0.6)';
 
-            const openingColor = '#facc15'; // Yellow
-            const openColor = '#22c55e'; // Green
-            const closingColor = '#ef4444'; // Red
-            const overlayColor = 'rgba(93, 64, 55, 0.6)'; // Darkening overlay
+            // Draw all the segments first
+            daySegments.forEach(segment => {
+                const segmentAngle = (segment.duration / DAY_DURATION) * 2 * Math.PI;
+                pieClockCtx.fillStyle = segment.color;
+                pieClockCtx.beginPath();
+                pieClockCtx.moveTo(centerX, centerY);
+                pieClockCtx.arc(centerX, centerY, radius, currentAngle, currentAngle + segmentAngle);
+                pieClockCtx.closePath();
+                pieClockCtx.fill();
+                currentAngle += segmentAngle;
+            });
 
-            // Opening segment
-            pieClockCtx.fillStyle = openingColor;
-            pieClockCtx.beginPath();
-            pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle, startAngle + openingAngle);
-            pieClockCtx.closePath();
-            pieClockCtx.fill();
-
-            // Open segment
-            pieClockCtx.fillStyle = openColor;
-            pieClockCtx.beginPath();
-            pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle, startAngle + openingAngle + openAngle);
-            pieClockCtx.closePath();
-            pieClockCtx.fill();
-
-            // Closing segment
-            pieClockCtx.fillStyle = closingColor;
-            pieClockCtx.beginPath();
-            pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle + openAngle, startAngle + 2 * Math.PI);
-            pieClockCtx.closePath();
-            pieClockCtx.fill();
 
             if (dayStarted) {
                  const progressAngle = ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
                  pieClockCtx.fillStyle = overlayColor;
                  pieClockCtx.beginPath();
                  pieClockCtx.moveTo(centerX, centerY);
-                 pieClockCtx.arc(centerX, centerY, radius + 1, startAngle + progressAngle, startAngle + 2 * Math.PI);
+                 pieClockCtx.arc(centerX, centerY, radius + 1, -Math.PI / 2 + progressAngle, -Math.PI / 2 + (2 * Math.PI));
                  pieClockCtx.closePath();
                  pieClockCtx.fill();
             } else {
@@ -3064,6 +3071,18 @@
             }
         }
 
+        function getCurrentSegment(timer) {
+            let elapsedTime = DAY_DURATION - timer;
+            let cumulativeDuration = 0;
+            for (const segment of daySegments) {
+                cumulativeDuration += segment.duration;
+                if (elapsedTime < cumulativeDuration) {
+                    return segment;
+                }
+            }
+            return daySegments[daySegments.length - 1]; // Return last segment if timer is at 0
+        }
+
         function gameLoop(timestamp) {
             if (!running || !lastTimestamp) {
                 lastTimestamp = timestamp;
@@ -3084,44 +3103,9 @@
                     }
                 }
 
-                if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2)) {
-                    midDayBreakTriggered = true;
-                    isMandatoryBreak = true;
-                    spawnFloatingText("LUNCH BREAK!", canvas.width / 2, 120, '#3b82f6');
-
-                    const employees = { cashier, stocker, barista, manager, salesperson };
-                    for (const empKey in employees) {
-                        if (unlocks.employees[empKey]) {
-                            employees[empKey].onBreak = true;
-                        }
-                    }
-
-                    if (activePanel === 'employees') {
-                        openEmployeesPanel();
-                    }
-
-                    setTimeout(() => {
-                        isMandatoryBreak = false;
-                        for (const empKey in employees) {
-                            if (unlocks.employees[empKey]) {
-                                if (!employees[empKey].playerInitiatedBreak) {
-                                    employees[empKey].onBreak = false;
-                                }
-                            }
-                        }
-                        if (activePanel === 'employees') {
-                            openEmployeesPanel();
-                        }
-                        spawnFloatingText("Break's over!", canvas.width / 2, 120, '#22c55e');
-                    }, 20000);
-                }
-
-                if (dayTimer > OPEN_DURATION + CLOSING_DURATION) {
-                    dayPhase = 'opening';
-                } else if (dayTimer > CLOSING_DURATION) {
-                    dayPhase = 'open';
-                } else if (dayTimer > 0) {
-                    dayPhase = 'closing';
+                if (dayTimer > 0) {
+                    const currentSegment = getCurrentSegment(dayTimer);
+                    dayPhase = currentSegment.base; // Map new segment to old phase for AI logic
                 } else {
                     dayPhase = 'pre-open';
                     nextDay();
@@ -3926,6 +3910,15 @@
             const worldX = (x - cameraX);
             const worldY = (y - cameraY);
 
+            // Check for manager's computer click
+            if (worldX >= managersComputer.x && worldX <= managersComputer.x + managersComputer.w &&
+                worldY >= managersComputer.y && worldY <= managersComputer.y + managersComputer.h) {
+                if (Math.hypot(player.x - (managersComputer.x + managersComputer.w / 2), player.y - (managersComputer.y + managersComputer.h / 2)) < 150) {
+                    openSchedulePanel();
+                    return;
+                }
+            }
+
             // Check for clicks on packages in the loading dock
             if (worldY >= loadingDock.y) {
                  if (Math.hypot(player.x - worldX, player.y - worldY) < 150) {
@@ -4276,10 +4269,6 @@
                         openEmployeesPanel();
                         saveGame();
                     });
-
-                    if (isMandatoryBreak) {
-                        toggle.disabled = true;
-                    }
                 }
             }
 
@@ -5237,6 +5226,68 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             }
         }
 
+        function openSchedulePanel() {
+            const schedulePanel = document.getElementById('employee-schedule-panel');
+            const scheduleList = document.getElementById('employee-schedule-list');
+            scheduleList.innerHTML = ''; // Clear previous entries
+
+            const employees = { cashier, stocker, barista, manager, salesperson };
+            let anyUnlocked = false;
+
+            for (const empKey in unlocks.employees) {
+                if (unlocks.employees[empKey]) {
+                    anyUnlocked = true;
+                    const employee = employees[empKey];
+                    const empDiv = document.createElement('div');
+                    empDiv.className = 'p-4 border-2 border-amber-800/50 rounded-lg bg-white/50';
+
+                    // Main employee info
+                    let content = `<div class="flex justify-between items-center border-b-2 border-amber-800/20 pb-2 mb-3">
+                                     <h3 class="text-xl font-handwritten">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</h3>
+                                     <span class="text-sm px-2 py-1 rounded ${employee.onBreak ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'}">${employee.onBreak ? 'On Break' : 'Working'}</span>
+                                   </div>`;
+
+                    // Break Assignment
+                    content += `<div class="flex items-center justify-between mb-2">
+                                  <label class="text-lg">Break Assignment:</label>
+                                  <div class="flex items-center space-x-2">
+                                    <button class="btn-style text-sm px-3 py-1" disabled>Day</button>
+                                    <button class="btn-style text-sm px-3 py-1" disabled>Eve</button>
+                                  </div>
+                                </div>`;
+
+                    // Openers/Closers Toggles
+                    content += `<div class="flex items-center justify-between">
+                                  <label class="text-lg">Special Shifts:</label>
+                                  <div class="flex items-center space-x-4">
+                                     <div class="flex items-center">
+                                        <label for="openers-toggle-${empKey}" class="mr-2">Openers</label>
+                                        <input type="checkbox" id="openers-toggle-${empKey}" class="toggle-checkbox" disabled />
+                                     </div>
+                                     <div class="flex items-center">
+                                        <label for="closers-toggle-${empKey}" class="mr-2">Closers</label>
+                                        <input type="checkbox" id="closers-toggle-${empKey}" class="toggle-checkbox" disabled />
+                                     </div>
+                                  </div>
+                                </div>`;
+
+                    empDiv.innerHTML = content;
+                    scheduleList.appendChild(empDiv);
+                }
+            }
+
+            if (!anyUnlocked) {
+                scheduleList.innerHTML = `<p class="text-center p-4">No employees hired yet.</p>`;
+            }
+
+            schedulePanel.classList.remove('hidden');
+        }
+
+        function closeSchedulePanel() {
+            const schedulePanel = document.getElementById('employee-schedule-panel');
+            schedulePanel.classList.add('hidden');
+        }
+
         function saveGame() {
             const gameState = {
                 cash, day, shopPoints, itemPopularity,
@@ -5343,6 +5394,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
+            document.getElementById('close-schedule-panel-btn').addEventListener('click', closeSchedulePanel);
 
             // Order Quantity Modal Logic
             const quantityInput = document.getElementById('order-quantity-input');

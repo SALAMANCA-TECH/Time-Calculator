@@ -3520,7 +3520,7 @@
                 coffeeShop.rect.h = coffeeShopHeight;
                 coffeeShop.rect.w = coffeeShopWidth;
                 coffeeShop.rect.x = rightmostCell.rect.x + rightmostCell.rect.w + 40;
-                coffeeShop.rect.y = (desk.y + desk.height) - coffeeShop.rect.h;
+                coffeeShop.rect.y = (desk.y + desk.height) - coffeeShop.rect.h + 141;
                 coffeeShop.y = coffeeShop.rect.y + coffeeShop.rect.h; // Set the sorting y-position
 
                 // Define the zone behind the counter
@@ -3540,8 +3540,8 @@
             }
 
 
-            cashierCounter.x = storeShiftX + 40 + 141;
-            cashierCounter.y = (desk.y - cashierCounter.h) + 40 + 141;
+            cashierCounter.x = storeShiftX + 40;
+            cashierCounter.y = (desk.y - cashierCounter.h) + 40;
 
             managersOffice.w = officeWidth;
             managersOffice.h = canvas.height / 2;

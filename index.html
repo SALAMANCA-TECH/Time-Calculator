@@ -576,19 +576,21 @@
         let shelves = [];
         const MAX_BASKET_SIZE = 5;
         const MAX_SHELF_STACK = 10;
+        const STOCKER_BASKET_SIZE = 6 * MAX_SHELF_STACK;
+        const BARISTA_BASKET_SIZE = 10;
         const MAX_PACKAGE_SIZE = 20;
         const PACKAGE_WIDTH = 60;
         const PACKAGE_HEIGHT = 50;
         let loadingDockPackages = [];
 
         let unlocks = {
-            employees: { cashier: false, manager: false, salesperson: false },
+            employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
             shelves: [true, false, false, false, false, false],
             storage: [false, false, false, false, false, false]
         };
 
         const unlockCosts = {
-            employees: { cashier: 10, manager: 50, salesperson: 30 },
+            employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
             shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
             storage: [10, 20, 30, 40, 50, 60]
         };
@@ -598,6 +600,8 @@
             storageUnitWeeklyRate: 70,
             salaries: {
                 cashier: 20,
+                stocker: 25,
+                barista: 30,
                 manager: 50,
                 salesperson: 40
             }
@@ -613,6 +617,19 @@
             basket: []
         };
 
+        const stocker = {
+            x: 300, y: 300, width: 50, height: 50, speed: 180,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            basket: [],
+            task: null,
+            stateTimer: 0,
+            idleX: 0, idleY: 0,
+            onBreak: false,
+            playerInitiatedBreak: false
+        };
+
         const cashier = {
             x: 100, y: 300, width: 50, height: 50, speed: 200,
             currentFrame: 0, frameWidth: 90, frameHeight: 90,
@@ -626,6 +643,18 @@
             basket: []
         };
 
+        const barista = {
+            x: 600, y: 600, width: 50, height: 50, speed: 160,
+            currentFrame: 0, frameWidth: 90, frameHeight: 90,
+            animationSpeed: 150, lastFrameTime: 0,
+            state: 'idle', facing: 'right',
+            basket: [],
+            task: null,
+            stateTimer: 0,
+            idleX: 0, idleY: 0,
+            onBreak: false,
+            playerInitiatedBreak: false
+        };
         const manager = {
             x: 200, y: 300, width: 50, height: 50, speed: 150,
             currentFrame: 0, frameWidth: 90, frameHeight: 90,
@@ -656,6 +685,8 @@
 
         const breakSpots = {
             cashier:     { x: 30, y: 15 }, // Top chair
+            stocker:     { x: 60, y: 65 }, // Bottom chair
+            barista:      { x: 10, y: 40 }, // Left of table
             manager:     { x: 85, y: 40 }, // Right of table
             salesperson: { x: 45, y: 40 }  // Center of table
         };
@@ -1915,9 +1946,19 @@
             drawCharacter(player, playerSpriteImage, "Shopkeep");
         }
 
+        function drawStocker() {
+            if (!unlocks.employees.stocker) return;
+            drawCharacter(stocker, playerSpriteImage, "Stocker", 'hue-rotate(180deg) brightness(1.2)');
+        }
+
         function drawCashier() {
             if (!unlocks.employees.cashier) return;
             drawCharacter(cashier, playerSpriteImage, "Cashier", 'sepia(0.8) saturate(3)');
+        }
+
+        function drawBarista() {
+            if (!unlocks.employees.barista) return;
+            drawCharacter(barista, playerSpriteImage, "Barista", 'hue-rotate(90deg) saturate(1.5)');
         }
 
         function drawManager() {
@@ -1973,6 +2014,113 @@
         }
         // --- END REFACTOR ---
 
+        function updateStocker(deltaTime) {
+            if (!unlocks.employees.stocker) return;
+
+            if (stocker.onBreak) {
+                const breakSpot = getBreakSpot('stocker');
+                if (moveCharacterTowards(stocker, breakSpot.x, breakSpot.y, deltaTime)) {
+                    stocker.state = 'idle';
+                } else {
+                    stocker.state = 'walk';
+                }
+                updateCharacterAnimation(stocker, deltaTime);
+                return;
+            }
+
+            if (handlePreDayState(stocker, deltaTime)) return;
+
+            updateCharacterAnimation(stocker, deltaTime);
+
+            stocker.stateTimer -= deltaTime;
+            switch(stocker.state) {
+                case 'idle':
+                    if (stocker.stateTimer <= 0) {
+                        const task = findRestockingTask();
+                        if (task) {
+                            stocker.task = task;
+                            stocker.state = task.action;
+                        } else {
+                            stocker.stateTimer = 3000;
+                            if(Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
+                                stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                                moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime);
+                            } else {
+                                stocker.task = null;
+                            }
+                        }
+                    }
+                    break;
+                case 'fetching':
+                    if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                        const itemToTake = stocker.task.item;
+                        const cell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToTake) && c.items[itemToTake] > 0);
+                        if(cell) {
+                            while(stocker.basket.length < STOCKER_BASKET_SIZE && cell.items[itemToTake] > 0) {
+                                stocker.basket.push(itemToTake);
+                                cell.items[itemToTake]--;
+                            }
+                        }
+                        stocker.state = 'stocking';
+                        stocker.task = null;
+                    }
+                    break;
+                case 'fetching_dock':
+                    if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                        const pkg = loadingDockPackages[stocker.task.packageIndex];
+                        if (pkg && pkg.itemName === stocker.task.item) {
+                            while(stocker.basket.length < STOCKER_BASKET_SIZE && pkg.quantity > 0) {
+                                stocker.basket.push(pkg.itemName);
+                                pkg.quantity--;
+                            }
+                            if (pkg.quantity <= 0) {
+                                loadingDockPackages.splice(stocker.task.packageIndex, 1);
+                            }
+                        }
+                        stocker.state = 'stocking';
+                        stocker.task = null;
+                    }
+                    break;
+                case 'stocking':
+                    if (!stocker.task) {
+                        if (stocker.basket.length === 0) {
+                            stocker.state = 'idle';
+                            stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                            break;
+                        }
+                        const itemToStock = stocker.basket[0];
+                        const targetShelf = findShelfForStocking(itemToStock);
+                        if (targetShelf) {
+                            stocker.task = { action: 'place', item: itemToStock, shelf: targetShelf, target: {x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 10} };
+                        } else {
+                            stocker.basket.shift();
+                        }
+                    }
+                    if (stocker.task && moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                        const shelf = stocker.task.shelf;
+                        const itemToStock = stocker.task.item;
+
+                        let slot = shelf.items.find(s => s.assignedItem === itemToStock && s.quantity < MAX_SHELF_STACK);
+                        if (!slot) {
+                            slot = shelf.items.find(s => s.assignedItem === null);
+                        }
+
+                        if (slot) {
+                            const itemIndexInBasket = stocker.basket.indexOf(itemToStock);
+                            if(itemIndexInBasket > -1) {
+                                if(slot.assignedItem === null) {
+                                    slot.assignedItem = itemToStock;
+                                }
+                                stocker.basket.splice(itemIndexInBasket, 1);
+                                slot.quantity++;
+                            }
+                        }
+                        stocker.task = null;
+                    }
+                    break;
+            }
+        }
+
         function updateCashier(deltaTime) {
             if (!unlocks.employees.cashier) return;
 
@@ -2027,6 +2175,35 @@
                         cashier.task = null;
                     }
                     break;
+            }
+        }
+
+        function updateBarista(deltaTime) {
+            if (!unlocks.employees.barista) return;
+
+            if (barista.onBreak) {
+                const breakSpot = getBreakSpot('barista');
+                if (moveCharacterTowards(barista, breakSpot.x, breakSpot.y, deltaTime)) {
+                    barista.state = 'idle';
+                } else {
+                    barista.state = 'walk';
+                }
+                updateCharacterAnimation(barista, deltaTime);
+                return;
+            }
+
+            if (handlePreDayState(barista, deltaTime)) return;
+
+            updateCharacterAnimation(barista, deltaTime);
+            barista.stateTimer -= deltaTime;
+
+            // The barista's only job is to go to their idle spot for now.
+            // Coffee selling logic will be added later.
+            if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
+                barista.state = 'walk';
+                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
+            } else {
+                barista.state = 'idle';
             }
         }
 
@@ -2933,7 +3110,9 @@
                 pointsProgressBar.style.width = `${pointsProgress}%`;
             }
 
+            updateStocker(deltaTime);
             updateCashier(deltaTime);
+            updateBarista(deltaTime);
             updateManager(deltaTime);
             updateSalesperson(deltaTime);
 
@@ -2989,7 +3168,7 @@
             ctx.translate(cameraX, cameraY);
 
             drawStoreBackground();
-            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, cashier, manager, salesperson];
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, barista, manager, salesperson];
 
             if (unlocks.shelves[5]) {
                 const { x, y, w: shopWidth, h: shopHeight } = coffeeShop.rect;
@@ -3032,8 +3211,12 @@
                     entity.draw();
                 } else if (entity === player) {
                     drawPlayer();
+                } else if (entity === stocker) {
+                    drawStocker();
                 } else if (entity === cashier) {
                     drawCashier();
+                } else if (entity === barista) {
+                    drawBarista();
                 } else if (entity === manager) {
                     drawManager();
                 } else if (entity === salesperson) {
@@ -3119,6 +3302,12 @@
             if (salePrice <= customer.budget) {
                 cash += salePrice;
                 shopPoints += customer.discount > 0 ? 1 : 3; // Less points for discounted sales
+
+                if (unlocks.employees.barista && Math.random() < 0.33) {
+                    cash += 10;
+                    customer.boughtCoffee = true;
+                    spawnFloatingText("Coffee! +$10", customer.x, customer.y - 120, '#654321');
+                }
 
                 customer.leaving = true;
                 customer.state = 'leaving';
@@ -3855,7 +4044,7 @@
             const employeeList = document.getElementById('employee-list');
             employeeList.innerHTML = '';
 
-            const employees = { cashier, manager, salesperson };
+            const employees = { cashier, stocker, barista, manager, salesperson };
 
             let anyUnlocked = false;
             for (const empKey in unlocks.employees) {

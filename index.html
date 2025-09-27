@@ -1046,6 +1046,26 @@
                         this.targetY = desk.y + 75;
                         this.moveTowardsTarget(deltaTime);
                         break;
+                    case 'goingForCoffee':
+                        this.targetX = coffeeShop.rect.x + coffeeShop.rect.w / 2;
+                        this.targetY = coffeeShop.collisionLineY + 30; // Stand in front of the counter
+                        if(this.moveTowardsTarget(deltaTime)) {
+                            this.state = 'orderingCoffee';
+                            this.stateTimer = 2000; // Wait 2 seconds
+                        }
+                        break;
+                    case 'orderingCoffee':
+                        this.stateTimer -= deltaTime;
+                        if(this.stateTimer <= 0) {
+                            cash += 10;
+                            this.boughtCoffee = true;
+                            spawnFloatingText("+$10", this.x, this.y - 90, '#22c55e');
+                            barista.state = 'transaction';
+                            barista.stateTimer = 2000;
+                            logCustomerToSalesReport(this); // Now log the full sale
+                            this.state = 'leaving';
+                        }
+                        break;
                 }
             }
 
@@ -2253,13 +2273,23 @@
             updateCharacterAnimation(barista, deltaTime);
             barista.stateTimer -= deltaTime;
 
-            // The barista's only job is to go to their idle spot for now.
-            // Coffee selling logic will be added later.
-            if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
-                barista.state = 'walk';
-                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
-            } else {
-                barista.state = 'idle';
+            switch(barista.state) {
+                case 'transaction':
+                    // The barista is busy serving coffee. The timer is set externally.
+                    if(barista.stateTimer <= 0) {
+                        barista.state = 'idle';
+                    }
+                    break;
+                case 'idle':
+                default:
+                    // The barista's only job is to go to their idle spot.
+                    if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
+                        barista.state = 'walk';
+                        moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
+                    } else {
+                        barista.state = 'idle';
+                    }
+                    break;
             }
         }
 
@@ -3332,14 +3362,6 @@
                 cash += salePrice;
                 shopPoints += customer.discount > 0 ? 1 : 3; // Less points for discounted sales
 
-                if (unlocks.employees.barista && Math.random() < 0.33) {
-                    cash += 10;
-                    customer.boughtCoffee = true;
-                    spawnFloatingText("Coffee! +$10", customer.x, customer.y - 120, '#654321');
-                }
-
-                customer.leaving = true;
-                customer.state = 'leaving';
                 const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
                 spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
 
@@ -3347,6 +3369,19 @@
                 customer.order.forEach(item => {
                     itemPopularity[item] = (itemPopularity[item] || 0) + 1;
                 });
+
+                // NEW COFFEE LOGIC
+                if (unlocks.coffeeShop && unlocks.employees.barista && Math.random() < 0.5) { // 50% chance to buy coffee
+                    customer.request = "A coffee would be nice.";
+                    customer.showSpeechBubble = true;
+                    customer.speechBubbleTimer = 3000;
+                    customer.state = 'goingForCoffee';
+                    // We will log the sale after they get coffee
+                } else {
+                    customer.leaving = true;
+                    customer.state = 'leaving';
+                    logCustomerToSalesReport(customer);
+                }
 
             } else {
                 customer.order.forEach(item => {
@@ -3367,8 +3402,8 @@
                 customer.leaving = true;
                 customer.state = 'leaving';
                 spawnFloatingText('Too Expensive!', customer.x, customer.y - 80, '#ef4444');
+                logCustomerToSalesReport(customer);
             }
-            logCustomerToSalesReport(customer);
             updateUI();
             populateInStoreCustomers();
             saveGame();
@@ -3629,7 +3664,7 @@
             }
 
             barista.idleX = coffeeShop.rect.x + (coffeeShop.rect.w / 2);
-            barista.idleY = coffeeShop.rect.y + coffeeShop.rect.h - 108;
+            barista.idleY = coffeeShop.rect.y + coffeeShop.rect.h - 93; // Moved down 15px
             if (barista.state === 'idle' && !barista.task) {
                 barista.x = barista.idleX;
                 barista.y = barista.idleY;
@@ -4395,9 +4430,7 @@
                 }
             } else if (type === 'coffeeShop') {
                 cost = unlockCosts.coffeeShop;
-                if (!unlocks.shelves[2]) { // Requires at least 2 shelves
-                    prerequisite = false;
-                }
+                // Prerequisite removed
             }
 
             if (developerMode) {
@@ -4513,17 +4546,16 @@
             const coffeeCost = developerMode ? 0 : unlockCosts.coffeeShop;
             const coffeeUnlocked = unlocks.coffeeShop;
             const coffeeCanAfford = shopPoints >= coffeeCost;
-            const coffeePrerequisite = unlocks.shelves[5]; // Requires all 6 shelves
+            const coffeePrerequisite = true; // Prerequisite removed
             const coffeeDiv = document.createElement('div');
             coffeeDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
             coffeeDiv.innerHTML = `
                 <div>
                     <span class="text-lg">Coffee Shop</span>
                     <span class="text-sm text-amber-800/80 block">Cost: ${coffeeCost} Points</span>
-                    ${!coffeePrerequisite ? '<span class="text-xs text-red-600 block">Requires 6 shelves</span>' : ''}
                 </div>
-                <button class="btn-style px-4 py-1" data-type="coffeeShop" data-key="coffeeShop" ${coffeeUnlocked || !coffeePrerequisite ? 'disabled' : ''} ${!coffeeCanAfford && !coffeeUnlocked ? 'disabled' : ''}>
-                    ${coffeeUnlocked ? 'Unlocked' : (coffeePrerequisite ? 'Buy' : 'Locked')}
+                <button class="btn-style px-4 py-1" data-type="coffeeShop" data-key="coffeeShop" ${coffeeUnlocked ? 'disabled' : ''} ${!coffeeCanAfford && !coffeeUnlocked ? 'disabled' : ''}>
+                    ${coffeeUnlocked ? 'Unlocked' : 'Buy'}
                 </button>
             `;
             upgradesContainer.appendChild(coffeeDiv);

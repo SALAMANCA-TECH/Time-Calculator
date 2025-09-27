@@ -4072,8 +4072,14 @@
             const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
             if (clickedShelf) {
                 if (Math.hypot(player.x - (clickedShelf.rect.x + clickedShelf.rect.w/2), player.y - (clickedShelf.rect.y + clickedShelf.rect.h/2)) < 150) {
-                    openClipboardPanel();
-                    openShelfPanel(clickedShelf);
+                    const shelfIndex = shelves.indexOf(clickedShelf);
+                    if (unlocks.shelves[shelfIndex]) {
+                        openClipboardPanel();
+                        openShelfPanel(clickedShelf);
+                    } else {
+                        const cost = unlockCosts.shelves[shelfIndex];
+                        showMessage(`This is Shelf ${shelfIndex + 1}. It costs ${cost} points to unlock.`);
+                    }
                     return;
                 }
             }
@@ -4985,15 +4991,20 @@
             activeStorageCell = cell;
             const storageGrid = document.getElementById('storage-grid');
             document.getElementById('storage-title').textContent = cell.label;
-            storageGrid.innerHTML = '';
+            storageGrid.innerHTML = ''; // Clear previous content
+
             if (cell.allowedItems.length === 0) {
                 storageGrid.innerHTML = `<p class="col-span-4 text-center">No items are stored here.</p>`;
+                showAppScreen('storage-panel');
+                return;
             }
+
             cell.allowedItems.forEach(itemName => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `p-2 text-center border-2 border-amber-900 rounded-lg bg-white shadow-sm`;
-                const inStock = cell.items[itemName] > 0;
+                const inStock = cell.items[itemName] && cell.items[itemName] > 0;
                 const canPutBack = player.basket.includes(itemName);
+
                 itemDiv.innerHTML = `
                     <div class="font-handwritten text-xl">${itemName}</div>
                     <div class="text-xs">In Stock: ${cell.items[itemName] || 0}</div>
@@ -5004,6 +5015,8 @@
                 `;
                 storageGrid.appendChild(itemDiv);
             });
+
+            // Add event listeners to the buttons
             storageGrid.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const action = e.target.dataset.action;
@@ -5015,6 +5028,7 @@
                     }
                 });
             });
+
             showAppScreen('storage-panel');
         }
 

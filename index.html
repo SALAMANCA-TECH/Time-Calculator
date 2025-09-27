@@ -2391,7 +2391,7 @@
                             if (lowStockItems.length > 0) {
                                 lowStockItems.sort((a, b) => (itemPopularity[b] || 0) - (itemPopularity[a] || 0));
                                 const mostPopularLowItem = lowStockItems[0];
-                                const quantityToOrder = 10;
+                                const quantityToOrder = 1;
                                 const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
 
                                 if (loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
@@ -2452,7 +2452,7 @@
                         } else {
                             // Single item order logic
                             const itemToOrder = orderTask.item;
-                            const quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 10;
+                            const quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 1;
                             const restockPrice = parseFloat((items[itemToOrder].cost * 0.75).toFixed(2));
                             const totalCost = restockPrice * quantityToOrder;
 

@@ -551,7 +551,8 @@
         let continuousMode = false;
         let isMandatoryBreak = false;
         let midDayBreakTriggered = false;
-        let weeklyExpenses = 0;
+        let currentWeeklyAccruedBill = 0;
+        let currentWeeklyLaborCost = 0;
 
         const OPENING_DURATION = 60000; // 1 minute
         const OPEN_DURATION = 180000; // 3 minutes
@@ -622,6 +623,7 @@
         const dailyOperatingCosts = {
             rent: 5,
             storageUnitWeeklyRate: 70,
+            coffeeShop: 2,
             salaries: {
                 cashier: 20,
                 stocker: 25,
@@ -3394,8 +3396,12 @@
             midDayBreakTriggered = false;
             manager.hasPlacedMorningOrder = false; // Reset for the next day
 
+            // --- Daily & Weekly Expense Calculation ---
+            let weeklyBillPaid = 0;
+
+            // 1. Calculate and pay daily labor costs
             let dailyLaborCost = 0;
-            dailyLaborCosts = {}; // Reset and populate for the report
+            dailyLaborCosts = {}; // Reset for the report
             for (const employee in unlocks.employees) {
                 if (unlocks.employees[employee]) {
                     const salary = dailyOperatingCosts.salaries[employee];
@@ -3403,27 +3409,35 @@
                     dailyLaborCost += salary;
                 }
             }
+            cash -= dailyLaborCost; // Pay labor immediately
+            currentWeeklyLaborCost += dailyLaborCost;
 
+            // 2. Calculate and accrue daily rentable costs
+            let dailyAccruedAmount = dailyOperatingCosts.rent;
             const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
-            const dailyStorageCost = (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
-            const dailyAccruedExpenses = dailyOperatingCosts.rent + dailyLaborCost + dailyStorageCost;
+            dailyAccruedAmount += (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
+            if (unlocks.facilities.coffeeShop) {
+                dailyAccruedAmount += dailyOperatingCosts.coffeeShop;
+            }
+            currentWeeklyAccruedBill += dailyAccruedAmount;
 
-            weeklyExpenses += dailyAccruedExpenses;
-
-            let weeklyBillPaid = 0;
-
+            // 3. Handle End-of-Week Billing
             if (day > 0 && day % 7 === 0) {
-                const totalWeeklyBill = weeklyExpenses;
-                cash -= totalWeeklyBill;
-                weeklyBillPaid = totalWeeklyBill;
-                weeklyExpenses = 0; // Reset for the next week
+                cash -= currentWeeklyAccruedBill;
+                weeklyBillPaid = currentWeeklyAccruedBill;
 
                 if (cash < 0) {
                     updateUI();
-                    endGame(`Game Over! You couldn't pay your weekly bills of $${totalWeeklyBill.toFixed(2)} and ended with a debt of $${Math.abs(cash).toFixed(2)}.`);
-                    return;
+                    endGame(`Game Over! You couldn't pay your weekly bill of $${weeklyBillPaid.toFixed(2)} and ended with a debt of $${Math.abs(cash).toFixed(2)}.`);
+                    return; // Exit here if game over
                 }
+
+                // Reset for the next week
+                currentWeeklyAccruedBill = 0;
+                currentWeeklyLaborCost = 0;
             }
+
+            const dailyTotalExpenses = dailyLaborCost + dailyAccruedAmount;
 
             customers.forEach(c => c.state = 'leaving');
             timeSinceLastCustomer = 0;
@@ -3475,7 +3489,7 @@
     `;
             document.getElementById('report-day').textContent = day;
             document.getElementById('report-sales').textContent = `$${grossSales.toFixed(2)}`;
-            document.getElementById('report-expenses').textContent = `-$${dailyAccruedExpenses.toFixed(2)}`;
+            document.getElementById('report-expenses').textContent = `-$${dailyTotalExpenses.toFixed(2)}`;
 
             const weeklyReportDiv = document.getElementById('weekly-bill-report');
             weeklyReportDiv.innerHTML = ''; // Clear previous weekly report
@@ -3485,7 +3499,7 @@
                 `;
             }
 
-            document.getElementById('report-profit').textContent = `$${(grossSales - dailyAccruedExpenses).toFixed(2)}`;
+            document.getElementById('report-profit').textContent = `$${(grossSales - dailyTotalExpenses).toFixed(2)}`;
 
             // --- START: POPULATE NEW REPORT VIEWS ---
 
@@ -3493,31 +3507,29 @@
             const billsView = document.getElementById('report-view-bills');
             billsView.innerHTML = ''; // Clear previous content
 
-            let billsHtml = `<h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Daily Cost Breakdown</h3>`;
-            billsHtml += `<div class="space-y-2 text-lg">`;
-            billsHtml += `<p class="flex justify-between"><span>Daily Rent:</span> <span>-$${dailyOperatingCosts.rent.toFixed(2)}</span></p>`;
+            let billsHtml = `<div class="space-y-6">`;
 
-            if (dailyStorageCost > 0) {
-                billsHtml += `<p class="flex justify-between"><span>Storage Units (Accrued):</span> <span>-$${dailyStorageCost.toFixed(2)}</span></p>`;
-            }
-
+            // Costs Paid Today section
+            billsHtml += `<div><h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Costs Paid Today</h3>`;
+            billsHtml += `<div class="space-y-1 text-lg">`;
             if (Object.keys(dailyLaborCosts).length > 0) {
-                billsHtml += `<div class="pl-4 border-l-2 border-amber-800/30 ml-2 my-1">`;
-                billsHtml += `<p class="font-bold">Labor:</p>`;
-                for (const employee in dailyLaborCosts) {
+                 for (const employee in dailyLaborCosts) {
                     const cost = dailyLaborCosts[employee];
-                    billsHtml += `<p class="flex justify-between text-base"><span>- ${employee.charAt(0).toUpperCase() + employee.slice(1)}:</span> <span>-$${cost.toFixed(2)}</span></p>`;
+                    billsHtml += `<p class="flex justify-between text-base"><span>- ${employee.charAt(0).toUpperCase() + employee.slice(1)}'s Salary:</span> <span>-$${cost.toFixed(2)}</span></p>`;
                 }
-                billsHtml += `</div>`;
+            } else {
+                billsHtml += `<p class="text-base text-gray-500">No labor costs today.</p>`;
             }
+            billsHtml += `</div></div>`;
 
-            let totalSupplyCost = 0;
-            dailySupplyOrders.forEach(order => {
-                totalSupplyCost += order.cost;
-            });
-            if (totalSupplyCost > 0) {
-                billsHtml += `<p class="flex justify-between"><span>Supply Orders:</span> <span>-$${totalSupplyCost.toFixed(2)}</span></p>`;
-            }
+
+            // Weekly Summary section
+            billsHtml += `<div><h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Week-to-Date Summary</h3>`;
+            billsHtml += `<div class="space-y-1 text-lg">`;
+            billsHtml += `<p class="flex justify-between"><span>Total Accrued Bill (Due Day ${Math.ceil(day / 7) * 7}):</span> <span class="font-bold text-red-600">-$${currentWeeklyAccruedBill.toFixed(2)}</span></p>`;
+            billsHtml += `<p class="flex justify-between"><span>Total Labor Paid This Week:</span> <span>-$${currentWeeklyLaborCost.toFixed(2)}</span></p>`;
+            billsHtml += `</div></div>`;
+
             billsHtml += `</div>`;
             billsView.innerHTML = billsHtml;
 
@@ -5148,7 +5160,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
-                customerProfiles, enabledItems
+                customerProfiles, enabledItems,
+                currentWeeklyAccruedBill, currentWeeklyLaborCost
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -5172,6 +5185,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
                     enabledItems = gameState.enabledItems || enabledItems;
+                    currentWeeklyAccruedBill = gameState.currentWeeklyAccruedBill || 0;
+                    currentWeeklyLaborCost = gameState.currentWeeklyLaborCost || 0;
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {

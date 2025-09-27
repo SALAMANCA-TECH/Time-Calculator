@@ -342,10 +342,11 @@
 
     <!-- New Game Screen -->
     <div id="new-game-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
-        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+        <div class="relative bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <button id="close-new-game-screen" class="absolute top-2 right-2 text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
             <h2 class="text-3xl font-handwritten text-center mb-6">Start a New Game</h2>
             <div class="space-y-4">
-                <button id="new-game-standard" class="btn-style p-4 text-xl w-full">Standard</button>
+                <button id="new-game-standard" class="btn-style p-4 text-xl w-full">Standard Unlocks</button>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col space-y-4">
                         <button id="new-game-dev" class="btn-style p-4 text-xl">Developer Mode</button>
@@ -5896,7 +5897,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             document.getElementById('place-order-btn').addEventListener('click', () => placeOrder(false));
             document.getElementById('new-game-btn').addEventListener('click', startNewGame);
-            document.getElementById('close-schedule-panel-btn').addEventListener('click', closeSchedulePanel);
+            document.getElementById('close-new-game-screen').addEventListener('click', () => {
+                document.getElementById('new-game-screen').classList.add('hidden');
+            });
 
             // New Game Screen Button Listeners
             document.getElementById('new-game-standard').addEventListener('click', () => choseNewGameOption('standard'));

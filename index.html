@@ -562,7 +562,7 @@
         const desk = { x: 0, y: 0, width: 0, height: 30 };
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
         const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
-        const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 }, draw: drawCoffeeShopForeground };
+        const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 }, draw: drawCoffeeShop };
         const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
         const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone2 = { x: 0, y: 0, w: 0, h: 0 };
@@ -1133,68 +1133,28 @@
             ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
         }
 
-        function drawCoffeeShopBackground(x, y, shopWidth, shopHeight) {
+        function drawCoffeeSign(x, y, shopWidth, shopHeight) {
             const coffeeDarkBrown = '#4a2e1c';
-            const coffeeMidBrown = '#6d4c41';
-            const coffeeLightBrown = '#a1887f';
-            const coffeeCream = '#f7e7d8';
-            const coffeeWindow = '#d7ccc8';
-            const coffeeSign = '#eaddc7';
-            const coffeeText = '#5d4037';
+            const coffeeSignColor = '#eaddc7';
+            const coffeeTextColor = '#5d4037';
 
-            // Main building structure
-            ctx.fillStyle = coffeeLightBrown;
-            ctx.fillRect(x, y, shopWidth, shopHeight);
-
-            // Top decorative beam
-            const roofHeight = shopHeight * 0.08;
-            ctx.fillStyle = coffeeMidBrown;
-            ctx.fillRect(x, y, shopWidth, roofHeight);
-
-
-            // Coffee Sign
             const signY = y + shopHeight * 0.1;
             const signHeight = shopHeight * 0.17;
             const signX = x + shopWidth * 0.07;
             const signWidth = shopWidth * 0.86;
-            ctx.fillStyle = coffeeSign;
+            ctx.fillStyle = coffeeSignColor;
             ctx.fillRect(signX, signY, signWidth, signHeight);
             ctx.strokeStyle = coffeeDarkBrown;
             ctx.strokeRect(signX, signY, signWidth, signHeight);
 
             // "Coffee" Text (Pixelated)
-            ctx.fillStyle = coffeeText;
-            const letterC = [
-                [0,1,1,1,0],
-                [1,0,0,0,1],
-                [1,0,0,0,0],
-                [1,0,0,0,1],
-                [0,1,1,1,0],
-            ];
-             const letterO = [
-                [0,1,1,1,0],
-                [1,0,0,0,1],
-                [1,0,0,0,1],
-                [1,0,0,0,1],
-                [0,1,1,1,0],
-            ];
-            const letterF = [
-                [1,1,1,1,1],
-                [1,0,0,0,0],
-                [1,1,1,0,0],
-                [1,0,0,0,0],
-                [1,0,0,0,0],
-            ];
-            const letterE = [
-                [1,1,1,1,1],
-                [1,0,0,0,0],
-                [1,1,1,1,0],
-                [1,0,0,0,0],
-                [1,1,1,1,1],
-            ];
-
+            ctx.fillStyle = coffeeTextColor;
+            const letterC = [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,0,0,1],[0,1,1,1,0]];
+            const letterO = [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]];
+            const letterF = [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,0,0],[1,0,0,0,0],[1,0,0,0,0]];
+            const letterE = [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,1,1,1,1]];
             const coffeeTextMap = [letterC, letterO, letterF, letterF, letterE, letterE];
-            const pixelSize = Math.max(1, Math.floor(signHeight / 10)); // Make pixel size dynamic
+            const pixelSize = Math.max(1, Math.floor(signHeight / 10));
             const letterWidth = 5 * pixelSize;
             const letterHeight = 5 * pixelSize;
             const textBlockWidth = (coffeeTextMap.length * letterWidth) + ((coffeeTextMap.length - 1) * pixelSize * 2);
@@ -1211,64 +1171,53 @@
                 }
                 textX += letterWidth + (pixelSize * 2);
             });
+        }
 
+        function drawCoffeeWindow(x, y, shopWidth, shopHeight) {
+            const coffeeDarkBrown = '#4a2e1c';
+            const coffeeWindowColor = '#d7ccc8';
 
-            // Window
-            const windowY = signY + signHeight + shopHeight * 0.03;
+            const windowY = y + shopHeight * 0.3;
             const windowHeight = shopHeight * 0.4;
             const windowX = x + shopWidth * 0.03;
             const windowWidth = shopWidth * 0.94;
             ctx.fillStyle = coffeeDarkBrown;
             ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
-            ctx.fillStyle = coffeeWindow;
-            ctx.fillRect(windowX + shopWidth*0.03, windowY + shopHeight*0.03, windowWidth - shopWidth*0.06, windowHeight - shopHeight*0.06);
+            ctx.fillStyle = coffeeWindowColor;
+            ctx.fillRect(windowX + shopWidth * 0.03, windowY + shopHeight * 0.03, windowWidth - shopWidth * 0.06, windowHeight - shopHeight * 0.06);
+        }
 
-             // Window reflection
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            const innerWindowX = windowX + shopWidth*0.03;
-            const innerWindowY = windowY + shopHeight*0.03;
-            for(let i=0; i< (windowWidth - shopWidth*0.06) / 10; i++){
-                ctx.moveTo(innerWindowX + i * 15, innerWindowY);
-                ctx.lineTo(innerWindowX + i * 15 + 30, innerWindowY + 20);
-            }
-            ctx.stroke();
-
-            // Espresso Machine
+        function drawEspressoMachine(x, y, shopWidth, shopHeight) {
             const machineW = shopWidth * 0.2;
             const machineH = shopHeight * 0.14;
             const machineX = x + shopWidth * 0.13;
-            const machineY = windowY + windowHeight - machineH;
+            const machineY = y + (shopHeight * 0.7) - machineH;
+
             ctx.fillStyle = '#9e9e9e';
             ctx.fillRect(machineX, machineY, machineW, machineH);
             ctx.strokeStyle = '#424242';
             ctx.strokeRect(machineX, machineY, machineW, machineH);
             ctx.fillStyle = '#616161';
-            ctx.fillRect(machineX + machineW*0.1, machineY + machineH*0.2, machineW*0.3, machineH*0.2);
-            ctx.fillRect(machineX + machineW*0.6, machineY + machineH*0.2, machineW*0.3, machineH*0.2);
+            ctx.fillRect(machineX + machineW * 0.1, machineY + machineH * 0.2, machineW * 0.3, machineH * 0.2);
+            ctx.fillRect(machineX + machineW * 0.6, machineY + machineH * 0.2, machineW * 0.3, machineH * 0.2);
         }
 
-        function drawCoffeeShopForeground() {
-            const x = this.rect.x, y = this.rect.y, shopWidth = this.rect.w, shopHeight = this.rect.h;
+        function drawCoffeeCounter(x, y, shopWidth, shopHeight) {
             const coffeeDarkBrown = '#4a2e1c';
             const coffeeMidBrown = '#6d4c41';
 
-            const signY = y + shopHeight * 0.1;
-            const signHeight = shopHeight * 0.17;
-            const windowY = signY + signHeight + shopHeight * 0.03;
-            const windowHeight = shopHeight * 0.4;
-
-            // Counter
-            const counterY = windowY + windowHeight + shopHeight * 0.03;
+            const counterY = y + shopHeight * 0.73;
             const counterHeight = shopHeight * 0.04;
             ctx.fillStyle = coffeeMidBrown;
             ctx.fillRect(x, counterY, shopWidth, counterHeight);
             ctx.strokeStyle = coffeeDarkBrown;
             ctx.strokeRect(x, counterY, shopWidth, counterHeight);
+        }
 
-            // Stools
-            const stoolY = counterY + counterHeight;
+        function drawStools(x, y, shopWidth, shopHeight) {
+            const coffeeMidBrown = '#6d4c41';
+            const stoolY = y + shopHeight * 0.77;
+
             const stoolW = shopWidth * 0.1;
             const stoolH = shopHeight * 0.06;
             const legH = shopHeight * 0.04;
@@ -1277,18 +1226,18 @@
             const stoolX1 = x + shopWidth * 0.5;
             ctx.fillStyle = coffeeMidBrown;
             ctx.fillRect(stoolX1, stoolY, stoolW, stoolH); // Seat
-            ctx.fillRect(stoolX1 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
-            ctx.fillRect(stoolX1 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
+            ctx.fillRect(stoolX1 + stoolW * 0.15, stoolY + stoolH, legW, legH); // Leg 1
+            ctx.fillRect(stoolX1 + stoolW * 0.7, stoolY + stoolH, legW, legH); // Leg 2
 
             const stoolX2 = x + shopWidth * 0.67;
             ctx.fillRect(stoolX2, stoolY, stoolW, stoolH); // Seat
-            ctx.fillRect(stoolX2 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
-            ctx.fillRect(stoolX2 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
+            ctx.fillRect(stoolX2 + stoolW * 0.15, stoolY + stoolH, legW, legH); // Leg 1
+            ctx.fillRect(stoolX2 + stoolW * 0.7, stoolY + stoolH, legW, legH); // Leg 2
 
             const stoolX3 = x + shopWidth * 0.84;
             ctx.fillRect(stoolX3, stoolY, stoolW, stoolH); // Seat
-            ctx.fillRect(stoolX3 + stoolW*0.15, stoolY + stoolH, legW, legH); // Leg 1
-            ctx.fillRect(stoolX3 + stoolW*0.7, stoolY + stoolH, legW, legH); // Leg 2
+            ctx.fillRect(stoolX3 + stoolW * 0.15, stoolY + stoolH, legW, legH); // Leg 1
+            ctx.fillRect(stoolX3 + stoolW * 0.7, stoolY + stoolH, legW, legH); // Leg 2
         }
 
         function drawManagersOffice() {
@@ -3261,10 +3210,46 @@
             ctx.translate(cameraX, cameraY);
 
             drawStoreBackground();
-            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, coffeeShop, player, stocker, cashier, barista, manager, salesperson];
+            const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, barista, manager, salesperson];
+
+            if (shelves.length > 5) {
+                const { x, y, w: shopWidth, h: shopHeight } = coffeeShop.rect;
+
+                const signYPos = y + shopHeight * 0.1;
+                const signHeight = shopHeight * 0.17;
+                const windowYPos = signYPos + signHeight + shopHeight * 0.03;
+                const windowHeight = shopHeight * 0.4;
+                const counterYPos = windowYPos + windowHeight + shopHeight * 0.03;
+                const counterHeight = shopHeight * 0.04;
+                const stoolYPos = counterYPos + counterHeight;
+                const stoolHeight = shopHeight * 0.06;
+                const legHeight = shopHeight * 0.04;
+
+                // Background parts of the coffee shop
+                dynamicEntities.push({
+                    y: windowYPos + windowHeight, // Sort by the bottom of the window
+                    draw: () => {
+                        drawCoffeeSign(x, y, shopWidth, shopHeight);
+                        drawCoffeeWindow(x, y, shopWidth, shopHeight);
+                        drawEspressoMachine(x, y, shopWidth, shopHeight);
+                    }
+                });
+
+                // Foreground parts of the coffee shop
+                dynamicEntities.push({
+                    y: stoolYPos + stoolHeight + legHeight, // Sort by the bottom of the stools
+                    draw: () => {
+                        drawCoffeeCounter(x, y, shopWidth, shopHeight);
+                        drawStools(x, y, shopWidth, shopHeight);
+                    }
+                });
+            }
+
             dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
             dynamicEntities.forEach(entity => {
                 if (entity instanceof Customer) {
+                    entity.draw();
+                } else if (entity.draw) { // Handles shelves, coffee shop parts
                     entity.draw();
                 } else if (entity === player) {
                     drawPlayer();
@@ -3278,8 +3263,6 @@
                     drawManager();
                 } else if (entity === salesperson) {
                     drawSalesperson();
-                } else if (entity.rect) { // It's a shelf
-                    entity.draw();
                 }
             });
             drawOfficeZones();

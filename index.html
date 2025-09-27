@@ -5336,7 +5336,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 let content = '';
 
                 if (slot.assignedItem) {
-                    const canPlaceMore = player.basket.includes(slot.assignedItem) && slot.quantity < MAX_SHELF_STACK;
+                    const canPlaceMore = player.basket.some(item => item.itemName === slot.assignedItem) && slot.quantity < MAX_SHELF_STACK;
                     const canTake = slot.quantity > 0 && player.basket.length < MAX_BASKET_SIZE;
                     content = `
                         <div>
@@ -5639,6 +5639,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     unlocks = gameState.unlocks || unlocks;
                     if (!unlocks.facilities) {
                         unlocks.facilities = { coffeeShop: false };
+                    }
+                    // PATCH: Ensure unlocks.shelves is the correct length for saved games
+                    if (unlocks.shelves.length < 8) {
+                        for (let i = unlocks.shelves.length; i < 8; i++) {
+                            unlocks.shelves.push(false);
+                        }
                     }
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};

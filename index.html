@@ -2234,6 +2234,12 @@
                             target: { x: customerToServe.x - 30, y: customerToServe.y - 100 }
                         };
                         cashier.state = 'serving';
+                    } else {
+                        // If no customer, ensure cashier is at their post
+                        if (Math.hypot(cashier.x - cashier.idleX, cashier.y - cashier.idleY) > 5) {
+                            cashier.state = 'returning';
+                            cashier.task = null; // Clear task before returning
+                        }
                     }
                     break;
                 case 'serving':
@@ -2247,12 +2253,13 @@
                         if(cashier.task) {
                             completeTransaction(cashier.task.customerId);
                         }
-                        cashier.task = { target: {x: cashier.idleX, y: cashier.idleY } };
                         cashier.state = 'returning';
+                        cashier.task = null;
                     }
                     break;
                 case 'returning':
-                    if(cashier.task && moveCharacterTowards(cashier, cashier.task.target.x, cashier.task.target.y, deltaTime)) {
+                    // This state now directly uses idleX/idleY, ignoring any task.
+                    if(moveCharacterTowards(cashier, cashier.idleX, cashier.idleY, deltaTime)) {
                         cashier.state = 'idle';
                         cashier.task = null;
                     }
@@ -3165,7 +3172,15 @@
                         if (unlocks.employees[empKey]) {
                             const employee = employees[empKey];
                             if (!employee.playerInitiatedBreak) {
-                                employee.onBreak = !isEmployeeWorking(employee, currentSegment);
+                                const wasOnBreak = employee.onBreak;
+                                const isNowOnBreak = !isEmployeeWorking(employee, currentSegment);
+                                employee.onBreak = isNowOnBreak;
+
+                                // If break just ended, force them to return to their post
+                                if (wasOnBreak && !isNowOnBreak) {
+                                    employee.state = 'returning';
+                                    employee.task = null; // Clear any previous task
+                                }
                             }
                         }
                     }

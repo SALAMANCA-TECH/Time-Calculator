@@ -659,14 +659,14 @@
 
         let unlocks = {
             employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
-            shelves: [true, false, false, false, false, false],
+            shelves: [true, false, false, false, false, false, false, false],
             facilities: { coffeeShop: false },
             storage: [false, false, false, false, false, false]
         };
 
         const unlockCosts = {
             employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
-            shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
+            shelves: [null, 5, 10, 20, 40, 80, 30, 30], // index 0 is free
             facilities: { coffeeShop: 100 },
             storage: [10, 20, 30, 40, 50, 60]
         };
@@ -1024,35 +1024,82 @@
                     case 'takingItem':
                         this.stateTimer -= deltaTime;
                         if (this.stateTimer <= 0) {
-                            const currentItem = this.requestedItems[this.currentItemIndex];
-                            const shelf = shelves.find(s => s.items.some(i => i && i.assignedItem === currentItem));
-                            if(shelf) {
-                                const slot = shelf.items.find(i => i && i.assignedItem === currentItem && i.quantity > 0);
+                            const currentItemName = this.requestedItems[this.currentItemIndex];
+                            const shelf = shelves.find(s => s.items.some(i => i && i.assignedItem === currentItemName));
+                            if (shelf) {
+                                const slot = shelf.items.find(i => i && i.assignedItem === currentItemName && i.quantity > 0);
                                 if (slot) {
+                                    // 1. Take the item
                                     slot.quantity--;
-                                    this.order.push(currentItem);
-                                    this.currentItemIndex++; // <-- FIX: This was missing!
-                                     if(this.currentItemIndex >= this.requestedItems.length) {
-                                         this.request = `Got everything! Time to check out.`;
-                                         this.state = 'queuing';
-                                     } else {
-                                         this.state = 'browsing';
-                                         if(!this.findNextItemTarget()){
-                                             this.request = `Can't find the other items... I'll just look around.`;
-                                             this.state = 'wandering';
-                                             this.isWaitingForRestock = true;
-                                             this.stateTimer = 0;
-                                         }
-                                     }
+                                    this.order.push({ itemName: currentItemName, shelfType: shelf.type });
+
+                                    // 2. Handle SPECIALS shelf effect
+                                    if (shelf.type === 'SPECIALS') {
+                                        const originalRequest = [...customerProfiles[this.customerType][this.name].requestedItems];
+                                        let cheapestItemName = null;
+                                        let minCost = Infinity;
+                                        originalRequest.forEach(reqItem => {
+                                            if (items[reqItem].cost < minCost) {
+                                                minCost = items[reqItem].cost;
+                                                cheapestItemName = reqItem;
+                                            }
+                                        });
+
+                                        if (cheapestItemName) {
+                                            spawnFloatingText(`-1 ${cheapestItemName}`, this.x, this.y - 120, '#42a5f5');
+                                            const inBasketIndex = this.order.findIndex(o => o.itemName === cheapestItemName);
+                                            if (inBasketIndex > -1) {
+                                                this.order.splice(inBasketIndex, 1);
+                                            }
+                                            const inRequestsIndex = this.requestedItems.indexOf(cheapestItemName);
+                                            if (inRequestsIndex > -1) {
+                                                if (inRequestsIndex <= this.currentItemIndex) {
+                                                    this.currentItemIndex--;
+                                                }
+                                                this.requestedItems.splice(inRequestsIndex, 1);
+                                            }
+                                        }
+                                    } else if (shelf.type === 'SALES' && Math.random() < 0.3) { // 30% chance for impulse buy
+                                        const availableUpsellSlots = shelf.items.filter(s =>
+                                            s.assignedItem && s.quantity > 0 &&
+                                            !this.requestedItems.includes(s.assignedItem) &&
+                                            !this.order.some(orderItem => orderItem.itemName === s.assignedItem)
+                                        );
+
+                                        if (availableUpsellSlots.length > 0) {
+                                            const upsellSlot = availableUpsellSlots[Math.floor(Math.random() * availableUpsellSlots.length)];
+                                            upsellSlot.quantity--;
+                                            this.order.push({ itemName: upsellSlot.assignedItem, shelfType: 'SALES' });
+                                            spawnFloatingText(`+1 ${upsellSlot.assignedItem}!`, this.x, this.y - 120, '#ef4444');
+                                        }
+                                    }
+
+
+                                    // 3. Move to the next item
+                                    this.currentItemIndex++;
+
+                                    // 4. Decide what to do next
+                                    if (this.currentItemIndex >= this.requestedItems.length) {
+                                        this.request = `Got everything! Time to check out.`;
+                                        this.state = 'queuing';
+                                    } else {
+                                        this.state = 'browsing';
+                                        if (!this.findNextItemTarget()) {
+                                            this.request = `Can't find the other items... I'll just look around.`;
+                                            this.state = 'wandering';
+                                            this.isWaitingForRestock = true;
+                                            this.stateTimer = 0;
+                                        }
+                                    }
                                 } else {
-                                    this.request = `They're out of ${currentItem}!`;
+                                    this.request = `They're out of ${currentItemName}!`;
                                     logCustomerToSalesReport(this);
                                     this.state = 'leaving';
                                 }
                             } else {
-                                 this.request = `They're out of ${currentItem}!`;
-                                 logCustomerToSalesReport(this);
-                                 this.state = 'leaving';
+                                this.request = `They're out of ${currentItemName}!`;
+                                logCustomerToSalesReport(this);
+                                this.state = 'leaving';
                             }
                         }
                         break;
@@ -1069,6 +1116,28 @@
                                 this.waitTimer = 0; // Reset timer
                                 return;
                             }
+
+                            // SALES SHELF ATTRACTION LOGIC
+                            const salesShelves = shelves.filter(s => s.type === 'SALES' && unlocks.shelves[shelves.indexOf(s)] && s.items.some(slot => slot.assignedItem && slot.quantity > 0));
+                            if (salesShelves.length > 0 && Math.random() < 0.2) { // 20% chance per wander cycle
+                                const randomSalesShelf = salesShelves[Math.floor(Math.random() * salesShelves.length)];
+                                const availableItems = randomSalesShelf.items.filter(slot => slot.assignedItem && slot.quantity > 0);
+                                const randomItemSlot = availableItems[Math.floor(Math.random() * availableItems.length)];
+                                const newItem = randomItemSlot.assignedItem;
+
+                                if (!this.requestedItems.includes(newItem)) {
+                                    this.requestedItems.push(newItem);
+                                    this.currentItemIndex = this.requestedItems.length - 1; // Target the new item
+                                    this.request = `Ooh, a sale! I'll take a ${newItem}!`;
+                                    this.showSpeechBubble = true;
+                                    this.speechBubbleTimer = 4000;
+                                    this.state = 'browsing';
+                                    this.isWaitingForRestock = false; // No longer waiting for a specific restock
+                                    this.findNextItemTarget();
+                                    return; // Exit the wandering state update
+                                }
+                            }
+
 
                             const firstShelfX = shelves[0].rect.x;
                             const lastShelf = shelves[shelves.length - 1];
@@ -2156,7 +2225,7 @@
                         const cell = storageCells.find((c, i) => unlocks.storage[i] && c.allowedItems.includes(itemToTake) && c.items[itemToTake] > 0);
                         if(cell) {
                             while(stocker.basket.length < STOCKER_BASKET_SIZE && cell.items[itemToTake] > 0) {
-                                stocker.basket.push(itemToTake);
+                                stocker.basket.push({ itemName: itemToTake, shelfType: 'NORMAL' });
                                 cell.items[itemToTake]--;
                             }
                         }
@@ -2169,7 +2238,7 @@
                         const pkg = loadingDockPackages[stocker.task.packageIndex];
                         if (pkg && pkg.itemName === stocker.task.item) {
                             while(stocker.basket.length < STOCKER_BASKET_SIZE && pkg.quantity > 0) {
-                                stocker.basket.push(pkg.itemName);
+                                stocker.basket.push({ itemName: pkg.itemName, shelfType: 'NORMAL' });
                                 pkg.quantity--;
                             }
                             if (pkg.quantity <= 0) {
@@ -2187,7 +2256,7 @@
                             stocker.task = null;
                             break;
                         }
-                        const itemToStock = stocker.basket[0];
+                        const itemToStock = stocker.basket[0].itemName;
                         const targetShelf = findShelfForStocking(itemToStock);
                         if (targetShelf) {
                             stocker.task = { action: 'place', item: itemToStock, shelf: targetShelf, target: {x: targetShelf.rect.x + targetShelf.rect.w / 2, y: targetShelf.rect.y + targetShelf.rect.h + 10} };
@@ -2195,7 +2264,7 @@
                             stocker.basket.shift();
                         }
                     }
-                    if (stocker.task && moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
+                     if (stocker.task && moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
                         const shelf = stocker.task.shelf;
                         const itemToStock = stocker.task.item;
 
@@ -2205,9 +2274,9 @@
                         }
 
                         if (slot) {
-                            const itemIndexInBasket = stocker.basket.indexOf(itemToStock);
-                            if(itemIndexInBasket > -1) {
-                                if(slot.assignedItem === null) {
+                            const itemIndexInBasket = stocker.basket.findIndex(basketItem => basketItem.itemName === itemToStock);
+                            if (itemIndexInBasket > -1) {
+                                if (slot.assignedItem === null) {
                                     slot.assignedItem = itemToStock;
                                 }
                                 stocker.basket.splice(itemIndexInBasket, 1);
@@ -2704,12 +2773,15 @@
                                         }));
                                         if (allStockedItems.length > 0) {
                                             const randomItem = allStockedItems[Math.floor(Math.random() * allStockedItems.length)];
-                                            customer.order.push(randomItem);
-                                            customer.profile.patience -= 10;
-                                            customer.patience = customer.profile.patience; // Sync instance
-                                            customer.state = 'queuing';
-                                            customer.request = `Alright, you've convinced me. I'll take the ${randomItem}.`;
-                                            spawnFloatingText("Convinced!", salesperson.x, salesperson.y - 90, '#f59e0b');
+                                            const shelfWithItem = shelves.find(s => s.items.some(slot => slot.assignedItem === randomItem && slot.quantity > 0));
+                                            if (shelfWithItem) {
+                                                customer.order.push({ itemName: randomItem, shelfType: shelfWithItem.type });
+                                                customer.profile.patience -= 10;
+                                                customer.patience = customer.profile.patience; // Sync instance
+                                                customer.state = 'queuing';
+                                                customer.request = `Alright, you've convinced me. I'll take the ${randomItem}.`;
+                                                spawnFloatingText("Convinced!", salesperson.x, salesperson.y - 90, '#f59e0b');
+                                            }
                                         } else {
                                             customer.profile.patience -= 30;
                                             customer.patience = customer.profile.patience; // Sync instance
@@ -2777,7 +2849,7 @@
                                 const slot = targetShelf.items.find(i => i && i.assignedItem === itemToCollect && i.quantity > 0);
                                 if (slot) {
                                     slot.quantity--;
-                                    salesperson.basket.push(itemToCollect);
+                                    salesperson.basket.push({ itemName: itemToCollect, shelfType: targetShelf.type });
                                     task.currentItemIndex++; // Move to next item
                                 }
                             }
@@ -2808,7 +2880,7 @@
                         const item = salesperson.task.target.item;
                         if (cell && item && cell.items[item] > 0) {
                             cell.items[item]--;
-                            salesperson.basket.push(item);
+                            salesperson.basket.push({ itemName: item, shelfType: 'NORMAL' });
                             salesperson.task.currentItemIndex++;
                         }
                         salesperson.state = 'collectingItem'; // Go back to check for the next item
@@ -3419,7 +3491,7 @@
                 name: customer.name,
                 typeKey: customer.customerType,
                 requestedItems: customer.requestedItems,
-                purchasedItems: [...customer.order],
+                purchasedItems: customer.order.map(item => item.itemName),
                 waitTime: Math.round(customer.waitTimer),
                 patienceChange: customer.profile.patience - customer.initialPatience,
                 discount: customer.discount,
@@ -3441,11 +3513,18 @@
                 return;
             }
 
-            let totalCost = 0;
-            customer.order.forEach(item => {
-                totalCost += items[item].cost;
+            let salePrice = 0;
+            customer.order.forEach(orderItem => {
+                const baseCost = items[orderItem.itemName].cost;
+                let itemPrice = Math.ceil(baseCost * 1.5);
+                 if (orderItem.shelfType === 'SALES') {
+                    itemPrice = Math.ceil(itemPrice * 0.85); // 15% off
+                } else if (orderItem.shelfType === 'SPECIALS') {
+                    itemPrice = Math.ceil(itemPrice * 1.25); // 25% on top
+                }
+                salePrice += itemPrice;
             });
-            let salePrice = Math.ceil(totalCost * 1.5);
+
 
             // Apply discount if applicable
             if (customer.discount > 0) {
@@ -3470,20 +3549,21 @@
                 spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
 
                 // Track popularity of sold items
-                customer.order.forEach(item => {
-                    itemPopularity[item] = (itemPopularity[item] || 0) + 1;
+                customer.order.forEach(orderItem => {
+                    itemPopularity[orderItem.itemName] = (itemPopularity[orderItem.itemName] || 0) + 1;
                 });
 
             } else {
-                customer.order.forEach(item => {
-                    const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === item) || s.items.some(i => i.assignedItem === null));
+                customer.order.forEach(orderItem => {
+                    const itemName = orderItem.itemName;
+                    const shelfToReturn = shelves.find(s => s.items.some(i => i && i.assignedItem === itemName) || s.items.some(i => i.assignedItem === null));
                     if(shelfToReturn) {
-                        let slot = shelfToReturn.items.find(i => i && i.assignedItem === item);
+                        let slot = shelfToReturn.items.find(i => i && i.assignedItem === itemName);
                         if(slot) slot.quantity++;
                         else {
                             const emptySlot = shelfToReturn.items.find(i => i.assignedItem === null);
                             if(emptySlot) {
-                                emptySlot.assignedItem = item;
+                                emptySlot.assignedItem = itemName;
                                 emptySlot.quantity = 1;
                             }
                         }
@@ -3859,7 +3939,7 @@
             const shelfWidth = 60, shelfHeight = 120;
             const shelfY = desk.y - shelfHeight + 40;
 
-            const numShelves = 6;
+            const numShelves = 8;
             const shelfPadding = 20;
             const totalShelvesWidth = (numShelves * shelfWidth) + ((numShelves - 1) * shelfPadding);
             const startX = storeShiftX + 250;
@@ -3874,7 +3954,8 @@
                             { assignedItem: null, quantity: 0 }
                         ],
                         y: shelfY + shelfHeight,
-                        draw: drawShelf
+                        draw: drawShelf,
+                        type: i === 6 ? 'SALES' : i === 7 ? 'SPECIALS' : 'NORMAL'
                     };
                     shelves.push(shelf);
                 }
@@ -3938,8 +4019,22 @@
                 drawLockIcon(this.rect.x + this.rect.w / 2 - 25, this.rect.y + this.rect.h / 2 - 25, 50, 50);
                 return;
             }
+
+            ctx.save();
+            // Base shelf drawing
             ctx.fillStyle = '#8d6e63';
             ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+
+            // Apply tint based on type
+            if (this.type === 'SALES') {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            } else if (this.type === 'SPECIALS') {
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.2)';
+                ctx.fillRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            }
+
+            // Shelf details
             ctx.strokeStyle = '#4e342e';
             ctx.lineWidth = 4;
             ctx.strokeRect(this.rect.x, this.rect.y, this.rect.w, this.rect.h);
@@ -3960,6 +4055,8 @@
             ctx.moveTo(this.rect.x, this.rect.y + 10 + slotHeight * 3);
             ctx.lineTo(this.rect.x + this.rect.w, this.rect.y + 10 + slotHeight * 3);
             ctx.stroke();
+
+            // Draw items on shelf
             const itemWidth = this.rect.w - 20;
             const itemHeight = (this.rect.h - 40) / 4;
             for (let i = 0; i < this.items.length; i++) {
@@ -3977,6 +4074,15 @@
                     ctx.textBaseline = 'middle';
                     ctx.fillText(item.assignedItem.substring(0, 8), stackX + itemWidth / 2, stackY + itemHeight / 2);
                 }
+            }
+             ctx.restore();
+
+            // Draw shelf name if applicable
+            if (this.type === 'SALES' || this.type === 'SPECIALS') {
+                ctx.fillStyle = '#f7e7d8';
+                ctx.font = 'bold 18px "Patrick Hand"';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.type, this.rect.x + this.rect.w / 2, this.rect.y - 10);
             }
         }
 
@@ -4154,12 +4260,15 @@
 
                         if (allStockedItems.length > 0) {
                             const randomItem = allStockedItems[Math.floor(Math.random() * allStockedItems.length)];
-                            nearbyCustomer.order.push(randomItem);
-                            nearbyCustomer.profile.patience -= 10; // Small patience hit
-                            nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
-                            nearbyCustomer.state = 'queuing';
-                            nearbyCustomer.request = `Alright, I'll take a ${randomItem} then.`;
-                            spawnFloatingText("Convinced!", nearbyCustomer.x, nearbyCustomer.y - 90, '#f59e0b');
+                            const shelfWithItem = shelves.find(s => s.items.some(slot => slot.assignedItem === randomItem && slot.quantity > 0));
+                            if (shelfWithItem) {
+                                nearbyCustomer.order.push({ itemName: randomItem, shelfType: shelfWithItem.type });
+                                nearbyCustomer.profile.patience -= 10; // Small patience hit
+                                nearbyCustomer.patience = nearbyCustomer.profile.patience; // Sync instance
+                                nearbyCustomer.state = 'queuing';
+                                nearbyCustomer.request = `Alright, I'll take a ${randomItem} then.`;
+                                spawnFloatingText("Convinced!", nearbyCustomer.x, nearbyCustomer.y - 90, '#f59e0b');
+                            }
                         } else {
                             // No items in stock, so they just leave.
                             nearbyCustomer.profile.patience -= 30; // Large patience hit
@@ -4192,16 +4301,19 @@
             }
 
             if (nearbyCustomer.behaviorType === 'needsAssistance' && !nearbyCustomer.needsAssistanceFulfilled) {
-                const neededItems = nearbyCustomer.requestedItems.filter(item => !nearbyCustomer.order.includes(item));
-                const playerBasketCounts = player.basket.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
+                const purchasedItemNames = nearbyCustomer.order.map(orderItem => orderItem.itemName);
+                const neededItems = nearbyCustomer.requestedItems.filter(item => !purchasedItemNames.includes(item));
+                const playerBasketCounts = player.basket.reduce((acc, item) => { acc[item.itemName] = (acc[item.itemName] || 0) + 1; return acc; }, {});
                 const neededItemsCounts = neededItems.reduce((acc, item) => { acc[item] = (acc[item] || 0) + 1; return acc; }, {});
                 const canFulfill = Object.keys(neededItemsCounts).every(item => (playerBasketCounts[item] || 0) >= neededItemsCounts[item]);
 
                 if (canFulfill && neededItems.length > 0) {
-                    neededItems.forEach(item => {
-                        const index = player.basket.indexOf(item);
-                        player.basket.splice(index, 1);
-                        nearbyCustomer.order.push(item);
+                    neededItems.forEach(itemName => {
+                        const index = player.basket.findIndex(basketItem => basketItem.itemName === itemName);
+                        if (index > -1) {
+                            const [removedItem] = player.basket.splice(index, 1);
+                            nearbyCustomer.order.push(removedItem);
+                        }
                     });
 
                     updateStaticBasketDisplay();
@@ -4428,17 +4540,18 @@
                 return;
             }
 
-            const itemCounts = basket.reduce((acc, item) => {
-                acc[item] = (acc[item] || 0) + 1;
+            const itemCounts = basket.reduce((acc, basketItem) => {
+                const itemName = basketItem.itemName;
+                acc[itemName] = (acc[itemName] || 0) + 1;
                 return acc;
             }, {});
 
-            for (const item in itemCounts) {
+            for (const itemName in itemCounts) {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'flex justify-between items-center text-sm p-1';
                 itemDiv.innerHTML = `
-                    <span>${item}</span>
-                    <span class="font-handwritten text-base">x${itemCounts[item]}</span>
+                    <span>${itemName}</span>
+                    <span class="font-handwritten text-base">x${itemCounts[itemName]}</span>
                 `;
                 basketItemsContainer.appendChild(itemDiv);
             }
@@ -4551,7 +4664,7 @@
             }
             const pkg = loadingDockPackages[packageIndex];
             if (pkg && pkg.quantity > 0) {
-                player.basket.push(pkg.itemName);
+                player.basket.push({ itemName: pkg.itemName, shelfType: 'NORMAL' });
                 pkg.quantity--;
                 if (pkg.quantity <= 0) {
                     loadingDockPackages.splice(packageIndex, 1);
@@ -4801,11 +4914,15 @@
                 const isUnlocked = unlocks.shelves[i];
                 const canAfford = shopPoints >= cost;
                 const prerequisiteMet = unlocks.shelves[i - 1];
+                let shelfName = `Shelf ${i + 1}`;
+                if (i === 6) shelfName = 'Sales Shelf';
+                if (i === 7) shelfName = 'Specials Shelf';
+
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 div.innerHTML = `
                     <div>
-                        <span class="text-lg">Shelf ${i + 1}</span>
+                        <span class="text-lg">${shelfName}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                     </div>
                     <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet || !canAfford ? 'disabled' : ''}>
@@ -5036,7 +5153,7 @@
             if (player.basket.length < MAX_BASKET_SIZE) {
                 if (cell.items[itemName] > 0) {
                     cell.items[itemName]--;
-                    player.basket.push(itemName);
+                    player.basket.push({ itemName: itemName, shelfType: 'NORMAL' });
                     updateStaticBasketDisplay();
                     saveGame();
                     openStorageCell(cell); // Refresh panel
@@ -5047,7 +5164,7 @@
         }
 
         function putItemInStorage(itemName, cell) {
-            const itemIndex = player.basket.indexOf(itemName);
+            const itemIndex = player.basket.findIndex(item => item.itemName === itemName);
             if (itemIndex > -1) {
                 player.basket.splice(itemIndex, 1);
                 if (!cell.items[itemName]) cell.items[itemName] = 0;
@@ -5240,13 +5357,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     const targetSlot = targetShelf.items[slotIndex];
 
                     if (action === 'take') {
-                        player.basket.push(targetSlot.assignedItem);
+                        player.basket.push({ itemName: targetSlot.assignedItem, shelfType: targetShelf.type });
                         targetSlot.quantity--;
                         updateStaticBasketDisplay();
                         saveGame();
                         openShelfPanel(targetShelf);
                     } else if (action === 'place') {
-                        const itemIndex = player.basket.indexOf(targetSlot.assignedItem);
+                        const itemIndex = player.basket.findIndex(item => item.itemName === targetSlot.assignedItem);
                         if (itemIndex > -1) {
                             player.basket.splice(itemIndex, 1);
                             targetSlot.quantity++;
@@ -5280,7 +5397,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             backButton.onclick = () => openShelfPanel(shelf);
             assignmentGrid.appendChild(backButton);
 
-            const uniqueItemsInBasket = [...new Set(player.basket)];
+            const uniqueItemsInBasket = [...new Set(player.basket.map(item => item.itemName))];
 
             uniqueItemsInBasket.forEach(itemName => {
                 const button = document.createElement('button');
@@ -5288,7 +5405,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 button.textContent = itemName;
                 button.onclick = () => {
                     const targetSlot = shelf.items[slotIndex];
-                    const itemIndexInBasket = player.basket.indexOf(itemName);
+                    const itemIndexInBasket = player.basket.findIndex(item => item.itemName === itemName);
 
                     if (itemIndexInBasket > -1) {
                         // Remove item from basket

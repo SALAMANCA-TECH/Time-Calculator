@@ -198,6 +198,10 @@
                                 <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Shelves</h3>
                                 <div id="unlocks-shelves" class="space-y-2"></div>
                             </div>
+                             <div>
+                                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Facilities</h3>
+                                <div id="unlocks-facilities" class="space-y-2"></div>
+                            </div>
                             <div>
                                 <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Storage</h3>
                                 <div id="unlocks-storage" class="space-y-2"></div>
@@ -4391,50 +4395,97 @@
             const empContainer = document.getElementById('unlocks-employees');
             const shelvesContainer = document.getElementById('unlocks-shelves');
             const storageContainer = document.getElementById('unlocks-storage');
+            const facilitiesContainer = document.getElementById('unlocks-facilities');
             empContainer.innerHTML = '';
             shelvesContainer.innerHTML = '';
             storageContainer.innerHTML = '';
+            facilitiesContainer.innerHTML = '';
 
             // Employees
             for (const emp in unlockCosts.employees) {
                 const cost = developerMode ? 0 : unlockCosts.employees[emp];
                 const isUnlocked = unlocks.employees[emp];
                 const canAfford = shopPoints >= cost;
-                const div = document.createElement('div');
-                div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-                div.innerHTML = `
-                    <div>
-                        <span class="text-lg">${emp.charAt(0).toUpperCase() + emp.slice(1)}</span>
-                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
-                    </div>
-                    <button class="btn-style px-4 py-1" data-type="employee" data-key="${emp}" ${isUnlocked ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
-                        ${isUnlocked ? 'Unlocked' : 'Buy'}
-                    </button>
+                let prerequisiteMet = true;
+                let tooltipText = '';
+
+                if (emp === 'barista' && !unlocks.shelves[5]) {
+                    prerequisiteMet = false;
+                    tooltipText = 'Requires Coffee Shop';
+                }
+
+                const container = document.createElement('div');
+                container.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+
+                const textDiv = document.createElement('div');
+                textDiv.innerHTML = `
+                    <span class="text-lg">${emp.charAt(0).toUpperCase() + emp.slice(1)}</span>
+                    <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                 `;
-                empContainer.appendChild(div);
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'relative item-tooltip';
+
+                const button = document.createElement('button');
+                button.className = 'btn-style px-4 py-1';
+                button.dataset.type = 'employee';
+                button.dataset.key = emp;
+                button.disabled = isUnlocked || !canAfford || !prerequisiteMet;
+                button.textContent = isUnlocked ? 'Unlocked' : 'Buy';
+
+                buttonContainer.appendChild(button);
+
+                if (tooltipText) {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip -top-8 left-1/2 -translate-x-1/2';
+                    tooltip.textContent = tooltipText;
+                    buttonContainer.appendChild(tooltip);
+                }
+
+                container.appendChild(textDiv);
+                container.appendChild(buttonContainer);
+                empContainer.appendChild(container);
             }
 
-            // Shelves (starting from the second one)
-            for (let i = 1; i < unlockCosts.shelves.length; i++) {
+
+            // Shelves (all except the last one, which is the coffee shop)
+            for (let i = 1; i < unlockCosts.shelves.length - 1; i++) {
                 const cost = developerMode ? 0 : unlockCosts.shelves[i];
                 const isUnlocked = unlocks.shelves[i];
                 const canAfford = shopPoints >= cost;
-                // The coffee shop (index 5) has no prerequisite.
-                const prerequisiteMet = i === 5 ? true : unlocks.shelves[i - 1];
+                const prerequisiteMet = unlocks.shelves[i - 1];
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-                const shelfName = i === 5 ? "Coffee Shop" : `Shelf ${i + 1}`;
                 div.innerHTML = `
                     <div>
-                        <span class="text-lg">${shelfName}</span>
+                        <span class="text-lg">Shelf ${i + 1}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                     </div>
-                    <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
+                    <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet || !canAfford ? 'disabled' : ''}>
                         ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
                     </button>
                 `;
                 shelvesContainer.appendChild(div);
             }
+
+            // Facilities (Coffee Shop)
+            const coffeeShopIndex = 5;
+            const coffeeShopCost = developerMode ? 0 : unlockCosts.shelves[coffeeShopIndex];
+            const isCoffeeShopUnlocked = unlocks.shelves[coffeeShopIndex];
+            const canAffordCoffeeShop = shopPoints >= coffeeShopCost;
+            const coffeeDiv = document.createElement('div');
+            coffeeDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+            coffeeDiv.innerHTML = `
+                <div>
+                    <span class="text-lg">Coffee Shop</span>
+                    <span class="text-sm text-amber-800/80 block">Cost: ${coffeeShopCost} Points</span>
+                </div>
+                <button class="btn-style px-4 py-1" data-type="shelf" data-key="${coffeeShopIndex}" ${isCoffeeShopUnlocked || !canAffordCoffeeShop ? 'disabled' : ''}>
+                    ${isCoffeeShopUnlocked ? 'Unlocked' : 'Buy'}
+                </button>
+            `;
+            facilitiesContainer.appendChild(coffeeDiv);
+
 
             // Storage
             for (let i = 0; i < unlockCosts.storage.length; i++) {

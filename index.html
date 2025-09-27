@@ -4494,21 +4494,22 @@
             }
 
             restockGrid.innerHTML += `
-                <div class="grid grid-cols-4 gap-x-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                <div class="grid grid-cols-6 gap-x-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
                     <span class="font-bold col-span-2">Item</span>
                     <span class="text-right font-bold">Stock</span>
-                    <span></span> <!-- Header for buttons -->
+                    <span class="col-span-3"></span> <!-- Header for buttons -->
                 </div>
             `;
             for (const itemName of unlockedItems) {
 
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'grid grid-cols-4 gap-x-2 items-center py-2 border-b border-amber-800/10';
+                itemDiv.className = 'grid grid-cols-6 gap-x-2 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
                     <span class="text-lg col-span-2">${itemName}</span>
                     <span class="text-right text-lg">${inventory[itemName]}</span>
-                    <div class="flex space-x-1">
+                    <div class="flex space-x-1 col-span-3">
                         <button class="btn-style order-item-btn text-sm px-2 py-1" data-item="${itemName}">Order</button>
+                        <button class="btn-style buy-now-one-btn text-sm px-2 py-1 bg-blue-600 hover:bg-blue-500" data-item="${itemName}">Buy 1</button>
                         <button class="btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500" data-item="${itemName}">Buy 5</button>
                     </div>
                 `;
@@ -4526,6 +4527,13 @@
                 button.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.item;
                     buyNow(itemName);
+                });
+            });
+
+            restockGrid.querySelectorAll('.buy-now-one-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.item;
+                    buyNowOne(itemName);
                 });
             });
 
@@ -4761,6 +4769,31 @@
                 spawnFloatingText(`Bought 5 ${itemName}!`, player.x, player.y - 90, '#3b82f6');
             } else {
                 showMessage(`You can't afford to buy 5 of ${itemName}! You need $${totalCost.toFixed(2)}.`);
+            }
+        }
+
+        function buyNowOne(itemName) {
+            const quantity = 1;
+            const itemData = items[itemName];
+            const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+            const totalCost = restockPrice * quantity;
+            const MAX_DOCK_PACKAGES = 5;
+
+            const packagesFromOrder = Math.ceil(quantity / MAX_PACKAGE_SIZE);
+
+            if (loadingDockPackages.length + packagesFromOrder > MAX_DOCK_PACKAGES) {
+                showMessage(`Not enough space on the loading dock to buy now. Please clear some space first.`);
+                return;
+            }
+
+            if (cash >= totalCost) {
+                cash -= totalCost;
+                loadingDockPackages.push({ itemName: itemName, quantity: quantity });
+                updateUI();
+                saveGame();
+                spawnFloatingText(`Bought 1 ${itemName}!`, player.x, player.y - 90, '#3b82f6');
+            } else {
+                showMessage(`You can't afford to buy 1 of ${itemName}! You need $${totalCost.toFixed(2)}.`);
             }
         }
 

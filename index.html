@@ -586,12 +586,14 @@
         let unlocks = {
             employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
             shelves: [true, false, false, false, false, false],
+            facilities: { coffeeShop: false },
             storage: [false, false, false, false, false, false]
         };
 
         const unlockCosts = {
             employees: { cashier: 10, stocker: 15, barista: 20, manager: 50, salesperson: 30 },
             shelves: [null, 5, 10, 20, 40, 80], // index 0 is free
+            facilities: { coffeeShop: 100 },
             storage: [10, 20, 30, 40, 50, 60]
         };
 
@@ -3489,7 +3491,7 @@
             ];
 
             // NEW COFFEE SHOP LOGIC
-            if (unlocks.shelves[5]) {
+            if (unlocks.facilities.coffeeShop) {
                 const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
@@ -4350,10 +4352,11 @@
             } else if (type === 'shelf') {
                 key = parseInt(key);
                 cost = unlockCosts.shelves[key];
-                // The coffee shop (index 5) does not have a prerequisite
-                if (key > 0 && key !== 5 && !unlocks.shelves[key - 1]) {
+                if (key > 0 && !unlocks.shelves[key - 1]) {
                     prerequisite = false;
                 }
+            } else if (type === 'facility') {
+                cost = unlockCosts.facilities[key];
             } else if (type === 'storage') {
                 key = parseInt(key);
                 cost = unlockCosts.storage[key];
@@ -4378,7 +4381,10 @@
                     initializeLayout(); // Recalculate layout for new employee positions
                 } else if (type === 'shelf') {
                     unlocks.shelves[key] = true;
-                    initializeLayout(); // Redraw layout after unlocking a shelf
+                    initializeLayout();
+                } else if (type === 'facility') {
+                    unlocks.facilities[key] = true;
+                    initializeLayout();
                 } else if (type === 'storage') {
                     unlocks.storage[key] = true;
                 }
@@ -4410,7 +4416,7 @@
                 let prerequisiteMet = true;
                 let tooltipText = '';
 
-                if (emp === 'barista' && !unlocks.shelves[5]) {
+                if (emp === 'barista' && !unlocks.facilities.coffeeShop) {
                     prerequisiteMet = false;
                     tooltipText = 'Requires Coffee Shop';
                 }
@@ -4449,8 +4455,8 @@
             }
 
 
-            // Shelves (all except the last one, which is the coffee shop)
-            for (let i = 1; i < unlockCosts.shelves.length - 1; i++) {
+            // Shelves
+            for (let i = 1; i < unlockCosts.shelves.length; i++) {
                 const cost = developerMode ? 0 : unlockCosts.shelves[i];
                 const isUnlocked = unlocks.shelves[i];
                 const canAfford = shopPoints >= cost;
@@ -4470,9 +4476,8 @@
             }
 
             // Facilities (Coffee Shop)
-            const coffeeShopIndex = 5;
-            const coffeeShopCost = developerMode ? 0 : unlockCosts.shelves[coffeeShopIndex];
-            const isCoffeeShopUnlocked = unlocks.shelves[coffeeShopIndex];
+            const coffeeShopCost = developerMode ? 0 : unlockCosts.facilities.coffeeShop;
+            const isCoffeeShopUnlocked = unlocks.facilities.coffeeShop;
             const canAffordCoffeeShop = shopPoints >= coffeeShopCost;
             const coffeeDiv = document.createElement('div');
             coffeeDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
@@ -4481,7 +4486,7 @@
                     <span class="text-lg">Coffee Shop</span>
                     <span class="text-sm text-amber-800/80 block">Cost: ${coffeeShopCost} Points</span>
                 </div>
-                <button class="btn-style px-4 py-1" data-type="shelf" data-key="${coffeeShopIndex}" ${isCoffeeShopUnlocked || !canAffordCoffeeShop ? 'disabled' : ''}>
+                <button class="btn-style px-4 py-1" data-type="facility" data-key="coffeeShop" ${isCoffeeShopUnlocked || !canAffordCoffeeShop ? 'disabled' : ''}>
                     ${isCoffeeShopUnlocked ? 'Unlocked' : 'Buy'}
                 </button>
             `;
@@ -5008,6 +5013,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     storageCells = gameState.storageCells || storageCells;
                     shelves = gameState.shelves || shelves;
                     unlocks = gameState.unlocks || unlocks;
+                    if (!unlocks.facilities) {
+                        unlocks.facilities = { coffeeShop: false };
+                    }
                     loadingDockPackages = gameState.loadingDockPackages || [];
                     customerDemand = gameState.customerDemand || {};
                     enabledItems = gameState.enabledItems || enabledItems;

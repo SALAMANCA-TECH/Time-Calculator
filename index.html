@@ -4058,8 +4058,14 @@
             const clickedCell = storageCells.find(c => worldX >= c.rect.x && worldX <= c.rect.x + c.rect.w && worldY >= c.rect.y && worldY <= c.rect.y + c.rect.h);
             if (clickedCell) {
                 if (Math.hypot(player.x - (clickedCell.rect.x + clickedCell.rect.w/2), player.y - (clickedCell.rect.y + clickedCell.rect.h)) < 150) {
-                    openClipboardPanel();
-                    openStorageCell(clickedCell);
+                    const cellIndex = storageCells.indexOf(clickedCell);
+                    if (unlocks.storage[cellIndex]) {
+                        openClipboardPanel();
+                        openStorageCell(clickedCell);
+                    } else {
+                        const cost = unlockCosts.storage[cellIndex];
+                        showMessage(`This is the ${clickedCell.label} storage. It costs ${cost} points to unlock.`);
+                    }
                     return;
                 }
             }

@@ -2119,11 +2119,9 @@
                             stocker.task = task;
                             stocker.state = task.action;
                         } else {
-                            stocker.stateTimer = 3000;
-                            if(Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
-                                stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
-                                moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime);
-                            } else {
+                            stocker.stateTimer = 3000; // No tasks, wait before checking again
+                            if (Math.hypot(stocker.x - stocker.idleX, stocker.y - stocker.idleY) > 5) {
+                                stocker.state = 'returning';
                                 stocker.task = null;
                             }
                         }
@@ -2162,8 +2160,8 @@
                 case 'stocking':
                     if (!stocker.task) {
                         if (stocker.basket.length === 0) {
-                            stocker.state = 'idle';
-                            stocker.task = { target: {x: stocker.idleX, y: stocker.idleY} };
+                            stocker.state = 'returning';
+                            stocker.task = null;
                             break;
                         }
                         const itemToStock = stocker.basket[0];
@@ -2193,6 +2191,12 @@
                                 slot.quantity++;
                             }
                         }
+                        stocker.task = null;
+                    }
+                    break;
+                case 'returning':
+                    if (moveCharacterTowards(stocker, stocker.idleX, stocker.idleY, deltaTime)) {
+                        stocker.state = 'idle';
                         stocker.task = null;
                     }
                     break;
@@ -3059,6 +3063,21 @@
                 pieClockCtx.beginPath();
                 pieClockCtx.arc(centerX, centerY, radius + 1, 0, 2 * Math.PI);
                 pieClockCtx.fill();
+            }
+
+            // Draw the "second hand"
+            if (dayStarted) {
+                const progressAngle = ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
+                const handAngle = -Math.PI / 2 + progressAngle;
+                const handX = centerX + radius * Math.cos(handAngle);
+                const handY = centerY + radius * Math.sin(handAngle);
+
+                pieClockCtx.strokeStyle = 'white';
+                pieClockCtx.lineWidth = 2;
+                pieClockCtx.beginPath();
+                pieClockCtx.moveTo(centerX, centerY);
+                pieClockCtx.lineTo(handX, handY);
+                pieClockCtx.stroke();
             }
 
             // Border

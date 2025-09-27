@@ -315,34 +315,53 @@
 
     <!-- End of Day Report Panel -->
     <div id="end-of-day-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
-        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900">
-            <h2 class="text-3xl font-handwritten text-center mb-4">End of Day Report</h2>
-            <div class="grid grid-cols-2 gap-6">
-                <!-- Left Side: Summary -->
+        <div class="bg-amber-100 w-full max-w-4xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 90vh;">
+            <h2 class="text-3xl font-handwritten text-center mb-4 flex-shrink-0">End of Day Report</h2>
+
+            <!-- Summary Section -->
+            <div class="grid grid-cols-2 gap-6 mb-4 flex-shrink-0">
                 <div>
                     <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Summary</h3>
                     <div class="space-y-2 text-lg">
                         <p>Day Ended: <span id="report-day" class="font-bold"></span></p>
                         <p>Gross Sales: <span id="report-sales" class="font-bold"></span></p>
-                    <p>Today's Accrued Expenses: <span id="report-expenses" class="font-bold"></span></p>
-                    <div id="weekly-bill-report" class="pl-4 text-base border-l-2 border-amber-800/30 ml-2 space-y-1 my-1">
-
-                    </div>
+                        <p>Today's Accrued Expenses: <span id="report-expenses" class="font-bold"></span></p>
+                        <div id="weekly-bill-report" class="pl-4 text-base border-l-2 border-amber-800/30 ml-2 space-y-1 my-1"></div>
                         <p class="border-t border-amber-800/30 pt-2">Net Profit: <span id="report-profit" class="font-bold"></span></p>
                     </div>
                 </div>
-                <!-- Right Side: Sales Details -->
-                <div>
-                    <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Customer Details</h3>
-                    <div id="sales-report-list" class="h-64 overflow-y-auto space-y-3 p-2 bg-white/30 rounded-md border">
-                        <!-- Report items will be populated here -->
-                    </div>
-                    <div id="report-summary-extra" class="mt-2 text-sm">
-                        <!-- Extra summary stats will be populated here -->
-                    </div>
+                <div id="report-summary-extra" class="mt-2 text-sm">
+                    <!-- Extra summary stats will be populated here -->
                 </div>
             </div>
-            <div class="text-center mt-6">
+
+            <!-- Report Toggles -->
+            <div class="flex space-x-2 border-b-2 border-amber-800/30 mb-2 flex-shrink-0">
+                <button id="report-toggle-customers" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md">Customer Details</button>
+                <button id="report-toggle-sales" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Sales</button>
+                <button id="report-toggle-bills" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Bills</button>
+                <button id="report-toggle-market" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50" disabled>Market (Soon)</button>
+            </div>
+
+            <!-- Report Views -->
+            <div class="flex-grow overflow-y-auto p-2 bg-white/30 rounded-md border">
+                <!-- Customer Details View -->
+                <div id="report-view-customers" class="report-view space-y-3">
+                    <!-- Original #sales-report-list content goes here -->
+                </div>
+
+                <!-- Sales View -->
+                <div id="report-view-sales" class="report-view hidden">
+                    <!-- Sales breakdown will be populated here -->
+                </div>
+
+                <!-- Bills View -->
+                <div id="report-view-bills" class="report-view hidden">
+                    <!-- Bills breakdown will be populated here -->
+                </div>
+            </div>
+
+            <div class="text-center mt-4 flex-shrink-0">
                 <button id="next-day-report-btn" class="btn-style px-8 py-3 text-xl">Start Next Day</button>
             </div>
         </div>
@@ -549,6 +568,9 @@
         let clipboardUpdateTimer = 0;
         const CLIPBOARD_UPDATE_INTERVAL = 250; // ms
         let dailySalesReport = [];
+        let startingDayInventory = {};
+        let dailySupplyOrders = [];
+        let dailyLaborCosts = {};
 
         // Camera and zoom variables
         let cameraX = 0;
@@ -2441,6 +2463,12 @@
                             cash -= orderTask.totalCost;
                             updateUI();
                             orderTask.items.forEach(orderItem => {
+                                dailySupplyOrders.push({
+                                    orderedBy: 'Manager',
+                                    itemName: orderItem.itemName,
+                                    quantity: orderItem.quantity,
+                                    cost: parseFloat((items[orderItem.itemName].cost * 0.75).toFixed(2)) * orderItem.quantity
+                                });
                                 let remainingQuantity = orderItem.quantity;
                                 while (remainingQuantity > 0) {
                                     const quantityForPackage = Math.min(remainingQuantity, MAX_PACKAGE_SIZE);
@@ -2466,6 +2494,12 @@
 
                             cash -= totalCost;
                             updateUI();
+                            dailySupplyOrders.push({
+                                orderedBy: 'Manager',
+                                itemName: itemToOrder,
+                                quantity: quantityToOrder,
+                                cost: totalCost
+                            });
 
                             let remainingQuantity = quantityToOrder;
                             while (remainingQuantity > 0) {
@@ -3361,22 +3395,25 @@
             manager.hasPlacedMorningOrder = false; // Reset for the next day
 
             let dailyLaborCost = 0;
+            dailyLaborCosts = {}; // Reset and populate for the report
             for (const employee in unlocks.employees) {
                 if (unlocks.employees[employee]) {
-                    dailyLaborCost += dailyOperatingCosts.salaries[employee];
+                    const salary = dailyOperatingCosts.salaries[employee];
+                    dailyLaborCosts[employee] = salary;
+                    dailyLaborCost += salary;
                 }
             }
 
-            const dailyAccruedExpenses = dailyOperatingCosts.rent + dailyLaborCost;
+            const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
+            const dailyStorageCost = (unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate) / 7;
+            const dailyAccruedExpenses = dailyOperatingCosts.rent + dailyLaborCost + dailyStorageCost;
+
             weeklyExpenses += dailyAccruedExpenses;
 
             let weeklyBillPaid = 0;
 
             if (day > 0 && day % 7 === 0) {
-                const unlockedStorageUnits = unlocks.storage.filter(unlocked => unlocked).length;
-                const weeklyStorageCost = unlockedStorageUnits * dailyOperatingCosts.storageUnitWeeklyRate;
-                const totalWeeklyBill = weeklyExpenses + weeklyStorageCost;
-
+                const totalWeeklyBill = weeklyExpenses;
                 cash -= totalWeeklyBill;
                 weeklyBillPaid = totalWeeklyBill;
                 weeklyExpenses = 0; // Reset for the next week
@@ -3393,7 +3430,7 @@
 
             updateUI();
             const reportPanel = document.getElementById('end-of-day-panel');
-            const reportList = document.getElementById('sales-report-list');
+            const reportList = document.getElementById('report-view-customers');
             reportList.innerHTML = '';
             let grossSales = 0;
             const salesTally = {};
@@ -3449,7 +3486,112 @@
             }
 
             document.getElementById('report-profit').textContent = `$${(grossSales - dailyAccruedExpenses).toFixed(2)}`;
+
+            // --- START: POPULATE NEW REPORT VIEWS ---
+
+            // 1. Populate Bills View
+            const billsView = document.getElementById('report-view-bills');
+            billsView.innerHTML = ''; // Clear previous content
+
+            let billsHtml = `<h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Daily Cost Breakdown</h3>`;
+            billsHtml += `<div class="space-y-2 text-lg">`;
+            billsHtml += `<p class="flex justify-between"><span>Daily Rent:</span> <span>-$${dailyOperatingCosts.rent.toFixed(2)}</span></p>`;
+
+            if (dailyStorageCost > 0) {
+                billsHtml += `<p class="flex justify-between"><span>Storage Units (Accrued):</span> <span>-$${dailyStorageCost.toFixed(2)}</span></p>`;
+            }
+
+            if (Object.keys(dailyLaborCosts).length > 0) {
+                billsHtml += `<div class="pl-4 border-l-2 border-amber-800/30 ml-2 my-1">`;
+                billsHtml += `<p class="font-bold">Labor:</p>`;
+                for (const employee in dailyLaborCosts) {
+                    const cost = dailyLaborCosts[employee];
+                    billsHtml += `<p class="flex justify-between text-base"><span>- ${employee.charAt(0).toUpperCase() + employee.slice(1)}:</span> <span>-$${cost.toFixed(2)}</span></p>`;
+                }
+                billsHtml += `</div>`;
+            }
+
+            let totalSupplyCost = 0;
+            dailySupplyOrders.forEach(order => {
+                totalSupplyCost += order.cost;
+            });
+            if (totalSupplyCost > 0) {
+                billsHtml += `<p class="flex justify-between"><span>Supply Orders:</span> <span>-$${totalSupplyCost.toFixed(2)}</span></p>`;
+            }
+            billsHtml += `</div>`;
+            billsView.innerHTML = billsHtml;
+
+            // 2. Populate Sales View
+            const salesView = document.getElementById('report-view-sales');
+            salesView.innerHTML = ''; // Clear previous content
+
+            const requestedTally = {};
+            dailySalesReport.forEach(report => {
+                report.requestedItems.forEach(item => {
+                    requestedTally[item] = (requestedTally[item] || 0) + 1;
+                });
+            });
+
+            const orderedTally = {};
+            dailySupplyOrders.forEach(order => {
+                orderedTally[order.itemName] = (orderedTally[order.itemName] || 0) + order.quantity;
+            });
+
+            let salesHtml = `<div class="text-sm">`;
+            salesHtml += `
+                <div class="grid grid-cols-6 gap-2 font-bold border-b-2 border-amber-800/30 pb-1 mb-2 text-center">
+                    <span class="text-left">Item</span>
+                    <span>Start</span>
+                    <span>Requested</span>
+                    <span>Ordered</span>
+                    <span>Sold</span>
+                    <span>End</span>
+                </div>
+            `;
+
+            const allTrackedItems = new Set();
+            Object.keys(startingDayInventory).forEach(item => allTrackedItems.add(item));
+            Object.keys(requestedTally).forEach(item => allTrackedItems.add(item));
+            Object.keys(orderedTally).forEach(item => allTrackedItems.add(item));
+            Object.keys(salesTally).forEach(item => allTrackedItems.add(item));
+
+            const sortedItems = Array.from(allTrackedItems).sort();
+
+            for (const itemName of sortedItems) {
+                const startStock = startingDayInventory[itemName] || 0;
+                const requested = requestedTally[itemName] || 0;
+                const ordered = orderedTally[itemName] || 0;
+                const sold = salesTally[itemName] || 0;
+                const endStock = getTotalStock(itemName);
+
+                if (startStock > 0 || requested > 0 || ordered > 0 || sold > 0) {
+                    salesHtml += `
+                        <div class="grid grid-cols-6 gap-2 py-1 border-b border-amber-800/10 text-center font-handwritten text-base">
+                            <span class="text-left">${itemName}</span>
+                            <span>${startStock}</span>
+                            <span>${requested}</span>
+                            <span>${ordered}</span>
+                            <span>${sold}</span>
+                            <span>${endStock}</span>
+                        </div>
+                    `;
+                }
+            }
+            salesHtml += `</div>`;
+            salesView.innerHTML = salesHtml;
+
+            // --- END: POPULATE NEW REPORT VIEWS ---
+
             reportPanel.classList.remove('hidden');
+
+            // Default to customer view
+            document.getElementById('report-view-customers').classList.remove('hidden');
+            document.getElementById('report-view-sales').classList.add('hidden');
+            document.getElementById('report-view-bills').classList.add('hidden');
+            document.getElementById('report-toggle-customers').classList.remove('bg-opacity-50');
+            document.getElementById('report-toggle-sales').classList.add('bg-opacity-50');
+            document.getElementById('report-toggle-bills').classList.add('bg-opacity-50');
+
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;
                 for (const type in customerProfiles) {
@@ -4595,10 +4737,21 @@
                 cash -= totalCost;
                 for (const itemName in orderSource) {
                     let quantityToOrder = orderSource[itemName];
-                    while (quantityToOrder > 0) {
-                        const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
-                        loadingDockPackages.push({itemName: itemName, quantity: quantityForPackage});
-                        quantityToOrder -= quantityForPackage;
+                    if (quantityToOrder > 0) {
+                        const itemData = items[itemName];
+                        const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                        dailySupplyOrders.push({
+                            orderedBy: 'Player',
+                            itemName: itemName,
+                            quantity: quantityToOrder,
+                            cost: restockPrice * quantityToOrder
+                        });
+
+                        while (quantityToOrder > 0) {
+                            const quantityForPackage = Math.min(quantityToOrder, MAX_PACKAGE_SIZE);
+                            loadingDockPackages.push({itemName: itemName, quantity: quantityForPackage});
+                            quantityToOrder -= quantityForPackage;
+                        }
                     }
                 }
                 currentRestockOrder = {};
@@ -5072,6 +5225,15 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 dayTimer = DAY_DURATION;
                 timeSinceLastCustomer = 0;
                 document.getElementById('start-day-btn').classList.add('hidden');
+
+                // Capture starting inventory and reset daily trackers
+                startingDayInventory = {};
+                Object.keys(items).forEach(itemName => {
+                    startingDayInventory[itemName] = getTotalStock(itemName);
+                });
+                dailySupplyOrders = [];
+                dailyLaborCosts = {};
+
                 // Ensure all idle states are correct before starting
                 if (!stocker.task) stocker.state = 'idle';
                 if (!cashier.task) cashier.state = 'idle';
@@ -5130,6 +5292,33 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             // Phone Navigation
             document.getElementById('close-phone').addEventListener('click', closeClipboard);
             document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
+
+            // Report View Toggling
+            const reportToggleButtons = document.querySelectorAll('.report-toggle-btn');
+            const reportViews = document.querySelectorAll('.report-view');
+            reportToggleButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetViewId = button.id.replace('report-toggle-', 'report-view-');
+
+                    // Toggle views
+                    reportViews.forEach(view => {
+                        if (view.id === targetViewId) {
+                            view.classList.remove('hidden');
+                        } else {
+                            view.classList.add('hidden');
+                        }
+                    });
+
+                    // Toggle button styles
+                    reportToggleButtons.forEach(btn => {
+                        if (btn === button) {
+                            btn.classList.remove('bg-opacity-50');
+                        } else {
+                            btn.classList.add('bg-opacity-50');
+                        }
+                    });
+                });
+            });
 
             // Settings Toggles
             const devToggle = document.getElementById('developer-toggle');

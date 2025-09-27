@@ -3599,8 +3599,8 @@
                 manager.y = manager.idleY;
             }
 
-            barista.idleX = coffeeShop.rect.x + (coffeeShop.rect.w / 4); // Move to the left side of the counter
-            barista.idleY = coffeeShop.rect.y + coffeeShop.rect.h + 5; // Position in front of the counter
+            barista.idleX = coffeeShop.rect.x + (coffeeShop.rect.w / 4) + 42; // Move to the right
+            barista.idleY = coffeeShop.rect.y + coffeeShop.rect.h + 5 - 42; // Move up
             if (barista.state === 'idle' && !barista.task) {
                 barista.x = barista.idleX;
                 barista.y = barista.idleY;

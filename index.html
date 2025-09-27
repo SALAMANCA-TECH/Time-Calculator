@@ -5522,6 +5522,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             hideScreen('new-game-screen');
             hideScreen('dev-mode-screen');
             hideScreen('family-store-screen');
+            hideScreen('specialty-store-screen');
+            hideScreen('casual-mode-screen');
 
             // 2. Reset everything
             localStorage.removeItem('artEmporiumSave');
@@ -5749,7 +5751,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 if (localStorage.getItem('artEmporiumSave')) {
                     hideScreen('new-game-screen');
                 } else {
-                    showMessage("You must select a game mode to continue.");
+                    startGame(); // Start a default game if no save exists
                 }
             });
 

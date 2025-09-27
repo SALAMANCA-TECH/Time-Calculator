@@ -3173,7 +3173,7 @@
             drawStoreBackground();
             const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, barista, manager, salesperson];
 
-            if (shelves.length > 5) {
+            if (unlocks.shelves[5]) {
                 const { x, y, w: shopWidth, h: shopHeight } = coffeeShop.rect;
 
                 const signYPos = y + shopHeight * 0.1;
@@ -3492,7 +3492,7 @@
             ];
 
             // NEW COFFEE SHOP LOGIC
-            if (shelves.length > 5) {
+            if (unlocks.shelves[5]) {
                 const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
@@ -4427,9 +4427,10 @@
                 const prerequisiteMet = unlocks.shelves[i - 1];
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
+                const shelfName = i === 5 ? "Coffee Shop" : `Shelf ${i + 1}`;
                 div.innerHTML = `
                     <div>
-                        <span class="text-lg">Shelf ${i + 1}</span>
+                        <span class="text-lg">${shelfName}</span>
                         <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                     </div>
                     <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>

@@ -317,12 +317,64 @@
     <div id="new-game-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
         <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
             <h2 class="text-3xl font-handwritten text-center mb-6">Start a New Game</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <button id="new-game-standard" class="btn-style p-4 text-xl col-span-2">Standard</button>
-                <button id="new-game-dev" class="btn-style p-4 text-xl">Developer Mode</button>
-                <button id="new-game-family" class="btn-style p-4 text-xl">Family Store</button>
-                <button id="new-game-casual" class="btn-style p-4 text-xl">Casual</button>
-                <button id="new-game-specialty" class="btn-style p-4 text-xl">Specialty Store</button>
+            <div class="space-y-4">
+                <button id="new-game-standard" class="btn-style p-4 text-xl w-full">Standard</button>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col space-y-4">
+                        <button id="new-game-dev" class="btn-style p-4 text-xl">Developer Mode</button>
+                        <button id="new-game-casual" class="btn-style p-4 text-xl">Casual</button>
+                    </div>
+                    <div class="flex flex-col space-y-4">
+                        <button id="new-game-family" class="btn-style p-4 text-xl">Family Store</button>
+                        <button id="new-game-specialty" class="btn-style p-4 text-xl">Specialty Store</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dev Mode Options Screen -->
+    <div id="dev-mode-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <h2 class="text-3xl font-handwritten text-center mb-6">Developer Options</h2>
+            <div class="space-y-4 mb-6">
+                <!-- Toggle Switches -->
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="dev-unlocks-label" for="dev-unlocks-toggle" class="text-lg">Standard</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="dev-unlocks-toggle" id="dev-unlocks-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="dev-unlocks-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="dev-supplies-label" for="dev-supplies-toggle" class="text-lg">Standard Costs</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="dev-supplies-toggle" id="dev-supplies-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="dev-supplies-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="dev-debt-label" for="dev-debt-toggle" class="text-lg">Standard Debt</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="dev-debt-toggle" id="dev-debt-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="dev-debt-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label id="dev-market-label" for="dev-market-toggle" class="text-lg">Market</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="dev-market-toggle" id="dev-market-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="dev-market-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <button id="dev-market-control-btn" class="btn-style p-4 text-xl">Market Control</button>
+                <button id="dev-starting-unlocks-btn" class="btn-style p-4 text-xl">Starting Unlocks</button>
+            </div>
+            <div class="flex justify-between items-center">
+                <button id="dev-back-btn" class="btn-style p-4 text-xl">Back</button>
+                <button id="dev-start-game-btn" class="btn-style bg-green-700 hover:bg-green-600 p-4 text-xl">Start Game</button>
             </div>
         </div>
     </div>
@@ -5249,12 +5301,30 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function choseNewGameOption(mode) {
-            // TODO: Implement different game modes.
-            document.getElementById('new-game-screen').classList.add('hidden');
-            localStorage.removeItem('artEmporiumSave');
-            resetGameState();
-            // The start-day-btn is now the single source of truth for starting a day's logic
-            document.getElementById('start-day-btn').click();
+            if (mode === 'dev') {
+                document.getElementById('new-game-screen').classList.add('hidden');
+                document.getElementById('dev-mode-screen').classList.remove('hidden');
+            } else {
+                // TODO: Implement other game modes. For now, they all start a standard game.
+                document.getElementById('new-game-screen').classList.add('hidden');
+                localStorage.removeItem('artEmporiumSave');
+                resetGameState();
+                // The start-day-btn is now the single source of truth for starting a day's logic
+                document.getElementById('start-day-btn').click();
+            }
+        }
+
+        function setupDevToggle(toggleId, labelId, onText, offText) {
+            const toggle = document.getElementById(toggleId);
+            const label = document.getElementById(labelId);
+
+            function updateLabel() {
+                label.textContent = toggle.checked ? onText : offText;
+            }
+
+            toggle.addEventListener('change', updateLabel);
+            // Initialize the label text
+            updateLabel();
         }
 
         function resetGameState() {
@@ -5437,6 +5507,25 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('new-game-family').addEventListener('click', () => choseNewGameOption('family'));
             document.getElementById('new-game-casual').addEventListener('click', () => choseNewGameOption('casual'));
             document.getElementById('new-game-specialty').addEventListener('click', () => choseNewGameOption('specialty'));
+
+            // Dev Mode Screen Button Listeners
+            document.getElementById('dev-back-btn').addEventListener('click', () => {
+                document.getElementById('dev-mode-screen').classList.add('hidden');
+                document.getElementById('new-game-screen').classList.remove('hidden');
+            });
+            document.getElementById('dev-start-game-btn').addEventListener('click', () => {
+                 // For now, starts a standard game. Dev options will be hooked up later.
+                document.getElementById('dev-mode-screen').classList.add('hidden');
+                localStorage.removeItem('artEmporiumSave');
+                resetGameState();
+                document.getElementById('start-day-btn').click();
+            });
+
+            // Setup Dev Toggles with dynamic labels
+            setupDevToggle('dev-unlocks-toggle', 'dev-unlocks-label', 'Free Unlockables', 'Standard');
+            setupDevToggle('dev-supplies-toggle', 'dev-supplies-label', 'Free Supplies', 'Standard Costs');
+            setupDevToggle('dev-debt-toggle', 'dev-debt-label', 'No Debt Penalty', 'Standard Debt');
+            setupDevToggle('dev-market-toggle', 'dev-market-label', 'Market Events', 'No Market');
 
             // Order Quantity Modal Logic
             const quantityInput = document.getElementById('order-quantity-input');

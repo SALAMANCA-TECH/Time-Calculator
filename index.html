@@ -468,6 +468,41 @@
         </div>
     </div>
 
+    <!-- Casual Mode Options Screen -->
+    <div id="casual-mode-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <h2 class="text-3xl font-handwritten text-center mb-6">Casual Mode Options</h2>
+            <div class="space-y-4 mb-6">
+                <!-- Toggles -->
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label for="casual-breaks-toggle" class="text-lg">No Breaks</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="casual-breaks-toggle" id="casual-breaks-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="casual-breaks-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label for="casual-debt-toggle" class="text-lg">No Debt Penalty</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="casual-debt-toggle" id="casual-debt-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="casual-debt-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label for="casual-market-toggle" class="text-lg">Market ON/OFF</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="casual-market-toggle" id="casual-market-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="casual-market-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center">
+                <button id="casual-back-btn" class="btn-style p-4 text-xl">Back</button>
+                <button id="casual-start-game-btn" class="btn-style bg-green-700 hover:bg-green-600 p-4 text-xl">Start Game</button>
+            </div>
+        </div>
+    </div>
+
     <!-- End of Day Report Panel -->
     <div id="end-of-day-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
         <div class="bg-amber-100 w-full max-w-4xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 90vh;">
@@ -707,6 +742,9 @@
         let saleMultiplier = 1.5;
         let isMandatoryBreak = false;
         let midDayBreakTriggered = false;
+        let casualNoBreaks = false;
+        let casualNoDebtPenalty = false;
+        let marketEnabled = false;
         let currentWeeklyAccruedBill = 0;
         let currentWeeklyLaborCost = 0;
         let currentWeeklyRentCost = 0;
@@ -3240,7 +3278,7 @@
                     }
                 }
 
-                if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2)) {
+                if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2) && !casualNoBreaks) {
                     midDayBreakTriggered = true;
                     isMandatoryBreak = true;
                     spawnFloatingText("LUNCH BREAK!", canvas.width / 2, 120, '#3b82f6');
@@ -3613,7 +3651,7 @@
                 cash -= currentWeeklyAccruedBill;
                 weeklyBillPaid = currentWeeklyAccruedBill;
 
-                if (cash < 0) {
+                if (cash < 0 && !casualNoDebtPenalty) {
                     updateUI();
                     endGame(`Game Over! You couldn't pay your weekly bill of $${weeklyBillPaid.toFixed(2)} and ended with a debt of $${Math.abs(cash).toFixed(2)}.`);
                     return; // Exit here if game over
@@ -3808,6 +3846,15 @@
             document.getElementById('report-toggle-customers').classList.remove('bg-opacity-50');
             document.getElementById('report-toggle-sales').classList.add('bg-opacity-50');
             document.getElementById('report-toggle-bills').classList.add('bg-opacity-50');
+
+            // Handle Market toggle for the report button
+            const marketReportButton = document.getElementById('report-toggle-market');
+            marketReportButton.disabled = !marketEnabled;
+            if (marketEnabled) {
+                marketReportButton.textContent = 'Market';
+            } else {
+                marketReportButton.textContent = 'Market (Soon)';
+            }
 
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;
@@ -5557,6 +5604,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
             }
 
+            if (options.casual) {
+                casualNoBreaks = options.casual.noBreaks;
+                casualNoDebtPenalty = options.casual.noDebtPenalty;
+                marketEnabled = options.casual.market;
+            }
+
             // 4. Finalize setup
             initializeLayout();
             updateUI();
@@ -5688,6 +5741,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 hideScreen('new-game-screen');
                 showScreen('specialty-store-screen');
             });
+            document.getElementById('new-game-casual').addEventListener('click', () => {
+                hideScreen('new-game-screen');
+                showScreen('casual-mode-screen');
+            });
             document.getElementById('close-new-game-screen').addEventListener('click', () => {
                 if (localStorage.getItem('artEmporiumSave')) {
                     hideScreen('new-game-screen');
@@ -5707,6 +5764,23 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         freeUnlocks: document.getElementById('dev-unlocks-toggle').checked,
                         freeSupplies: document.getElementById('dev-supplies-toggle').checked,
                         startWithDebt: document.getElementById('dev-debt-toggle').checked
+                    }
+                };
+                startGame(options);
+            });
+
+            // --- Casual Mode Screen Logic ---
+            document.getElementById('casual-back-btn').addEventListener('click', () => {
+                hideScreen('casual-mode-screen');
+                showScreen('new-game-screen');
+            });
+
+            document.getElementById('casual-start-game-btn').addEventListener('click', () => {
+                const options = {
+                    casual: {
+                        noBreaks: document.getElementById('casual-breaks-toggle').checked,
+                        noDebtPenalty: document.getElementById('casual-debt-toggle').checked,
+                        market: document.getElementById('casual-market-toggle').checked,
                     }
                 };
                 startGame(options);

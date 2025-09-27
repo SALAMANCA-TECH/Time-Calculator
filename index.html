@@ -3172,7 +3172,7 @@
             drawStoreBackground();
             const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, barista, manager, salesperson];
 
-            if (unlocks.shelves[5]) {
+            if (unlocks.facilities.coffeeShop) {
                 const { x, y, w: shopWidth, h: shopHeight } = coffeeShop.rect;
 
                 const signYPos = y + shopHeight * 0.1;

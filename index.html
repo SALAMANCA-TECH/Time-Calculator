@@ -258,6 +258,12 @@
                         <div id="shelf-grid" class="grid grid-cols-1 gap-4"></div>
                     </div>
 
+                    <!-- Storage Panel -->
+                    <div id="storage-panel" class="phone-app-screen hidden">
+                        <h2 id="storage-title" class="text-3xl font-handwritten mb-4">Manage Storage</h2>
+                        <div id="storage-grid" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
                     <!-- Assignment Panel -->
                     <div id="assignment-panel" class="phone-app-screen hidden">
                         <h2 id="assignment-title" class="text-2xl font-handwritten mb-4">Assign Item</h2>
@@ -679,7 +685,7 @@
             Object.keys(enabledItems).forEach(item => {
                 if (enabledItems[item]) {
                     // Check if the item is actually unlocked via storage
-                    const isUnlocked = storageCells.some((cell, index) => (index === 0 || unlocks.storage[index]) && cell.allowedItems.includes(item));
+                    const isUnlocked = storageCells.some((cell, index) => unlocks.storage[index] && cell.allowedItems.includes(item));
                     if (isUnlocked) {
                         unlockedAndEnabledItems.add(item);
                     }
@@ -4138,8 +4144,14 @@
 
             const clickedCell = storageCells.find(c => worldX >= c.rect.x && worldX <= c.rect.x + c.rect.w && worldY >= c.rect.y && worldY <= c.rect.y + c.rect.h);
             if (clickedCell) {
-                if (Math.hypot(player.x - (clickedCell.rect.x + clickedCell.rect.w/2), player.y - (clickedCell.rect.y + clickedCell.rect.h)) < 150) {
-                    openStorageCell(clickedCell); return;
+                const cellIndex = storageCells.indexOf(clickedCell);
+                // Ensure the clicked cell is unlocked before proceeding
+                if (unlocks.storage[cellIndex]) {
+                    if (Math.hypot(player.x - (clickedCell.rect.x + clickedCell.rect.w/2), player.y - (clickedCell.rect.y + clickedCell.rect.h)) < 150) {
+                        openClipboardPanel();
+                        openStorageCell(clickedCell);
+                        return;
+                    }
                 }
             }
             const clickedShelf = shelves.find(s => worldX >= s.rect.x && worldX <= s.rect.x + s.rect.w && worldY >= s.rect.y && worldY <= s.rect.y + s.rect.h);
@@ -4313,7 +4325,7 @@
             const customerList = document.getElementById('all-customer-list');
             customerList.innerHTML = '';
 
-            const unlockedTypeKeys = ['artist'];
+            const unlockedTypeKeys = [];
             unlocks.storage.forEach((isUnlocked, index) => {
                 if (isUnlocked) {
                     const typeKey = Object.keys(customerTypes).find(key => customerTypes[key].storageIndex === index);
@@ -5086,6 +5098,7 @@
             showAppScreen('storage-panel');
         }
 
+
 function openProductAssignmentForShelf(shelf, slotIndex) {
             const assignmentGrid = document.getElementById('assignment-grid');
             const assignmentTitle = document.getElementById('assignment-title');
@@ -5136,7 +5149,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     cell.allowedItems.forEach(item => unlockedItems.add(item));
                 }
             });
-            storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
 
 
             for (const itemName of unlockedItems) {
@@ -5222,8 +5234,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             itemsGrid.innerHTML = '';
 
             const unlockedItems = new Set();
-            // Artist items are always available
-            storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
             // Add items from unlocked storage cells
             unlocks.storage.forEach((isUnlocked, index) => {
                 if (isUnlocked) {

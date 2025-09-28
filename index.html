@@ -4681,8 +4681,11 @@
             });
             storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
 
-            if (unlockedItems.size === 0) {
-                restockGrid.innerHTML = `<p class="text-center p-4">Unlock more storage cells to order new types of items!</p>`;
+            const availableItemsToOrder = [...unlockedItems].filter(item => enabledItems[item]);
+
+
+            if (availableItemsToOrder.length === 0) {
+                restockGrid.innerHTML = `<p class="text-center p-4">No items are enabled for ordering. Check the 'Items' app.</p>`;
                 showAppScreen('restock-panel');
                 return;
             }
@@ -4694,7 +4697,7 @@
                     <span class="col-span-3"></span> <!-- Header for buttons -->
                 </div>
             `;
-            for (const itemName of unlockedItems) {
+            for (const itemName of availableItemsToOrder) {
 
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'grid grid-cols-6 gap-x-2 items-center py-2 border-b border-amber-800/10';
@@ -5034,11 +5037,46 @@
             }
         }
 
+        function stockAllRelevantToStorage(cell) {
+            const itemsToMove = player.basket.filter(item => cell.allowedItems.includes(item));
+            if (itemsToMove.length === 0) return;
+
+            const currentFill = Object.values(cell.items).reduce((a, b) => a + b, 0);
+            const capacity = cell.capacity;
+            const availableSpace = capacity - currentFill;
+
+            if (itemsToMove.length > availableSpace) {
+                showMessage(`Not enough space in ${cell.label} storage. Needs space for ${itemsToMove.length} items, but only has ${availableSpace}.`);
+                return;
+            }
+
+            const newBasket = player.basket.filter(item => !cell.allowedItems.includes(item));
+            itemsToMove.forEach(item => {
+                cell.items[item] = (cell.items[item] || 0) + 1;
+            });
+
+            player.basket = newBasket;
+            spawnFloatingText(`Stocked ${itemsToMove.length} items!`, player.x, player.y - 90, '#22c55e');
+            saveGame();
+            openStorageCell(cell); // Refresh the panel
+        }
+
         function openStorageCell(cell) {
             activeStorageCell = cell;
             const storageGrid = document.getElementById('storage-grid');
             document.getElementById('storage-title').textContent = cell.label;
             storageGrid.innerHTML = '';
+
+            const stockAllButtonContainer = document.createElement('div');
+            stockAllButtonContainer.className = 'p-2 col-span-2'; // Span across grid
+            const stockAllButton = document.createElement('button');
+            stockAllButton.className = 'btn-style w-full py-2';
+            stockAllButton.textContent = 'Stock All Relevant from Basket';
+            stockAllButton.onclick = () => stockAllRelevantToStorage(cell);
+            stockAllButton.disabled = !player.basket.some(item => cell.allowedItems.includes(item));
+            stockAllButtonContainer.appendChild(stockAllButton);
+            storageGrid.appendChild(stockAllButtonContainer);
+
             if (cell.allowedItems.length === 0) {
                 storageGrid.innerHTML = `<p class="col-span-4 text-center">No items are stored here.</p>`;
             }

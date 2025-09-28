@@ -874,7 +874,7 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            shift: 'Day Shift',
+            shift: ['Day Shift'],
             breakPreference: 'first'
         };
 
@@ -889,7 +889,7 @@
             onBreak: false,
             playerInitiatedBreak: false,
             basket: [],
-            shift: 'Day Shift',
+            shift: ['Day Shift'],
             breakPreference: 'first'
         };
 
@@ -904,7 +904,7 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            shift: 'Day Shift',
+            shift: ['Day Shift'],
             breakPreference: 'first'
         };
         const manager = {
@@ -920,7 +920,7 @@
             canOrder: true,
             lastOrderQuarter: -1,
                 hasPlacedMorningOrder: false,
-            shift: 'Day Shift',
+            shift: ['Day Shift'],
             breakPreference: 'first'
         };
 
@@ -935,7 +935,7 @@
             onBreak: false,
             playerInitiatedBreak: false,
             basket: [],
-            shift: 'Day Shift',
+            shift: ['Day Shift'],
             breakPreference: 'first'
         };
 
@@ -3289,7 +3289,7 @@
                 const currentShiftPhase = dayPhase.replace('-', ' '); // "day-shift" -> "day shift"
                 for (const empKey in employees) {
                     const employee = employees[empKey];
-                    if (unlocks.employees[empKey] && !employee.onBreak && employee.shift.toLowerCase() === currentShiftPhase) {
+                    if (unlocks.employees[empKey] && !employee.onBreak && employee.shift.map(s => s.toLowerCase()).includes(currentShiftPhase.toLowerCase())) {
                         employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + deltaTime;
                     }
                 }
@@ -3307,7 +3307,7 @@
                     const employees = { cashier, stocker, barista, manager, salesperson };
                     for (const empKey in employees) {
                         const employee = employees[empKey];
-                        if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'first') {
+                        if (unlocks.employees[empKey] && employee.shift.includes('Day Shift') && employee.breakPreference === 'first') {
                             employee.onBreak = true;
                         }
                     }
@@ -3317,7 +3317,7 @@
                         isMandatoryBreak = false;
                         for (const empKey in employees) {
                             const employee = employees[empKey];
-                            if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'first') {
+                            if (unlocks.employees[empKey] && employee.shift.includes('Day Shift') && employee.breakPreference === 'first') {
                                 if (!employee.playerInitiatedBreak) {
                                     employee.onBreak = false;
                                 }
@@ -3336,7 +3336,7 @@
                     const employees = { cashier, stocker, barista, manager, salesperson };
                     for (const empKey in employees) {
                         const employee = employees[empKey];
-                        if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'last') {
+                        if (unlocks.employees[empKey] && employee.shift.includes('Night Shift') && employee.breakPreference === 'last') {
                             employee.onBreak = true;
                         }
                     }
@@ -3346,7 +3346,7 @@
                         isMandatoryBreak = false;
                         for (const empKey in employees) {
                             const employee = employees[empKey];
-                            if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'last') {
+                            if (unlocks.employees[empKey] && employee.shift.includes('Night Shift') && employee.breakPreference === 'last') {
                                 if (!employee.playerInitiatedBreak) {
                                     employee.onBreak = false;
                                 }
@@ -4544,14 +4544,14 @@
                     const currentShiftPhase = dayPhase.replace('-', ' ');
                     if (employee.onBreak) {
                         statusText = '<span class="text-yellow-600">On Break</span>';
-                    } else if (employee.shift.toLowerCase() === currentShiftPhase) {
+                    } else if (employee.shift.map(s => s.toLowerCase()).includes(currentShiftPhase.toLowerCase())) {
                         statusText = '<span class="text-green-600">Working</span>';
-                    } else if (employee.shift !== 'Off') {
+                    } else if (!employee.shift.includes('Off')) {
                         statusText = '<span class="text-gray-500">Waiting for Shift</span>';
                     }
 
                     const shiftButtonsHtml = shiftOptions.map(opt => {
-                        const isSelected = employee.shift === opt.value;
+                        const isSelected = employee.shift.includes(opt.value);
                         const selectedClass = isSelected ? 'bg-green-700 !text-white' : 'bg-amber-700/60';
                         return `<button class="shift-btn btn-style !px-2 !py-1 !text-sm ${selectedClass}" data-shift-value="${opt.value}" title="${opt.value}">${opt.label}</button>`;
                     }).join('');
@@ -4587,7 +4587,32 @@
                     shiftButtonContainer.addEventListener('click', (e) => {
                         if (e.target.classList.contains('shift-btn')) {
                             const newShift = e.target.dataset.shiftValue;
-                            employee.shift = newShift;
+                            let currentShifts = employee.shift;
+
+                            if (newShift === 'Off') {
+                                employee.shift = ['Off'];
+                            } else {
+                                // If "Off" was the only shift, clear it before adding the new one.
+                                if (currentShifts.length === 1 && currentShifts[0] === 'Off') {
+                                    currentShifts = [];
+                                }
+
+                                const index = currentShifts.indexOf(newShift);
+                                if (index > -1) {
+                                    // Remove shift if it's already there
+                                    currentShifts.splice(index, 1);
+                                } else {
+                                    // Add shift if it's not
+                                    currentShifts.push(newShift);
+                                }
+
+                                // If no shifts are selected, default to "Off"
+                                if (currentShifts.length === 0) {
+                                    employee.shift = ['Off'];
+                                } else {
+                                    employee.shift = currentShifts;
+                                }
+                            }
                             openEmployeesPanel(); // Refresh
                             saveGame();
                         }
@@ -5884,6 +5909,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         for (const empKey in gameState.employees) {
                             if (allEmployees[empKey]) {
                                 Object.assign(allEmployees[empKey], gameState.employees[empKey]);
+                                // Backward compatibility: convert string shift to array
+                                if (typeof allEmployees[empKey].shift === 'string') {
+                                    allEmployees[empKey].shift = [allEmployees[empKey].shift];
+                                }
                             }
                         }
                     }

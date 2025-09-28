@@ -4336,14 +4336,17 @@
 
             // Default interaction: show speech bubble and maybe upsell
             if (nearbyCustomer.state === 'wandering' || nearbyCustomer.state === 'waitingForInteraction' || nearbyCustomer.state === 'waitingForAssistance') {
-                 const missingItem = nearbyCustomer.requestedItems[nearbyCustomer.currentItemIndex];
-                 if (missingItem) {
-                     nearbyCustomer.request = `I was really hoping to find some ${missingItem} today.`;
-                 } else if (nearbyCustomer.behaviorType === 'needsInteraction') {
-                     nearbyCustomer.request = "Hello? Could someone help me find something?";
-                 } else if (nearbyCustomer.behaviorType === 'needsAssistance') {
-                     nearbyCustomer.request = "Could someone get these items for me, please?";
-                 }
+                if (nearbyCustomer.behaviorType === 'needsAssistance') {
+                    const fullList = nearbyCustomer.requestedItems.join(', ');
+                    nearbyCustomer.request = `I need: ${fullList}.`;
+                } else {
+                    const missingItem = nearbyCustomer.requestedItems[nearbyCustomer.currentItemIndex];
+                    if (missingItem) {
+                        nearbyCustomer.request = `I was really hoping to find some ${missingItem} today.`;
+                    } else if (nearbyCustomer.behaviorType === 'needsInteraction') {
+                        nearbyCustomer.request = "Hello? Could someone help me find something?";
+                    }
+                }
             }
             nearbyCustomer.showSpeechBubble = true;
             nearbyCustomer.speechBubbleTimer = 3000;

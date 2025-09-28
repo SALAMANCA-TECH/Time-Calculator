@@ -2480,47 +2480,6 @@
             }
         }
 
-        function getTotalStock(itemName) {
-            let total = 0;
-            // Check storage cells
-            storageCells.forEach(cell => {
-                if (cell.items && cell.items[itemName]) {
-                    total += cell.items[itemName];
-                }
-            });
-            // Check loading dock packages
-            loadingDockPackages.forEach(pkg => {
-                if (pkg.itemName === itemName) {
-                    total += pkg.quantity;
-                }
-            });
-            // Check shelves
-            shelves.forEach(shelf => {
-                shelf.items.forEach(slot => {
-                    if (slot.assignedItem === itemName) {
-                        total += slot.quantity;
-                    }
-                });
-            });
-            return total;
-        }
-
-        function getBackroomStock(itemName) {
-            let total = 0;
-            // Check storage cells
-            storageCells.forEach(cell => {
-                if (cell.items && cell.items[itemName]) {
-                    total += cell.items[itemName];
-                }
-            });
-            // Check loading dock packages
-            loadingDockPackages.forEach(pkg => {
-                if (pkg.itemName === itemName) {
-                    total += pkg.quantity;
-                }
-            });
-            return total;
-        }
 
         function updateManager(deltaTime) {
              if (!unlocks.employees.manager) return;
@@ -4658,6 +4617,48 @@
 
         let currentRestockOrder = {};
 
+        function getTotalStock(itemName) {
+            let total = 0;
+            // Check storage cells
+            storageCells.forEach(cell => {
+                if (cell.items && cell.items[itemName]) {
+                    total += cell.items[itemName];
+                }
+            });
+            // Check loading dock packages
+            loadingDockPackages.forEach(pkg => {
+                if (pkg.itemName === itemName) {
+                    total += pkg.quantity;
+                }
+            });
+            // Check shelves
+            shelves.forEach(shelf => {
+                shelf.items.forEach(slot => {
+                    if (slot.assignedItem === itemName) {
+                        total += slot.quantity;
+                    }
+                });
+            });
+            return total;
+        }
+
+        function getBackroomStock(itemName) {
+            let total = 0;
+            // Check storage cells
+            storageCells.forEach(cell => {
+                if (cell.items && cell.items[itemName]) {
+                    total += cell.items[itemName];
+                }
+            });
+            // Check loading dock packages
+            loadingDockPackages.forEach(pkg => {
+                if (pkg.itemName === itemName) {
+                    total += pkg.quantity;
+                }
+            });
+            return total;
+        }
+
         function openClipboardPanel() {
             const clipboardPanel = document.getElementById('clipboard-panel');
             clipboardPanel.classList.add('open');
@@ -4733,7 +4734,7 @@
                 itemDiv.className = 'grid grid-cols-6 gap-x-2 items-center py-2 border-b border-amber-800/10';
                 itemDiv.innerHTML = `
                     <span class="text-lg col-span-2">${itemName}</span>
-                    <span class="text-right text-lg">${inventory[itemName]}</span>
+                    <span class="text-right text-lg">${getTotalStock(itemName)}</span>
                     <div class="flex space-x-1 col-span-3">
                         <button class="btn-style order-item-btn text-sm px-2 py-1" data-item="${itemName}">Order</button>
                         <button class="btn-style buy-now-one-btn text-sm px-2 py-1 bg-blue-600 hover:bg-blue-500" data-item="${itemName}">Buy 1</button>

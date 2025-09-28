@@ -1086,6 +1086,31 @@
                     wrapText(ctx, this.request, this.x, bubbleY + 20, bubbleWidth - 20, 20);
                 }
 
+                // Assistance indicators
+                const indicatorY = this.y - this.frameHeight - 25;
+                if (this.behaviorType === 'needsInteraction' && !this.isInteractedWith) {
+                    ctx.font = 'bold 36px "Indie Flower", cursive';
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = 'rgba(0, 150, 255, 0.9)';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = 'rgba(0, 150, 255, 0.5)';
+                    ctx.fillText('?', this.x, indicatorY);
+                    ctx.shadowBlur = 0; // Reset shadow
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText('?', this.x, indicatorY);
+                } else if (this.behaviorType === 'needsAssistance' && !this.needsAssistanceFulfilled) {
+                    ctx.font = 'bold 36px "Indie Flower", cursive';
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = 'rgba(0, 255, 100, 0.9)';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = 'rgba(0, 255, 100, 0.5)';
+                    ctx.fillText('!', this.x, indicatorY);
+                    ctx.shadowBlur = 0; // Reset shadow
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText('!', this.x, indicatorY);
+                }
+
+
                 ctx.font = '20px "Indie Flower", cursive';
                 ctx.textAlign = 'center';
                 const displayName = this.name;

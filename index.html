@@ -1019,7 +1019,7 @@
             // Architectural (formerly Drawing)
             'Pencil Lead': { cost: 20 }, 'Vellum': { cost: 75 }, 'Fancy Markers': { cost: 100 }, 'Tiny Trees': { cost: 200 },
             // Coffee Shop
-            'Beans': { cost: 15 }, 'Milks': { cost: 5 }, 'Sugar': { cost: 3 }, 'Snacks': { cost: 8 }
+            'Beans': { cost: 1 }, 'Milks': { cost: 2 }, 'Sugar': { cost: 2 }, 'Snacks': { cost: 3 }
         };
 
         let inventory = {};
@@ -4920,46 +4920,66 @@
             restockGrid.innerHTML = '';
             updateRestockTotal();
 
-            const unlockedItems = new Set();
-            storageCells.forEach((cell, index) => {
-                if (unlocks.storage[index]) {
-                    cell.allowedItems.forEach(item => unlockedItems.add(item));
-                }
-            });
-            storageCells[0].allowedItems.forEach(item => unlockedItems.add(item));
+            const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
 
-            const availableItemsToOrder = [...unlockedItems].filter(item => enabledItems[item]);
+            // Helper function to render a list of items for ordering
+            const renderOrderList = (title, itemsToRender, container) => {
+                const availableItems = itemsToRender.filter(item => enabledItems[item]);
+                if (availableItems.length === 0) return;
 
+                const sectionHeader = document.createElement('h3');
+                sectionHeader.className = 'text-xl font-handwritten border-b-2 border-amber-800/30 mb-2 mt-4';
+                sectionHeader.textContent = title;
+                container.appendChild(sectionHeader);
 
-            if (availableItemsToOrder.length === 0) {
-                restockGrid.innerHTML = `<p class="text-center p-4">No items are enabled for ordering. Check the 'Items' app.</p>`;
-                showAppScreen('restock-panel');
-                return;
-            }
-
-            restockGrid.innerHTML += `
-                <div class="grid grid-cols-6 gap-x-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten">
+                const headerRow = document.createElement('div');
+                 headerRow.className = 'grid grid-cols-6 gap-x-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten';
+                 headerRow.innerHTML = `
                     <span class="font-bold col-span-2">Item</span>
                     <span class="text-right font-bold">Stock</span>
                     <span class="col-span-3"></span> <!-- Header for buttons -->
-                </div>
-            `;
-            for (const itemName of availableItemsToOrder) {
-
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'grid grid-cols-6 gap-x-2 items-center py-2 border-b border-amber-800/10';
-                itemDiv.innerHTML = `
-                    <span class="text-lg col-span-2">${itemName}</span>
-                    <span class="text-right text-lg">${getTotalStock(itemName)}</span>
-                    <div class="flex space-x-1 col-span-3">
-                        <button class="btn-style order-item-btn text-sm px-2 py-1" data-item="${itemName}">Order</button>
-                        <button class="btn-style buy-now-one-btn text-sm px-2 py-1 bg-blue-600 hover:bg-blue-500" data-item="${itemName}">Buy 1</button>
-                        <button class="btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500" data-item="${itemName}">Buy 5</button>
-                    </div>
                 `;
-                restockGrid.appendChild(itemDiv);
+                container.appendChild(headerRow);
+
+                for (const itemName of availableItems) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'grid grid-cols-6 gap-x-2 items-center py-2 border-b border-amber-800/10';
+                    itemDiv.innerHTML = `
+                        <span class="text-lg col-span-2">${itemName}</span>
+                        <span class="text-right text-lg">${getTotalStock(itemName)}</span>
+                        <div class="flex space-x-1 col-span-3">
+                            <button class="btn-style order-item-btn text-sm px-2 py-1" data-item="${itemName}">Order</button>
+                            <button class="btn-style buy-now-one-btn text-sm px-2 py-1 bg-blue-600 hover:bg-blue-500" data-item="${itemName}">Buy 1</button>
+                            <button class="btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500" data-item="${itemName}">Buy 5</button>
+                        </div>
+                    `;
+                    container.appendChild(itemDiv);
+                }
+            };
+
+            // Conditionally render Coffee Supplies
+            if (unlocks.facilities.coffeeShop) {
+                renderOrderList('Coffee Supplies', coffeeItems, restockGrid);
             }
 
+            // Render Art Supplies, grouped by storage category
+            storageCells.forEach((cell, index) => {
+                if (unlocks.storage[index]) {
+                    // Filter out coffee items, just in case they overlap in the future
+                    const artItemsForCell = cell.allowedItems.filter(item => !coffeeItems.includes(item));
+                     if (artItemsForCell.length > 0) {
+                        renderOrderList(cell.label, artItemsForCell, restockGrid);
+                    }
+                }
+            });
+
+
+            // Check if any items were rendered at all
+            if (restockGrid.children.length === 0) {
+                 restockGrid.innerHTML = `<p class="text-center p-4">No items are enabled for ordering. Check the 'Items' app or unlock more storage.</p>`;
+            }
+
+            // Attach event listeners to all generated buttons
             restockGrid.querySelectorAll('.order-item-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.item;

@@ -2628,18 +2628,10 @@
                                 manager.task = {
                                     action: 'order',
                                     item: mostPopularLowItem,
-                                        isUrgent: false,
-                                        target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                                    };
-                                    manager.state = 'going_to_office';
-                                } else {
-                                    manager.stateTimer = 10000;
-                                    if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
-                                         manager.task = { target: {x: manager.idleX, y: manager.idleY} };
-                                     } else {
-                                         manager.task = null;
-                                     }
-                                }
+                                    isUrgent: false,
+                                    target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                                };
+                                manager.state = 'going_to_office';
                             } else {
                                  manager.stateTimer = 10000;
                                 if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
@@ -5010,6 +5002,7 @@
                 return;
             }
 
+
             if (cash >= totalCost) {
                 cash -= totalCost;
                 for (const itemName in orderSource) {
@@ -5172,6 +5165,42 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             showAppScreen('assignment-panel');
         }
 
+        function stockAllRelevantFromBasket(shelf) {
+            let itemsMoved = 0;
+            const basketCounts = player.basket.reduce((acc, item) => {
+                acc[item] = (acc[item] || 0) + 1;
+                return acc;
+            }, {});
+
+            for (const slot of shelf.items) {
+                if (slot.assignedItem && basketCounts[slot.assignedItem]) {
+                    let canMove = MAX_SHELF_STACK - slot.quantity;
+                    let toMove = Math.min(canMove, basketCounts[slot.assignedItem]);
+
+                    if (toMove > 0) {
+                        slot.quantity += toMove;
+                        basketCounts[slot.assignedItem] -= toMove;
+                        itemsMoved += toMove;
+
+                        // Remove items from player's basket
+                        let removedCount = 0;
+                        for (let i = player.basket.length - 1; i >= 0 && removedCount < toMove; i--) {
+                            if (player.basket[i] === slot.assignedItem) {
+                                player.basket.splice(i, 1);
+                                removedCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (itemsMoved > 0) {
+                spawnFloatingText(`Stocked ${itemsMoved} items!`, player.x, player.y - 90, '#22c55e');
+                saveGame();
+                openShelfPanel(shelf); // Refresh the panel
+            }
+        }
+
         function openItemsPanel() {
             const itemsGrid = document.getElementById('items-toggle-grid');
             itemsGrid.innerHTML = '';
@@ -5216,42 +5245,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             }
 
             showAppScreen('items-panel');
-        }
-
-        function stockAllRelevantFromBasket(shelf) {
-            let itemsMoved = 0;
-            const basketCounts = player.basket.reduce((acc, item) => {
-                acc[item] = (acc[item] || 0) + 1;
-                return acc;
-            }, {});
-
-            for (const slot of shelf.items) {
-                if (slot.assignedItem && basketCounts[slot.assignedItem]) {
-                    let canMove = MAX_SHELF_STACK - slot.quantity;
-                    let toMove = Math.min(canMove, basketCounts[slot.assignedItem]);
-
-                    if (toMove > 0) {
-                        slot.quantity += toMove;
-                        basketCounts[slot.assignedItem] -= toMove;
-                        itemsMoved += toMove;
-
-                        // Remove items from player's basket
-                        let removedCount = 0;
-                        for (let i = player.basket.length - 1; i >= 0 && removedCount < toMove; i--) {
-                            if (player.basket[i] === slot.assignedItem) {
-                                player.basket.splice(i, 1);
-                                removedCount++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (itemsMoved > 0) {
-                spawnFloatingText(`Stocked ${itemsMoved} items!`, player.x, player.y - 90, '#22c55e');
-                saveGame();
-                openShelfPanel(shelf); // Refresh the panel
-            }
         }
 
         function openShelfPanel(shelf) {

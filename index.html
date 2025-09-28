@@ -4025,7 +4025,7 @@
                 const coffeeCellWidth = 40;
                 const coffeeCellHeight = 40;
                 const coffeeCellPadding = 10;
-                const coffeeStorageY = coffeeShop.rect.y - coffeeCellHeight - coffeeCellPadding;
+                const coffeeStorageY = coffeeShop.rect.y - coffeeCellHeight - coffeeCellPadding + 20; // Move down 20px
                 const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
 
                 if (coffeeShop.storage.length === 0) { // Only initialize if empty
@@ -4033,7 +4033,7 @@
                         coffeeShop.storage.push({
                             label: coffeeItems[i],
                             rect: {
-                                x: coffeeShop.rect.x + i * (coffeeCellWidth + coffeeCellPadding),
+                                x: coffeeShop.rect.x + 10 + i * (coffeeCellWidth + coffeeCellPadding), // Move right 10px
                                 y: coffeeStorageY,
                                 w: coffeeCellWidth,
                                 h: coffeeCellHeight
@@ -4044,7 +4044,7 @@
                     }
                 } else { // Just update positions on resize
                      for (let i = 0; i < coffeeItems.length; i++) {
-                        coffeeShop.storage[i].rect.x = coffeeShop.rect.x + i * (coffeeCellWidth + coffeeCellPadding);
+                        coffeeShop.storage[i].rect.x = coffeeShop.rect.x + 10 + i * (coffeeCellWidth + coffeeCellPadding); // Move right 10px
                         coffeeShop.storage[i].rect.y = coffeeStorageY;
                     }
                 }

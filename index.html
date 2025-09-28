@@ -237,11 +237,6 @@
                         </div>
                     </div>
 
-                    <!-- Basket Panel -->
-                    <div id="basket-panel" class="phone-app-screen hidden">
-                        <h2 class="text-3xl font-handwritten mb-4">Your Basket</h2>
-                        <div id="basket-grid" class="space-y-2"></div>
-                    </div>
 
                     <!-- Shelf Assignment Panel -->
                     <div id="shelf-assignment-panel" class="phone-app-screen hidden">
@@ -311,6 +306,17 @@
     <div id="message-box" class="hidden rounded-lg">
         <p id="message-text" class="text-lg"></p>
         <button id="message-ok-btn" class="btn-style mt-4 px-4 py-2 rounded-lg">OK</button>
+    </div>
+
+    <!-- Basket UI Panel -->
+    <div id="basket-ui-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
+        <div class="bg-amber-100 w-full max-w-sm p-4 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <h2 class="text-2xl font-handwritten text-center mb-4">Your Basket</h2>
+            <div id="basket-ui-grid" class="space-y-2 overflow-y-auto max-h-60 p-2 bg-white/30 rounded-md border">
+                <!-- Basket items will be populated here -->
+            </div>
+            <button id="close-basket-ui-btn" class="btn-style mt-4 px-6 py-2 self-center">Close</button>
+        </div>
     </div>
 
     <!-- New Game Screen -->
@@ -949,9 +955,8 @@
                 openClipboardPanel();
                 showAppScreen('restock-panel');
             } else if (e.code === 'KeyG') {
-                // Legacy keybind, now opens phone to basket
-                openClipboardPanel();
-                showAppScreen('basket-panel');
+                // Open the main basket panel
+                toggleBasketPanel();
             } else if (e.code === 'KeyT') {
                 // Legacy keybind, now opens phone to unlocks
                 openClipboardPanel();
@@ -1649,7 +1654,7 @@
         }
 
         function drawStaticUI() {
-            const boxWidth = 70, boxHeight = 70;
+            const boxWidth = 150, boxHeight = 70; // Increased width for two icons
             const boxX = canvas.width - boxWidth - 20, boxY = 20;
 
             ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
@@ -1659,9 +1664,16 @@
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
             const iconY = boxY + 10;
-            phoneIcon.x = boxX + 10; phoneIcon.y = iconY;
 
+            // Phone Icon
+            phoneIcon.x = boxX + 10;
+            phoneIcon.y = iconY;
             drawPhoneIcon(phoneIcon.x, phoneIcon.y, phoneIcon.width, phoneIcon.height);
+
+            // Shopping Basket Icon
+            shoppingBasket.x = boxX + 10 + phoneIcon.width + 10; // Position next to phone
+            shoppingBasket.y = iconY;
+            drawShoppingBasket(shoppingBasket.x, shoppingBasket.y, shoppingBasket.width, shoppingBasket.height);
         }
 
         function drawCashRegister(x, y, w, h) {
@@ -4113,6 +4125,7 @@
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= boxX && x <= boxX + boxWidth && y >= boxY && y <= boxY + boxHeight) {
                  if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openClipboardPanel(); }
+                 if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { toggleBasketPanel(); }
                 return;
             }
 
@@ -4483,31 +4496,6 @@
             showAppScreen('employees-panel');
         }
 
-        function openBasketPanel() {
-            const basketGrid = document.getElementById('basket-grid');
-            basketGrid.innerHTML = '';
-
-            if (player.basket.length === 0) {
-                basketGrid.innerHTML = `<p class="text-center p-4">Your basket is empty.</p>`;
-            } else {
-                const itemCounts = player.basket.reduce((acc, item) => {
-                    acc[item] = (acc[item] || 0) + 1;
-                    return acc;
-                }, {});
-
-                for (const item in itemCounts) {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'p-2 border-b border-amber-800/20 flex justify-between items-center';
-                    itemDiv.innerHTML = `
-                        <span class="text-lg">${item}</span>
-                        <span class="font-handwritten text-xl">x${itemCounts[item]}</span>
-                    `;
-                    basketGrid.appendChild(itemDiv);
-                }
-            }
-
-            showAppScreen('basket-panel');
-        }
 
         function openShelfAssignmentPanel() {
             const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
@@ -4638,7 +4626,6 @@
 
             const apps = [
                 { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
-                { name: 'Basket', icon: '🧺', panelId: 'basket-panel', action: openBasketPanel },
                 { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
                 { name: 'Items', icon: '💡', panelId: 'items-panel', action: openItemsPanel },
                 { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
@@ -5682,6 +5669,53 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('start-day-btn').click();
         }
 
+        function populateBasketPanel() {
+            const basketGrid = document.getElementById('basket-ui-grid');
+            basketGrid.innerHTML = '';
+
+            if (player.basket.length === 0) {
+                basketGrid.innerHTML = `<p class="text-center p-4">Your basket is empty.</p>`;
+            } else {
+                const itemCounts = player.basket.reduce((acc, item) => {
+                    acc[item] = (acc[item] || 0) + 1;
+                    return acc;
+                }, {});
+
+                for (const item in itemCounts) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'p-2 border-b border-amber-800/20 flex justify-between items-center';
+                    itemDiv.innerHTML = `
+                        <span class="text-lg">${item}</span>
+                        <span class="font-handwritten text-xl">x${itemCounts[item]}</span>
+                    `;
+                    basketGrid.appendChild(itemDiv);
+                }
+            }
+        }
+
+        function toggleBasketPanel(forceOpen) {
+            const panel = document.getElementById('basket-ui-panel');
+            const isHidden = panel.classList.contains('hidden');
+
+            if (forceOpen === true) {
+                if (isHidden) {
+                    populateBasketPanel();
+                    panel.classList.remove('hidden');
+                }
+            } else if (forceOpen === false) {
+                if (!isHidden) {
+                    panel.classList.add('hidden');
+                }
+            } else { // Toggle
+                if (isHidden) {
+                    populateBasketPanel();
+                    panel.classList.remove('hidden');
+                } else {
+                    panel.classList.add('hidden');
+                }
+            }
+        }
+
         function saveGame() {
             const gameState = {
                 cash, day, shopPoints, itemPopularity,
@@ -6012,6 +6046,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             // Phone Navigation
             document.getElementById('close-phone').addEventListener('click', closeClipboard);
             document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
+
+            document.getElementById('close-basket-ui-btn').addEventListener('click', () => toggleBasketPanel(false));
 
             // Report View Toggling
             const reportToggleButtons = document.querySelectorAll('.report-toggle-btn');

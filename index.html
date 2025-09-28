@@ -750,7 +750,8 @@
         let continuousMode = false;
         let saleMultiplier = 1.5;
         let isMandatoryBreak = false;
-        let midDayBreakTriggered = false;
+        let dayShiftBreakTriggered = false;
+        let nightShiftBreakTriggered = false;
         let casualNoBreaks = false;
         let casualNoDebtPenalty = false;
         let marketEnabled = false;
@@ -760,12 +761,14 @@
         let currentWeeklyStorageCost = 0;
         let currentWeeklyCoffeeCost = 0;
 
-        const OPENING_DURATION = 60000; // 1 minute
-        const OPEN_DURATION = 180000; // 3 minutes
-        const CLOSING_DURATION = 60000; // 1 minute
-        const DAY_DURATION = OPENING_DURATION + OPEN_DURATION + CLOSING_DURATION; // Total 5 minutes
+        const OPENING_DURATION = 30000; // 30 seconds
+        const DAY_SHIFT_DURATION = 60000; // 1 minute
+        const NIGHT_SHIFT_DURATION = 60000; // 1 minute
+        const CLOSING_DURATION = 30000; // 30 seconds
+        let BREAK_DURATION = 20000; // 20 seconds
+        const DAY_DURATION = OPENING_DURATION + DAY_SHIFT_DURATION + NIGHT_SHIFT_DURATION + CLOSING_DURATION;
         let dayTimer = DAY_DURATION;
-        let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'open', 'closing'
+        let dayPhase = 'pre-open'; // 'pre-open', 'opening', 'day-shift', 'night-shift', 'closing'
         let zone1PointTimer = 0;
         let coffeeShopBehindCounterTimer = 0;
 
@@ -870,7 +873,9 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
-            playerInitiatedBreak: false
+            playerInitiatedBreak: false,
+            shift: 'Day Shift',
+            breakPreference: 'first'
         };
 
         const cashier = {
@@ -883,7 +888,9 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            basket: []
+            basket: [],
+            shift: 'Day Shift',
+            breakPreference: 'first'
         };
 
         const barista = {
@@ -896,7 +903,9 @@
             stateTimer: 0,
             idleX: 0, idleY: 0,
             onBreak: false,
-            playerInitiatedBreak: false
+            playerInitiatedBreak: false,
+            shift: 'Day Shift',
+            breakPreference: 'first'
         };
         const manager = {
             x: 200, y: 300, width: 50, height: 50, speed: 150,
@@ -911,6 +920,8 @@
             canOrder: true,
             lastOrderQuarter: -1,
                 hasPlacedMorningOrder: false,
+            shift: 'Day Shift',
+            breakPreference: 'first'
         };
 
         const salesperson = {
@@ -923,7 +934,9 @@
             idleX: 0, idleY: 0,
             onBreak: false,
             playerInitiatedBreak: false,
-            basket: []
+            basket: [],
+            shift: 'Day Shift',
+            breakPreference: 'first'
         };
 
         const breakSpots = {
@@ -3173,10 +3186,12 @@
 
             const startAngle = -Math.PI / 2;
             const openingAngle = (OPENING_DURATION / DAY_DURATION) * 2 * Math.PI;
-            const openAngle = (OPEN_DURATION / DAY_DURATION) * 2 * Math.PI;
+            const dayShiftAngle = (DAY_SHIFT_DURATION / DAY_DURATION) * 2 * Math.PI;
+            const nightShiftAngle = (NIGHT_SHIFT_DURATION / DAY_DURATION) * 2 * Math.PI;
 
             const openingColor = '#facc15'; // Yellow
             const openColor = '#22c55e'; // Green
+            const nightShiftColor = '#16a34a'; // Darker Green
             const closingColor = '#ef4444'; // Red
             const overlayColor = 'rgba(93, 64, 55, 0.6)'; // Darkening overlay
 
@@ -3188,11 +3203,19 @@
             pieClockCtx.closePath();
             pieClockCtx.fill();
 
-            // Open segment
+            // Day Shift segment
             pieClockCtx.fillStyle = openColor;
             pieClockCtx.beginPath();
             pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle, startAngle + openingAngle + openAngle);
+            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle, startAngle + openingAngle + dayShiftAngle);
+            pieClockCtx.closePath();
+            pieClockCtx.fill();
+
+            // Night Shift segment
+            pieClockCtx.fillStyle = nightShiftColor;
+            pieClockCtx.beginPath();
+            pieClockCtx.moveTo(centerX, centerY);
+            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle + dayShiftAngle, startAngle + openingAngle + dayShiftAngle + nightShiftAngle);
             pieClockCtx.closePath();
             pieClockCtx.fill();
 
@@ -3200,7 +3223,7 @@
             pieClockCtx.fillStyle = closingColor;
             pieClockCtx.beginPath();
             pieClockCtx.moveTo(centerX, centerY);
-            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle + openAngle, startAngle + 2 * Math.PI);
+            pieClockCtx.arc(centerX, centerY, radius, startAngle + openingAngle + dayShiftAngle + nightShiftAngle, startAngle + 2 * Math.PI);
             pieClockCtx.closePath();
             pieClockCtx.fill();
 
@@ -3232,15 +3255,19 @@
             if (!dayStarted) return;
 
             if (dayPhase === 'opening') {
-                dayTimer = OPEN_DURATION + CLOSING_DURATION;
-                dayPhase = 'open'; // Manually update phase
+                dayTimer = DAY_SHIFT_DURATION + NIGHT_SHIFT_DURATION + CLOSING_DURATION;
+                dayPhase = 'day-shift';
                 spawnFloatingText('Opening Skipped!', canvas.width / 2, 120, '#facc15');
-            } else if (dayPhase === 'open') {
+            } else if (dayPhase === 'day-shift') {
+                dayTimer = NIGHT_SHIFT_DURATION + CLOSING_DURATION;
+                dayPhase = 'night-shift';
+                spawnFloatingText('Day Shift Skipped!', canvas.width / 2, 120, '#22c55e');
+            } else if (dayPhase === 'night-shift') {
                 dayTimer = CLOSING_DURATION;
-                dayPhase = 'closing'; // Manually update phase
-                spawnFloatingText('Day Ended Early!', canvas.width / 2, 120, '#22c55e');
+                dayPhase = 'closing';
+                spawnFloatingText('Night Shift Skipped!', canvas.width / 2, 120, '#ef4444');
             } else if (dayPhase === 'closing') {
-                dayTimer = 1; // Set to 1ms to trigger nextDay() on the next frame
+                dayTimer = 1;
                 spawnFloatingText('Closing Skipped!', canvas.width / 2, 120, '#ef4444');
             }
         }
@@ -3257,50 +3284,86 @@
             if (dayStarted) {
                 dayTimer -= deltaTime;
 
-                // Track employee work time
+                // Track employee work time based on shift
                 const employees = { cashier, stocker, barista, manager, salesperson };
+                const currentShiftPhase = dayPhase.replace('-', ' '); // "day-shift" -> "day shift"
                 for (const empKey in employees) {
-                    if (unlocks.employees[empKey] && !employees[empKey].onBreak) {
+                    const employee = employees[empKey];
+                    if (unlocks.employees[empKey] && !employee.onBreak && employee.shift.toLowerCase() === currentShiftPhase) {
                         employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + deltaTime;
                     }
                 }
 
-                if (!midDayBreakTriggered && dayTimer <= (DAY_DURATION / 2) && !casualNoBreaks) {
-                    midDayBreakTriggered = true;
+                // --- Shift-Based Break Logic ---
+                const elapsedTime = DAY_DURATION - dayTimer;
+                const dayShiftBreakTime = OPENING_DURATION + (DAY_SHIFT_DURATION / 2);
+                const nightShiftBreakTime = OPENING_DURATION + DAY_SHIFT_DURATION + (NIGHT_SHIFT_DURATION / 2);
+
+                if (!dayShiftBreakTriggered && elapsedTime >= dayShiftBreakTime && !casualNoBreaks) {
+                    dayShiftBreakTriggered = true;
                     isMandatoryBreak = true;
-                    spawnFloatingText("LUNCH BREAK!", canvas.width / 2, 120, '#3b82f6');
+                    spawnFloatingText("FIRST BREAK!", canvas.width / 2, 120, '#3b82f6');
 
                     const employees = { cashier, stocker, barista, manager, salesperson };
                     for (const empKey in employees) {
-                        if (unlocks.employees[empKey]) {
-                            employees[empKey].onBreak = true;
+                        const employee = employees[empKey];
+                        if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'first') {
+                            employee.onBreak = true;
                         }
                     }
-
-                    if (activePanel === 'employees') {
-                        openEmployeesPanel();
-                    }
+                    if (isPhoneOpen && activePhoneScreen === 'employees-panel') openEmployeesPanel();
 
                     setTimeout(() => {
                         isMandatoryBreak = false;
                         for (const empKey in employees) {
-                            if (unlocks.employees[empKey]) {
-                                if (!employees[empKey].playerInitiatedBreak) {
-                                    employees[empKey].onBreak = false;
+                            const employee = employees[empKey];
+                            if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'first') {
+                                if (!employee.playerInitiatedBreak) {
+                                    employee.onBreak = false;
                                 }
                             }
                         }
-                        if (activePanel === 'employees') {
-                            openEmployeesPanel();
-                        }
+                        if (isPhoneOpen && activePhoneScreen === 'employees-panel') openEmployeesPanel();
                         spawnFloatingText("Break's over!", canvas.width / 2, 120, '#22c55e');
-                    }, 20000);
+                    }, BREAK_DURATION);
                 }
 
-                if (dayTimer > OPEN_DURATION + CLOSING_DURATION) {
+                if (!nightShiftBreakTriggered && elapsedTime >= nightShiftBreakTime && !casualNoBreaks) {
+                    nightShiftBreakTriggered = true;
+                    isMandatoryBreak = true;
+                    spawnFloatingText("LAST BREAK!", canvas.width / 2, 120, '#3b82f6');
+
+                    const employees = { cashier, stocker, barista, manager, salesperson };
+                    for (const empKey in employees) {
+                        const employee = employees[empKey];
+                        if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'last') {
+                            employee.onBreak = true;
+                        }
+                    }
+                    if (isPhoneOpen && activePhoneScreen === 'employees-panel') openEmployeesPanel();
+
+                    setTimeout(() => {
+                        isMandatoryBreak = false;
+                        for (const empKey in employees) {
+                            const employee = employees[empKey];
+                            if (unlocks.employees[empKey] && (employee.shift === 'Day Shift' || employee.shift === 'Night Shift') && employee.breakPreference === 'last') {
+                                if (!employee.playerInitiatedBreak) {
+                                    employee.onBreak = false;
+                                }
+                            }
+                        }
+                        if (isPhoneOpen && activePhoneScreen === 'employees-panel') openEmployeesPanel();
+                        spawnFloatingText("Break's over!", canvas.width / 2, 120, '#22c55e');
+                    }, BREAK_DURATION);
+                }
+
+
+                if (dayTimer > DAY_SHIFT_DURATION + NIGHT_SHIFT_DURATION + CLOSING_DURATION) {
                     dayPhase = 'opening';
+                } else if (dayTimer > NIGHT_SHIFT_DURATION + CLOSING_DURATION) {
+                    dayPhase = 'day-shift';
                 } else if (dayTimer > CLOSING_DURATION) {
-                    dayPhase = 'open';
+                    dayPhase = 'night-shift';
                 } else if (dayTimer > 0) {
                     dayPhase = 'closing';
                 } else {
@@ -3371,7 +3434,7 @@
                 }
             }
 
-            if (dayPhase === 'open') {
+            if (dayPhase === 'day-shift' || dayPhase === 'night-shift') {
                 timeSinceLastCustomer += deltaTime;
                 if (timeSinceLastCustomer >= CUSTOMER_SPAWN_INTERVAL) {
                     timeSinceLastCustomer = 0;
@@ -3595,7 +3658,8 @@
             if (!dayStarted) return;
             dayStarted = false;
             dayPhase = 'pre-open';
-            midDayBreakTriggered = false;
+            dayShiftBreakTriggered = false;
+            nightShiftBreakTriggered = false;
             manager.hasPlacedMorningOrder = false; // Reset for the next day
 
             // --- Daily & Weekly Expense Calculation ---
@@ -4459,6 +4523,7 @@
             employeeList.innerHTML = '';
 
             const employees = { cashier, stocker, barista, manager, salesperson };
+            const shiftOptions = ["Off", "Opening", "Day Shift", "Night Shift", "Closing"];
 
             let anyUnlocked = false;
             for (const empKey in unlocks.employees) {
@@ -4466,28 +4531,64 @@
                     anyUnlocked = true;
                     const employee = employees[empKey];
                     const empDiv = document.createElement('div');
-                    empDiv.className = 'flex items-center justify-between p-3 border-2 border-amber-800/50 rounded-lg bg-white/50';
+                    empDiv.className = 'grid grid-cols-2 gap-y-2 p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 mb-2';
+
+                    // Determine Status
+                    let statusText = 'Off Duty';
+                    const currentShiftPhase = dayPhase.replace('-', ' '); // e.g. 'day-shift' -> 'day shift'
+                    if (employee.onBreak) {
+                        statusText = '<span class="text-yellow-600">On Break</span>';
+                    } else if (employee.shift.toLowerCase() === currentShiftPhase) {
+                        statusText = '<span class="text-green-600">Working</span>';
+                    } else if (employee.shift !== 'Off') {
+                        statusText = '<span class="text-gray-500">Waiting for Shift</span>';
+                    }
+
+
                     empDiv.innerHTML = `
-                        <span class="text-lg">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</span>
+                        <div class="col-span-2 font-bold text-lg">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</div>
+
+                        <!-- Shift Assignment -->
                         <div class="flex items-center">
-                            <span class="mr-2 text-sm">${employee.onBreak ? 'On Break' : 'Active'}</span>
+                            <label for="${empKey}-shift-select" class="text-sm mr-2">Shift:</label>
+                            <select id="${empKey}-shift-select" class="p-1 rounded-md border-2 border-amber-800/50 bg-white/80 text-sm w-full">
+                                ${shiftOptions.map(s => `<option value="${s}" ${employee.shift === s ? 'selected' : ''}>${s}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Break Preference Toggle -->
+                        <div class="flex items-center justify-end">
+                             <label id="${empKey}-break-label" for="${empKey}-break-toggle" class="text-sm mr-2 cursor-pointer">${employee.breakPreference === 'first' ? 'First Break' : 'Last Break'}</label>
                             <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                <input type="checkbox" name="${empKey}-toggle" id="${empKey}-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${employee.onBreak ? 'checked' : ''}/>
-                                <label for="${empKey}-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                <input type="checkbox" name="${empKey}-break-toggle" id="${empKey}-break-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${employee.breakPreference === 'last' ? 'checked' : ''}/>
+                                <label for="${empKey}-break-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                             </div>
+                        </div>
+                        <div class="col-span-2 text-sm text-center pt-2 border-t border-amber-800/20 mt-1">
+                            Status: <span class="font-handwritten">${statusText}</span>
                         </div>
                     `;
                     employeeList.appendChild(empDiv);
-                    const toggle = empDiv.querySelector(`#${empKey}-toggle`);
-                    toggle.addEventListener('change', (e) => {
-                        employee.onBreak = e.target.checked;
-                        employee.playerInitiatedBreak = e.target.checked;
-                        openEmployeesPanel();
+
+                    // Add event listeners
+                    const shiftSelect = empDiv.querySelector(`#${empKey}-shift-select`);
+                    shiftSelect.addEventListener('change', (e) => {
+                        employee.shift = e.target.value;
+                        openEmployeesPanel(); // Refresh panel to update status
                         saveGame();
                     });
 
-                    if (isMandatoryBreak) {
-                        toggle.disabled = true;
+                    const breakToggle = empDiv.querySelector(`#${empKey}-break-toggle`);
+                    const breakLabel = empDiv.querySelector(`#${empKey}-break-label`);
+                    breakToggle.addEventListener('change', (e) => {
+                        employee.breakPreference = e.target.checked ? 'last' : 'first';
+                        breakLabel.textContent = e.target.checked ? 'Last Break' : 'First Break';
+                        saveGame();
+                    });
+
+                    if (isMandatoryBreak && employee.onBreak) {
+                        shiftSelect.disabled = true;
+                        breakToggle.disabled = true;
                     }
                 }
             }
@@ -5719,13 +5820,23 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function saveGame() {
+            const employeesToSave = {};
+            const employeeObjects = { cashier, stocker, barista, manager, salesperson };
+            for (const key in employeeObjects) {
+                employeesToSave[key] = {
+                    shift: employeeObjects[key].shift,
+                    breakPreference: employeeObjects[key].breakPreference
+                };
+            }
+
             const gameState = {
                 cash, day, shopPoints, itemPopularity,
                 inventory, storageCells, shelves,
                 unlocks, loadingDockPackages, customerDemand,
                 customerProfiles, enabledItems,
                 currentWeeklyAccruedBill, currentWeeklyLaborCost,
-                employeeWorkTimers
+                employeeWorkTimers,
+                employees: employeesToSave
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -5752,6 +5863,15 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     currentWeeklyAccruedBill = gameState.currentWeeklyAccruedBill || 0;
                     currentWeeklyLaborCost = gameState.currentWeeklyLaborCost || 0;
                     employeeWorkTimers = gameState.employeeWorkTimers || { cashier: 0, stocker: 0, barista: 0, manager: 0, salesperson: 0 };
+
+                    if (gameState.employees) {
+                        const allEmployees = { cashier, stocker, barista, manager, salesperson };
+                        for (const empKey in gameState.employees) {
+                            if (allEmployees[empKey]) {
+                                Object.assign(allEmployees[empKey], gameState.employees[empKey]);
+                            }
+                        }
+                    }
 
                     // Initialize popularity for any items missing from save
                     Object.keys(items).forEach(item => {

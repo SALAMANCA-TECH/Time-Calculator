@@ -821,7 +821,7 @@
             employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
             shelves: [true, false, false, false, false, false],
             facilities: { coffeeShop: false },
-            storage: [false, false, false, false, false, false]
+            storage: [true, false, false, false, false, false]
         };
 
         const unlockCosts = {
@@ -5680,7 +5680,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
                 shelves: [true, false, false, false, false, false],
                 facilities: { coffeeShop: false },
-                storage: [false, false, false, false, false, false]
+                storage: [true, false, false, false, false, false]
             };
 
             Object.keys(items).forEach(item => inventory[item] = 5);

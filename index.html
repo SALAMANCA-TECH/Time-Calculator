@@ -4523,7 +4523,13 @@
             employeeList.innerHTML = '';
 
             const employees = { cashier, stocker, barista, manager, salesperson };
-            const shiftOptions = ["Off", "Opening", "Day Shift", "Night Shift", "Closing"];
+            const shiftOptions = [
+                { label: 'O', value: 'Opening' },
+                { label: 'D', value: 'Day Shift' },
+                { label: 'N', value: 'Night Shift' },
+                { label: 'C', value: 'Closing' },
+                { label: 'X', value: 'Off' }
+            ];
 
             let anyUnlocked = false;
             for (const empKey in unlocks.employees) {
@@ -4531,11 +4537,11 @@
                     anyUnlocked = true;
                     const employee = employees[empKey];
                     const empDiv = document.createElement('div');
-                    empDiv.className = 'grid grid-cols-2 gap-y-2 p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 mb-2';
+                    empDiv.className = 'space-y-2 p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 mb-2';
 
                     // Determine Status
                     let statusText = 'Off Duty';
-                    const currentShiftPhase = dayPhase.replace('-', ' '); // e.g. 'day-shift' -> 'day shift'
+                    const currentShiftPhase = dayPhase.replace('-', ' ');
                     if (employee.onBreak) {
                         statusText = '<span class="text-yellow-600">On Break</span>';
                     } else if (employee.shift.toLowerCase() === currentShiftPhase) {
@@ -4544,50 +4550,59 @@
                         statusText = '<span class="text-gray-500">Waiting for Shift</span>';
                     }
 
+                    const shiftButtonsHtml = shiftOptions.map(opt => {
+                        const isSelected = employee.shift === opt.value;
+                        const selectedClass = isSelected ? 'bg-green-700 !text-white' : 'bg-amber-700/60';
+                        return `<button class="shift-btn btn-style !px-3 !py-1 !text-sm ${selectedClass}" data-shift-value="${opt.value}" title="${opt.value}">${opt.label}</button>`;
+                    }).join('');
 
                     empDiv.innerHTML = `
-                        <div class="col-span-2 font-bold text-lg">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</div>
+                        <div class="font-bold text-lg">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</div>
 
                         <!-- Shift Assignment -->
                         <div class="flex items-center">
-                            <label for="${empKey}-shift-select" class="text-sm mr-2">Shift:</label>
-                            <select id="${empKey}-shift-select" class="p-1 rounded-md border-2 border-amber-800/50 bg-white/80 text-sm w-full">
-                                ${shiftOptions.map(s => `<option value="${s}" ${employee.shift === s ? 'selected' : ''}>${s}</option>`).join('')}
-                            </select>
+                            <label class="text-sm mr-2 w-16">Shift:</label>
+                            <div class="flex space-x-1 flex-wrap" data-emp-key="${empKey}">
+                                ${shiftButtonsHtml}
+                            </div>
                         </div>
 
                         <!-- Break Preference Toggle -->
-                        <div class="flex items-center justify-end">
-                             <label id="${empKey}-break-label" for="${empKey}-break-toggle" class="text-sm mr-2 cursor-pointer">${employee.breakPreference === 'first' ? 'First Break' : 'Last Break'}</label>
-                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                <input type="checkbox" name="${empKey}-break-toggle" id="${empKey}-break-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${employee.breakPreference === 'last' ? 'checked' : ''}/>
+                        <div class="flex items-center">
+                             <label id="${empKey}-break-label" for="${empKey}-break-toggle" class="text-sm mr-2 w-16 cursor-pointer">Break:</label>
+                            <div class="relative inline-block w-24 mr-2 align-middle select-none transition duration-200 ease-in text-center">
+                                <input type="checkbox" name="${empKey}-break-toggle" id="${empKey}-break-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
                                 <label for="${empKey}-break-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                <span class="absolute left-0 top-0.5 w-full text-xs font-bold text-amber-900/70" id="${empKey}-break-text">${employee.breakPreference === 'first' ? 'First' : 'Last'}</span>
                             </div>
                         </div>
-                        <div class="col-span-2 text-sm text-center pt-2 border-t border-amber-800/20 mt-1">
+                        <div class="text-sm text-center pt-2 border-t border-amber-800/20 mt-1">
                             Status: <span class="font-handwritten">${statusText}</span>
                         </div>
                     `;
                     employeeList.appendChild(empDiv);
 
                     // Add event listeners
-                    const shiftSelect = empDiv.querySelector(`#${empKey}-shift-select`);
-                    shiftSelect.addEventListener('change', (e) => {
-                        employee.shift = e.target.value;
-                        openEmployeesPanel(); // Refresh panel to update status
-                        saveGame();
+                    const shiftButtonContainer = empDiv.querySelector(`div[data-emp-key="${empKey}"]`);
+                    shiftButtonContainer.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('shift-btn')) {
+                            const newShift = e.target.dataset.shiftValue;
+                            employee.shift = newShift;
+                            openEmployeesPanel(); // Refresh
+                            saveGame();
+                        }
                     });
 
                     const breakToggle = empDiv.querySelector(`#${empKey}-break-toggle`);
-                    const breakLabel = empDiv.querySelector(`#${empKey}-break-label`);
+                    const breakText = empDiv.querySelector(`#${empKey}-break-text`);
                     breakToggle.addEventListener('change', (e) => {
                         employee.breakPreference = e.target.checked ? 'last' : 'first';
-                        breakLabel.textContent = e.target.checked ? 'Last Break' : 'First Break';
+                        breakText.textContent = e.target.checked ? 'Last' : 'First';
                         saveGame();
                     });
 
                     if (isMandatoryBreak && employee.onBreak) {
-                        shiftSelect.disabled = true;
+                        shiftButtonContainer.querySelectorAll('button').forEach(b => b.disabled = true);
                         breakToggle.disabled = true;
                     }
                 }

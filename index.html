@@ -794,6 +794,7 @@
         const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
         const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 } };
         const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
+        const officeComputer = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone2 = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone3 = { x: 0, y: 0, w: 0, h: 0 };
@@ -1498,6 +1499,10 @@
             const pcHeight = 30;
             const pcX = deskX - pcWidth + 5; // Positioned to the left of the desk
             const pcY = deskY + (deskHeight - pcHeight) / 2;
+            officeComputer.x = pcX;
+            officeComputer.y = pcY;
+            officeComputer.w = pcWidth;
+            officeComputer.h = pcHeight;
             ctx.fillStyle = '#333';
             ctx.fillRect(pcX, pcY, pcWidth, pcHeight);
             ctx.fillStyle = '#555'; // Screen
@@ -4159,6 +4164,15 @@
                 if (Math.hypot(player.x - (clickedShelf.rect.x + clickedShelf.rect.w/2), player.y - (clickedShelf.rect.y + clickedShelf.rect.h/2)) < 150) {
                     openClipboardPanel();
                     openShelfPanel(clickedShelf);
+                    return;
+                }
+            }
+
+            if (worldX >= officeComputer.x && worldX <= officeComputer.x + officeComputer.w &&
+                worldY >= officeComputer.y && worldY <= officeComputer.y + officeComputer.h) {
+                if (Math.hypot(player.x - (officeComputer.x + officeComputer.w / 2), player.y - (officeComputer.y + officeComputer.h / 2)) < 150) {
+                    openClipboardPanel();
+                    openEmployeesPanel();
                     return;
                 }
             }

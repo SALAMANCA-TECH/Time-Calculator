@@ -4524,11 +4524,11 @@
 
             const employees = { cashier, stocker, barista, manager, salesperson };
             const shiftOptions = [
-                { label: 'O', value: 'Opening' },
-                { label: 'D', value: 'Day Shift' },
-                { label: 'N', value: 'Night Shift' },
-                { label: 'C', value: 'Closing' },
-                { label: 'X', value: 'Off' }
+                { label: 'Open', value: 'Opening' },
+                { label: 'Day', value: 'Day Shift' },
+                { label: 'Nite', value: 'Night Shift' },
+                { label: 'Close', value: 'Closing' },
+                { label: 'Off', value: 'Off' }
             ];
 
             let anyUnlocked = false;
@@ -4553,7 +4553,7 @@
                     const shiftButtonsHtml = shiftOptions.map(opt => {
                         const isSelected = employee.shift === opt.value;
                         const selectedClass = isSelected ? 'bg-green-700 !text-white' : 'bg-amber-700/60';
-                        return `<button class="shift-btn btn-style !px-3 !py-1 !text-sm ${selectedClass}" data-shift-value="${opt.value}" title="${opt.value}">${opt.label}</button>`;
+                        return `<button class="shift-btn btn-style !px-2 !py-1 !text-sm ${selectedClass}" data-shift-value="${opt.value}" title="${opt.value}">${opt.label}</button>`;
                     }).join('');
 
                     empDiv.innerHTML = `
@@ -4561,7 +4561,7 @@
 
                         <!-- Shift Assignment -->
                         <div class="flex items-center">
-                            <label class="text-sm mr-2 w-16">Shift:</label>
+                            <label class="text-sm mr-2">Shift:</label>
                             <div class="flex space-x-1 flex-wrap" data-emp-key="${empKey}">
                                 ${shiftButtonsHtml}
                             </div>

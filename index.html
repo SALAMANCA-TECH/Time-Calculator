@@ -4587,7 +4587,7 @@
 
         function takeItemFromPackage(packageIndex) {
             if (player.basket.length >= MAX_BASKET_SIZE) {
-                showMessage("Your basket is full!");
+                spawnFloatingText("Your basket is full!", player.x, player.y - 90, '#ef4444');
                 return;
             }
             const pkg = loadingDockPackages[packageIndex];
@@ -5401,7 +5401,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     openStorageCell(cell); // Refresh panel
                 }
             } else {
-                showMessage("Your basket is full!");
+                spawnFloatingText("Your basket is full!", player.x, player.y - 90, '#ef4444');
             }
         }
 

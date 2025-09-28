@@ -2273,6 +2273,24 @@
         }
 
         // --- START REFACTOR: Generic NPC Logic ---
+        function handleEmployeeOffDuty(character, empKey, deltaTime) {
+            const currentShiftPhase = dayPhase.replace('-', ' ');
+            const isWorking = character.shift.map(s => s.toLowerCase()).includes(currentShiftPhase.toLowerCase());
+
+            // An employee is off-duty if they are on break, the day hasn't started, or it's not their shift.
+            if (character.onBreak || !dayStarted || !isWorking) {
+                const breakSpot = getBreakSpot(empKey);
+                if (moveCharacterTowards(character, breakSpot.x, breakSpot.y, deltaTime)) {
+                    character.state = 'idle'; // Sit idle at the break spot
+                } else {
+                    character.state = 'walk'; // Walk towards the break spot
+                }
+                updateCharacterAnimation(character, deltaTime);
+                return true; // Is off-duty, so the main update function should exit.
+            }
+            return false; // Is on-duty, so continue with normal logic.
+        }
+
         function updateCharacterAnimation(character, deltaTime) {
             const animState = (character.state && !['idle', 'transaction', 'ordering', 'takingItem', 'waitingAtCounter', 'placing', 'interacting'].includes(character.state)) ? 'walk' : 'idle';
             const anim = animations[animState];
@@ -2285,36 +2303,12 @@
             }
         }
 
-        function handlePreDayState(character, deltaTime) {
-            if (!dayStarted) {
-                if (Math.hypot(character.x - character.idleX, character.y - character.idleY) > 5) {
-                    character.state = 'walk';
-                    moveCharacterTowards(character, character.idleX, character.idleY, deltaTime);
-                } else {
-                    character.state = 'idle';
-                }
-                updateCharacterAnimation(character, deltaTime);
-                return true; // Indicates the function should exit early
-            }
-            return false; // Continue with normal update logic
-        }
         // --- END REFACTOR ---
 
         function updateStocker(deltaTime) {
             if (!unlocks.employees.stocker) return;
 
-            if (stocker.onBreak) {
-                const breakSpot = getBreakSpot('stocker');
-                if (moveCharacterTowards(stocker, breakSpot.x, breakSpot.y, deltaTime)) {
-                    stocker.state = 'idle';
-                } else {
-                    stocker.state = 'walk';
-                }
-                updateCharacterAnimation(stocker, deltaTime);
-                return;
-            }
-
-            if (handlePreDayState(stocker, deltaTime)) return;
+            if (handleEmployeeOffDuty(stocker, 'stocker', deltaTime)) return;
 
             updateCharacterAnimation(stocker, deltaTime);
 
@@ -2410,18 +2404,7 @@
         function updateCashier(deltaTime) {
             if (!unlocks.employees.cashier) return;
 
-            if (cashier.onBreak) {
-                const breakSpot = getBreakSpot('cashier');
-                if (moveCharacterTowards(cashier, breakSpot.x, breakSpot.y, deltaTime)) {
-                    cashier.state = 'idle';
-                } else {
-                    cashier.state = 'walk';
-                }
-                updateCharacterAnimation(cashier, deltaTime);
-                return;
-            }
-
-            if (handlePreDayState(cashier, deltaTime)) return;
+            if (handleEmployeeOffDuty(cashier, 'cashier', deltaTime)) return;
 
             updateCharacterAnimation(cashier, deltaTime);
 
@@ -2467,18 +2450,7 @@
         function updateBarista(deltaTime) {
             if (!unlocks.employees.barista) return;
 
-            if (barista.onBreak) {
-                const breakSpot = getBreakSpot('barista');
-                if (moveCharacterTowards(barista, breakSpot.x, breakSpot.y, deltaTime)) {
-                    barista.state = 'idle';
-                } else {
-                    barista.state = 'walk';
-                }
-                updateCharacterAnimation(barista, deltaTime);
-                return;
-            }
-
-            if (handlePreDayState(barista, deltaTime)) return;
+            if (handleEmployeeOffDuty(barista, 'barista', deltaTime)) return;
 
             updateCharacterAnimation(barista, deltaTime);
             barista.stateTimer -= deltaTime;
@@ -2497,18 +2469,7 @@
         function updateManager(deltaTime) {
              if (!unlocks.employees.manager) return;
 
-            if (manager.onBreak) {
-                const breakSpot = getBreakSpot('manager');
-                if (moveCharacterTowards(manager, breakSpot.x, breakSpot.y, deltaTime)) {
-                    manager.state = 'idle';
-                } else {
-                    manager.state = 'walk';
-                }
-                updateCharacterAnimation(manager, deltaTime);
-                return;
-            }
-
-             if (handlePreDayState(manager, deltaTime)) return;
+            if (handleEmployeeOffDuty(manager, 'manager', deltaTime)) return;
 
             const currentQuarter = Math.floor(((DAY_DURATION - dayTimer) / DAY_DURATION) * 4);
             if (currentQuarter > manager.lastOrderQuarter) {
@@ -2735,18 +2696,7 @@
         function updateSalesperson(deltaTime) {
             if (!unlocks.employees.salesperson) return;
 
-            if (salesperson.onBreak) {
-                const breakSpot = getBreakSpot('salesperson');
-                if (moveCharacterTowards(salesperson, breakSpot.x, breakSpot.y, deltaTime)) {
-                    salesperson.state = 'idle';
-                } else {
-                    salesperson.state = 'walk';
-                }
-                updateCharacterAnimation(salesperson, deltaTime);
-                return;
-            }
-
-            if (handlePreDayState(salesperson, deltaTime)) return;
+            if (handleEmployeeOffDuty(salesperson, 'salesperson', deltaTime)) return;
 
             updateCharacterAnimation(salesperson, deltaTime);
             salesperson.stateTimer -= deltaTime;

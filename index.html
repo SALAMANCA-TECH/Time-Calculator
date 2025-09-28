@@ -137,6 +137,15 @@
              </div>
              <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">Start Day</button>
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
+            <div id="basket-container" class="relative">
+                <div id="basket-icon-container" class="relative p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm cursor-pointer flex items-center justify-center w-16 h-16">
+                    <svg class="w-8 h-8 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    <div id="basket-item-count" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">0</div>
+                </div>
+                <div id="basket-contents" class="hidden absolute top-full left-0 mt-2 w-48 bg-amber-100/90 border-2 border-amber-900 rounded-lg shadow-lg p-2 z-20">
+                    <!-- Basket items will be populated here -->
+                </div>
+            </div>
         </div>
 
         <!-- Canvas for the game -->
@@ -237,7 +246,6 @@
                         </div>
                     </div>
 
-
                     <!-- Shelf Assignment Panel -->
                     <div id="shelf-assignment-panel" class="phone-app-screen hidden">
                         <h2 id="shelf-assignment-title" class="text-3xl font-handwritten mb-4">Shelf Assignments</h2>
@@ -306,17 +314,6 @@
     <div id="message-box" class="hidden rounded-lg">
         <p id="message-text" class="text-lg"></p>
         <button id="message-ok-btn" class="btn-style mt-4 px-4 py-2 rounded-lg">OK</button>
-    </div>
-
-    <!-- Basket UI Panel -->
-    <div id="basket-ui-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
-        <div class="bg-amber-100 w-full max-w-sm p-4 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
-            <h2 class="text-2xl font-handwritten text-center mb-4">Your Basket</h2>
-            <div id="basket-ui-grid" class="space-y-2 overflow-y-auto max-h-60 p-2 bg-white/30 rounded-md border">
-                <!-- Basket items will be populated here -->
-            </div>
-            <button id="close-basket-ui-btn" class="btn-style mt-4 px-6 py-2 self-center">Close</button>
-        </div>
     </div>
 
     <!-- New Game Screen -->
@@ -955,8 +952,7 @@
                 openClipboardPanel();
                 showAppScreen('restock-panel');
             } else if (e.code === 'KeyG') {
-                // Open the main basket panel
-                toggleBasketPanel();
+                toggleBasketExpansion();
             } else if (e.code === 'KeyT') {
                 // Legacy keybind, now opens phone to unlocks
                 openClipboardPanel();
@@ -1654,7 +1650,7 @@
         }
 
         function drawStaticUI() {
-            const boxWidth = 150, boxHeight = 70; // Increased width for two icons
+            const boxWidth = 70, boxHeight = 70;
             const boxX = canvas.width - boxWidth - 20, boxY = 20;
 
             ctx.fillStyle = "rgba(93, 64, 55, 0.7)";
@@ -1664,16 +1660,9 @@
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
             const iconY = boxY + 10;
+            phoneIcon.x = boxX + 10; phoneIcon.y = iconY;
 
-            // Phone Icon
-            phoneIcon.x = boxX + 10;
-            phoneIcon.y = iconY;
             drawPhoneIcon(phoneIcon.x, phoneIcon.y, phoneIcon.width, phoneIcon.height);
-
-            // Shopping Basket Icon
-            shoppingBasket.x = boxX + 10 + phoneIcon.width + 10; // Position next to phone
-            shoppingBasket.y = iconY;
-            drawShoppingBasket(shoppingBasket.x, shoppingBasket.y, shoppingBasket.width, shoppingBasket.height);
         }
 
         function drawCashRegister(x, y, w, h) {
@@ -4125,7 +4114,6 @@
             // Check for static UI clicks FIRST, before transforming coordinates
             if (x >= boxX && x <= boxX + boxWidth && y >= boxY && y <= boxY + boxHeight) {
                  if (x >= phoneIcon.x && x <= phoneIcon.x + phoneIcon.width && y >= phoneIcon.y && y <= phoneIcon.y + phoneIcon.height) { openClipboardPanel(); }
-                 if (x >= shoppingBasket.x && x <= shoppingBasket.x + shoppingBasket.width && y >= shoppingBasket.y && y <= shoppingBasket.y + shoppingBasket.height) { toggleBasketPanel(); }
                 return;
             }
 
@@ -4282,6 +4270,7 @@
                         player.basket.splice(index, 1);
                         nearbyCustomer.order.push(item);
                     });
+                    updateBasketUI();
 
                     nearbyCustomer.waitTimer = 0; // Reset wait timer
                     nearbyCustomer.state = 'queuing';
@@ -4496,7 +4485,6 @@
             showAppScreen('employees-panel');
         }
 
-
         function openShelfAssignmentPanel() {
             const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
             shelfAssignmentGrid.innerHTML = ''; // Clear existing buttons
@@ -4609,6 +4597,7 @@
                 if (pkg.quantity <= 0) {
                     loadingDockPackages.splice(packageIndex, 1);
                 }
+                updateBasketUI();
             }
         }
 
@@ -5043,6 +5032,7 @@
             });
 
             player.basket = newBasket;
+            updateBasketUI();
             spawnFloatingText(`Stocked ${itemsToMove.length} items!`, player.x, player.y - 90, '#22c55e');
             saveGame();
             openStorageCell(cell); // Refresh the panel
@@ -5220,6 +5210,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             }
 
             if (itemsMoved > 0) {
+                updateBasketUI();
                 spawnFloatingText(`Stocked ${itemsMoved} items!`, player.x, player.y - 90, '#22c55e');
                 saveGame();
                 openShelfPanel(shelf); // Refresh the panel
@@ -5333,6 +5324,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     if (action === 'take') {
                         player.basket.push(targetSlot.assignedItem);
                         targetSlot.quantity--;
+                        updateBasketUI();
                         saveGame();
                         openShelfPanel(targetShelf);
                     } else if (action === 'place') {
@@ -5340,6 +5332,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         if (itemIndex > -1) {
                             player.basket.splice(itemIndex, 1);
                             targetSlot.quantity++;
+                            updateBasketUI();
                             saveGame();
                             openShelfPanel(targetShelf);
                         }
@@ -5387,6 +5380,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         targetSlot.assignedItem = itemName;
                         targetSlot.quantity = 1;
 
+                        updateBasketUI();
                         saveGame();
                         openShelfPanel(shelf); // Refresh the shelf panel to show the change
                     }
@@ -5402,6 +5396,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 if (cell.items[itemName] > 0) {
                     cell.items[itemName]--;
                     player.basket.push(itemName);
+                    updateBasketUI();
                     saveGame();
                     openStorageCell(cell); // Refresh panel
                 }
@@ -5416,6 +5411,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 player.basket.splice(itemIndex, 1);
                 if (!cell.items[itemName]) cell.items[itemName] = 0;
                 cell.items[itemName]++;
+                updateBasketUI();
                 saveGame();
                 openStorageCell(cell); // Refresh panel
             }
@@ -5669,53 +5665,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('start-day-btn').click();
         }
 
-        function populateBasketPanel() {
-            const basketGrid = document.getElementById('basket-ui-grid');
-            basketGrid.innerHTML = '';
-
-            if (player.basket.length === 0) {
-                basketGrid.innerHTML = `<p class="text-center p-4">Your basket is empty.</p>`;
-            } else {
-                const itemCounts = player.basket.reduce((acc, item) => {
-                    acc[item] = (acc[item] || 0) + 1;
-                    return acc;
-                }, {});
-
-                for (const item in itemCounts) {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'p-2 border-b border-amber-800/20 flex justify-between items-center';
-                    itemDiv.innerHTML = `
-                        <span class="text-lg">${item}</span>
-                        <span class="font-handwritten text-xl">x${itemCounts[item]}</span>
-                    `;
-                    basketGrid.appendChild(itemDiv);
-                }
-            }
-        }
-
-        function toggleBasketPanel(forceOpen) {
-            const panel = document.getElementById('basket-ui-panel');
-            const isHidden = panel.classList.contains('hidden');
-
-            if (forceOpen === true) {
-                if (isHidden) {
-                    populateBasketPanel();
-                    panel.classList.remove('hidden');
-                }
-            } else if (forceOpen === false) {
-                if (!isHidden) {
-                    panel.classList.add('hidden');
-                }
-            } else { // Toggle
-                if (isHidden) {
-                    populateBasketPanel();
-                    panel.classList.remove('hidden');
-                } else {
-                    panel.classList.add('hidden');
-                }
-            }
-        }
-
         function saveGame() {
             const gameState = {
                 cash, day, shopPoints, itemPopularity,
@@ -5784,11 +5733,46 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             }
         }
 
+        function updateBasketUI() {
+            const basketCount = document.getElementById('basket-item-count');
+            const basketContents = document.getElementById('basket-contents');
+
+            basketCount.textContent = player.basket.length;
+            basketContents.innerHTML = ''; // Clear previous contents
+
+            if (player.basket.length === 0) {
+                basketContents.innerHTML = '<p class="text-sm text-center text-amber-800/70">Basket is empty</p>';
+                return;
+            }
+
+            const itemCounts = player.basket.reduce((acc, item) => {
+                acc[item] = (acc[item] || 0) + 1;
+                return acc;
+            }, {});
+
+            for (const item in itemCounts) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'p-1 border-b border-amber-800/20 flex justify-between items-center';
+                itemDiv.innerHTML = `
+                    <span class="text-sm">${item}</span>
+                    <span class="font-handwritten text-base">x${itemCounts[item]}</span>
+                `;
+                basketContents.appendChild(itemDiv);
+            }
+        }
+
+        function toggleBasketExpansion() {
+            const basketContents = document.getElementById('basket-contents');
+            basketContents.classList.toggle('hidden');
+        }
+
         function init() {
             canvas = document.getElementById('game-canvas');
             ctx = canvas.getContext('2d');
             pieClockCanvas = document.getElementById('pie-clock-canvas');
             pieClockCtx = pieClockCanvas.getContext('2d');
+
+            document.getElementById('basket-icon-container').addEventListener('click', toggleBasketExpansion);
 
             const hasSave = localStorage.getItem('artEmporiumSave');
             if (hasSave) {
@@ -6046,8 +6030,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             // Phone Navigation
             document.getElementById('close-phone').addEventListener('click', closeClipboard);
             document.getElementById('phone-back-btn').addEventListener('click', showAppGrid);
-
-            document.getElementById('close-basket-ui-btn').addEventListener('click', () => toggleBasketPanel(false));
 
             // Report View Toggling
             const reportToggleButtons = document.querySelectorAll('.report-toggle-btn');

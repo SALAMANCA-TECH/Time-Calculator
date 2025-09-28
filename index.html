@@ -1086,6 +1086,9 @@
 
             findNextItemTarget() {
                 const itemToFind = this.requestedItems[this.currentItemIndex];
+                if (!enabledItems[itemToFind]) {
+                    return false; // Item is toggled off, cannot be found.
+                }
                 const targetShelf = shelves.find(s => s.items.some(i => i && i.assignedItem === itemToFind && i.quantity > 0));
                  if (targetShelf) {
                      this.targetX = targetShelf.rect.x + targetShelf.rect.w / 2;
@@ -2509,7 +2512,6 @@
             switch(manager.state) {
                 case 'idle':
                     if (manager.stateTimer <= 0) {
-                        const MAX_DOCK_PACKAGES = 5;
 
                         // --- Morning Prep Logic ---
                         if (dayPhase === 'opening' && manager.canOrder && !manager.hasPlacedMorningOrder) {
@@ -2554,7 +2556,7 @@
                                     packagesFromOrder += Math.ceil(orderItem.quantity / MAX_PACKAGE_SIZE);
                                 });
 
-                                if (finalOrderList.length > 0 && loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
+                                if (finalOrderList.length > 0) {
                                     manager.task = {
                                         action: 'order_bulk',
                                         items: finalOrderList,
@@ -2598,18 +2600,16 @@
                         if (urgentOrderItem) {
                             const quantityToOrder = requiredQuantity;
                             const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
-                            if (loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
-                                manager.task = {
-                                    action: 'order',
-                                    item: urgentOrderItem,
-                                    isUrgent: true,
-                                    requiredQuantity: requiredQuantity,
-                                    target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                                };
-                                manager.state = 'going_to_office';
-                                manager.stateTimer = 1000;
-                                break;
-                            }
+                            manager.task = {
+                                action: 'order',
+                                item: urgentOrderItem,
+                                isUrgent: true,
+                                requiredQuantity: requiredQuantity,
+                                target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
+                            };
+                            manager.state = 'going_to_office';
+                            manager.stateTimer = 1000;
+                            break;
                         }
 
                         // --- Evening Low-Stock Check ---
@@ -2625,10 +2625,9 @@
                                 const quantityToOrder = 1;
                                 const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
 
-                                if (loadingDockPackages.length + packagesFromOrder <= MAX_DOCK_PACKAGES) {
-                                    manager.task = {
-                                        action: 'order',
-                                        item: mostPopularLowItem,
+                                manager.task = {
+                                    action: 'order',
+                                    item: mostPopularLowItem,
                                         isUrgent: false,
                                         target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
                                     };
@@ -4955,14 +4954,8 @@
             const itemData = items[itemName];
             const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
             const totalCost = restockPrice * quantity;
-            const MAX_DOCK_PACKAGES = 5;
 
             const packagesFromOrder = Math.ceil(quantity / MAX_PACKAGE_SIZE);
-
-            if (loadingDockPackages.length + packagesFromOrder > MAX_DOCK_PACKAGES) {
-                showMessage(`Not enough space on the loading dock to buy now. Please clear some space first.`);
-                return;
-            }
 
             if (cash >= totalCost) {
                 cash -= totalCost;
@@ -4980,14 +4973,8 @@
             const itemData = items[itemName];
             const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
             const totalCost = restockPrice * quantity;
-            const MAX_DOCK_PACKAGES = 5;
 
             const packagesFromOrder = Math.ceil(quantity / MAX_PACKAGE_SIZE);
-
-            if (loadingDockPackages.length + packagesFromOrder > MAX_DOCK_PACKAGES) {
-                showMessage(`Not enough space on the loading dock to buy now. Please clear some space first.`);
-                return;
-            }
 
             if (cash >= totalCost) {
                 cash -= totalCost;
@@ -5002,7 +4989,6 @@
 
         function placeOrder() {
             const orderSource = currentRestockOrder;
-            const MAX_DOCK_PACKAGES = 5;
 
             let totalCost = 0;
             let itemsToOrder = 0;
@@ -5023,12 +5009,6 @@
                 showMessage("Your order is empty.");
                 return;
             }
-
-            if (loadingDockPackages.length + packagesFromOrder > MAX_DOCK_PACKAGES) {
-                showMessage(`This order would create ${packagesFromOrder} packages, exceeding the loading dock limit of ${MAX_DOCK_PACKAGES}. Please clear some space first.`);
-                return;
-            }
-
 
             if (cash >= totalCost) {
                 cash -= totalCost;
@@ -5238,11 +5218,64 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             showAppScreen('items-panel');
         }
 
+        function stockAllRelevantFromBasket(shelf) {
+            let itemsMoved = 0;
+            const basketCounts = player.basket.reduce((acc, item) => {
+                acc[item] = (acc[item] || 0) + 1;
+                return acc;
+            }, {});
+
+            for (const slot of shelf.items) {
+                if (slot.assignedItem && basketCounts[slot.assignedItem]) {
+                    let canMove = MAX_SHELF_STACK - slot.quantity;
+                    let toMove = Math.min(canMove, basketCounts[slot.assignedItem]);
+
+                    if (toMove > 0) {
+                        slot.quantity += toMove;
+                        basketCounts[slot.assignedItem] -= toMove;
+                        itemsMoved += toMove;
+
+                        // Remove items from player's basket
+                        let removedCount = 0;
+                        for (let i = player.basket.length - 1; i >= 0 && removedCount < toMove; i--) {
+                            if (player.basket[i] === slot.assignedItem) {
+                                player.basket.splice(i, 1);
+                                removedCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (itemsMoved > 0) {
+                spawnFloatingText(`Stocked ${itemsMoved} items!`, player.x, player.y - 90, '#22c55e');
+                saveGame();
+                openShelfPanel(shelf); // Refresh the panel
+            }
+        }
+
         function openShelfPanel(shelf) {
             activeShelf = shelf;
             const shelfGrid = document.getElementById('shelf-grid');
             document.getElementById('shelf-title').textContent = `Manage Shelf ${shelves.indexOf(shelf) + 1}`;
             shelfGrid.innerHTML = '';
+
+            const stockAllButtonContainer = document.createElement('div');
+            stockAllButtonContainer.className = 'p-2';
+            const stockAllButton = document.createElement('button');
+            stockAllButton.className = 'btn-style w-full py-2';
+            stockAllButton.textContent = 'Stock All Relevant from Basket';
+            stockAllButton.onclick = () => stockAllRelevantFromBasket(shelf);
+
+            const hasRelevantItems = player.basket.some(itemInBasket =>
+                shelf.items.some(slot => slot.assignedItem === itemInBasket && slot.quantity < MAX_SHELF_STACK)
+            );
+            stockAllButton.disabled = !hasRelevantItems;
+
+            stockAllButtonContainer.appendChild(stockAllButton);
+            shelfGrid.appendChild(stockAllButtonContainer);
+
+
             for (let i = 0; i < 4; i++) {
                 const slot = shelf.items[i];
                 const slotDiv = document.createElement('div');

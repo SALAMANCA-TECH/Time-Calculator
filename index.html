@@ -538,6 +538,7 @@
             <div class="flex space-x-2 border-b-2 border-amber-800/30 mb-2 flex-shrink-0">
                 <button id="report-toggle-customers" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md">Customer Details</button>
                 <button id="report-toggle-sales" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Sales</button>
+                <button id="report-toggle-coffee" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Coffee</button>
                 <button id="report-toggle-bills" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Bills</button>
                 <button id="report-toggle-market" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50" disabled>Market (Soon)</button>
             </div>
@@ -552,6 +553,11 @@
                 <!-- Sales View -->
                 <div id="report-view-sales" class="report-view hidden">
                     <!-- Sales breakdown will be populated here -->
+                </div>
+
+                <!-- Coffee View -->
+                <div id="report-view-coffee" class="report-view hidden">
+                    <!-- Coffee sales breakdown will be populated here -->
                 </div>
 
                 <!-- Bills View -->
@@ -795,7 +801,12 @@
         const desk = { x: 0, y: 0, width: 0, height: 30 };
         const loadingDock = { x: 0, y: 0, width: 0, height: 50 };
         const cashierCounter = { x: 0, y: 0, w: 40, h: 120 };
-        const coffeeShop = { rect: { x: 0, y: 0, w: 0, h: 0 }, y: 0, behindCounterZone: { x: 0, y: 0, w: 0, h: 0 } };
+        const coffeeShop = {
+            rect: { x: 0, y: 0, w: 0, h: 0 },
+            y: 0,
+            behindCounterZone: { x: 0, y: 0, w: 0, h: 0 },
+            storage: [] // New storage for coffee items
+        };
         const managersOffice = { x: 0, y: 0, w: 100, h: 100 };
         const officeComputer = { x: 0, y: 0, w: 0, h: 0 };
         const officeZone1 = { x: 0, y: 0, w: 0, h: 0 };
@@ -1006,7 +1017,9 @@
             // Sculpture (formerly Painting)
             'Clay': { cost: 20 }, 'Pottery Paints': { cost: 50 }, 'Stone': { cost: 150 }, 'Marble': { cost: 300 },
             // Architectural (formerly Drawing)
-            'Pencil Lead': { cost: 20 }, 'Vellum': { cost: 75 }, 'Fancy Markers': { cost: 100 }, 'Tiny Trees': { cost: 200 }
+            'Pencil Lead': { cost: 20 }, 'Vellum': { cost: 75 }, 'Fancy Markers': { cost: 100 }, 'Tiny Trees': { cost: 200 },
+            // Coffee Shop
+            'Beans': { cost: 15 }, 'Milks': { cost: 5 }, 'Sugar': { cost: 3 }, 'Snacks': { cost: 8 }
         };
 
         let inventory = {};
@@ -1218,8 +1231,15 @@
                                     this.order.push(currentItem);
                                     this.currentItemIndex++; // <-- FIX: This was missing!
                                      if(this.currentItemIndex >= this.requestedItems.length) {
-                                         this.request = `Got everything! Time to check out.`;
-                                         this.state = 'queuing';
+                                         if (unlocks.facilities.coffeeShop && !this.boughtCoffee && Math.random() < 0.5) {
+                                            this.request = "I could use a coffee now.";
+                                            this.showSpeechBubble = true;
+                                            this.speechBubbleTimer = 3000;
+                                            this.state = 'goingToCoffeeShop';
+                                         } else {
+                                            this.request = `Got everything! Time to check out.`;
+                                            this.state = 'queuing';
+                                         }
                                      } else {
                                          this.state = 'browsing';
                                          if(!this.findNextItemTarget()){
@@ -1321,8 +1341,36 @@
                         }
                         break;
                     }
+                    case 'goingToCoffeeShop':
+                        this.targetX = coffeeShop.rect.x + coffeeShop.rect.w / 2;
+                        this.targetY = coffeeShop.collisionLineY + 20;
+                        if (this.moveTowardsTarget(deltaTime)) {
+                            this.state = 'waitingForCoffee';
+                            this.stateTimer = 5000; // 5 seconds to be served
+                        }
+                        break;
+                    case 'waitingForCoffee':
+                        this.stateTimer -= deltaTime;
+                        const playerIsServing = isPlayerInZone(coffeeShop.behindCounterZone);
+                        const baristaIsServing = unlocks.employees.barista && !barista.onBreak && Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) < 10;
+
+                        if (playerIsServing || baristaIsServing) {
+                            cash += 10;
+                            this.boughtCoffee = true;
+                            spawnFloatingText("Coffee! +$10", this.x, this.y - 120, '#654321');
+                            this.request = "Great, now to pay for everything.";
+                            this.showSpeechBubble = true;
+                            this.speechBubbleTimer = 3000;
+                            this.state = 'queuing';
+                        } else if (this.stateTimer <= 0) {
+                            this.request = "Guess no one's working here...";
+                            this.showSpeechBubble = true;
+                            this.speechBubbleTimer = 3000;
+                            this.state = 'queuing';
+                        }
+                        break;
                     case 'leaving':
-            this.targetX = worldWidth + 100;
+                        this.targetX = worldWidth + 100;
                         this.targetY = desk.y + 75;
                         this.moveTowardsTarget(deltaTime);
                         break;
@@ -1694,8 +1742,31 @@
 
             drawLoadingDock();
             drawManagersOffice();
+            drawCoffeeStorage();
 
             // The coffee shop is now drawn as a dynamic entity, so no background drawing here.
+        }
+
+        function drawCoffeeStorage() {
+            if (!unlocks.facilities.coffeeShop || !coffeeShop.storage) return;
+
+            coffeeShop.storage.forEach(cell => {
+                const r = cell.rect;
+                ctx.fillStyle = '#a1887f'; // A brown color matching the office
+                ctx.fillRect(r.x, r.y, r.w, r.h);
+                ctx.strokeStyle = '#4e342e';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(r.x, r.y, r.w, r.h);
+
+                // Simple label
+                ctx.fillStyle = '#f7e7d8';
+                ctx.font = '12px "Patrick Hand"';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const quantity = cell.items[cell.label] || 0;
+                ctx.fillText(`${cell.label.substring(0,5)}`, r.x + r.w / 2, r.y + r.h / 2 - 5);
+                ctx.fillText(`(${quantity})`, r.x + r.w / 2, r.y + r.h / 2 + 10);
+            });
         }
 
         function drawStaticUI() {
@@ -3556,12 +3627,6 @@
                 cash += salePrice;
                 shopPoints += customer.discount > 0 ? 1 : 3; // Less points for discounted sales
 
-                if (unlocks.employees.barista && Math.random() < 0.33) {
-                    cash += 10;
-                    customer.boughtCoffee = true;
-                    spawnFloatingText("Coffee! +$10", customer.x, customer.y - 120, '#654321');
-                }
-
                 customer.leaving = true;
                 customer.state = 'leaving';
                 const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
@@ -3836,6 +3901,36 @@
             salesHtml += `</div>`;
             salesView.innerHTML = salesHtml;
 
+            // 3. Populate Coffee View
+            const coffeeView = document.getElementById('report-view-coffee');
+            coffeeView.innerHTML = ''; // Clear previous content
+            const coffeeCustomers = dailySalesReport.filter(r => r.boughtCoffee);
+            let totalCoffeeSales = 0;
+
+            if (coffeeCustomers.length > 0) {
+                let coffeeHtml = `<div class="space-y-3">`;
+                coffeeCustomers.forEach(report => {
+                    totalCoffeeSales += 10; // Assuming flat $10 price for now
+                    coffeeHtml += `
+                        <div class="p-2 border-b border-amber-800/10 flex justify-between items-center">
+                            <span class.font-handwritten>${report.name}</span>
+                            <span class="font-bold text-green-600">+$10.00</span>
+                        </div>
+                    `;
+                });
+                coffeeHtml += `
+                    <div class="p-2 border-t-2 border-amber-800/30 flex justify-between items-center font-bold text-lg">
+                        <span>Total Coffee Revenue:</span>
+                        <span>$${totalCoffeeSales.toFixed(2)}</span>
+                    </div>
+                `;
+                coffeeHtml += `</div>`;
+                coffeeView.innerHTML = coffeeHtml;
+            } else {
+                coffeeView.innerHTML = `<p class="text-center p-4">No coffee was sold today.</p>`;
+            }
+
+
             // --- END: POPULATE NEW REPORT VIEWS ---
 
             reportPanel.classList.remove('hidden');
@@ -3843,9 +3938,11 @@
             // Default to customer view
             document.getElementById('report-view-customers').classList.remove('hidden');
             document.getElementById('report-view-sales').classList.add('hidden');
+            document.getElementById('report-view-coffee').classList.add('hidden');
             document.getElementById('report-view-bills').classList.add('hidden');
             document.getElementById('report-toggle-customers').classList.remove('bg-opacity-50');
             document.getElementById('report-toggle-sales').classList.add('bg-opacity-50');
+            document.getElementById('report-toggle-coffee').classList.add('bg-opacity-50');
             document.getElementById('report-toggle-bills').classList.add('bg-opacity-50');
 
             // Handle Market toggle for the report button
@@ -3923,6 +4020,34 @@
                 const windowY = signY + signHeight + coffeeShop.rect.h * 0.03;
                 const windowHeight = coffeeShop.rect.h * 0.4;
                 coffeeShop.collisionLineY = windowY + windowHeight + coffeeShop.rect.h * 0.03;
+
+                // Initialize coffee shop storage cells
+                const coffeeCellWidth = 40;
+                const coffeeCellHeight = 40;
+                const coffeeCellPadding = 10;
+                const coffeeStorageY = coffeeShop.rect.y - coffeeCellHeight - coffeeCellPadding;
+                const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
+
+                if (coffeeShop.storage.length === 0) { // Only initialize if empty
+                    for (let i = 0; i < coffeeItems.length; i++) {
+                        coffeeShop.storage.push({
+                            label: coffeeItems[i],
+                            rect: {
+                                x: coffeeShop.rect.x + i * (coffeeCellWidth + coffeeCellPadding),
+                                y: coffeeStorageY,
+                                w: coffeeCellWidth,
+                                h: coffeeCellHeight
+                            },
+                            items: { [coffeeItems[i]]: 0 }, // Initialize with 0 of its own item
+                            capacity: 50
+                        });
+                    }
+                } else { // Just update positions on resize
+                     for (let i = 0; i < coffeeItems.length; i++) {
+                        coffeeShop.storage[i].rect.x = coffeeShop.rect.x + i * (coffeeCellWidth + coffeeCellPadding);
+                        coffeeShop.storage[i].rect.y = coffeeStorageY;
+                    }
+                }
             }
 
 

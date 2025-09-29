@@ -803,7 +803,7 @@
         let day = 1;
         let shopPoints = 0;
         let itemPopularity = {};
-        let priceHistory = {};
+        let priceHistory = {}; // Now stores { history: [], predictions: [] } for each item.
         let customers = [];
         let customerDemand = {};
         let canvas, ctx, pieClockCanvas, pieClockCtx;
@@ -4171,6 +4171,58 @@
             }
         }
 
+        function generatePredictions(priceArray) {
+            if (priceArray.length < 2) {
+                // Not enough data, return flat predictions
+                const lastPrice = priceArray.length > 0 ? priceArray[priceArray.length - 1] : 10;
+                return [lastPrice, lastPrice, lastPrice];
+            }
+
+            // Simple linear trend extrapolation
+            const trend = priceArray[priceArray.length - 1] - priceArray[priceArray.length - 2];
+            const predictions = [];
+            let lastKnownPrice = priceArray[priceArray.length - 1];
+
+            for (let i = 0; i < 3; i++) {
+                let nextPrice = lastKnownPrice + trend * (i + 1);
+                // Add some randomness to make it less predictable
+                const randomness = (Math.random() - 0.5) * (lastKnownPrice * 0.1); // +/- 5% of last price
+                nextPrice += randomness;
+                // Ensure price doesn't go below a reasonable minimum
+                nextPrice = Math.max(1, parseFloat(nextPrice.toFixed(2)));
+                predictions.push(nextPrice);
+            }
+            return predictions;
+        }
+
+
+        function generateInitialMarketData() {
+            priceHistory = {}; // Reset history
+            Object.keys(items).forEach(itemName => {
+                const baseCost = originalItemCosts[itemName];
+                const history = [];
+                let currentPrice = baseCost;
+
+                // Generate 4 days of historical data
+                for (let i = 0; i < 4; i++) {
+                    // Fluctuate price by up to +/- 20% of the base cost
+                    const fluctuation = (Math.random() - 0.5) * (baseCost * 0.4);
+                    currentPrice = Math.max(1, parseFloat((baseCost + fluctuation).toFixed(2))); // Ensure price is at least 1
+                    history.push(currentPrice);
+                }
+
+                const predictions = generatePredictions(history);
+
+                priceHistory[itemName] = {
+                    history: history,
+                    predictions: predictions
+                };
+
+                // The last historical price is "today's" price on day 1
+                items[itemName].cost = history[history.length - 1];
+            });
+        }
+
         function nextDay() {
             if (!dayStarted) return;
 
@@ -4202,17 +4254,26 @@
             }
 
 
-            // 3. Record price history for the day
+            // 3. Update and record price history for the new day
             Object.keys(items).forEach(itemName => {
-                if (!priceHistory[itemName]) {
-                    priceHistory[itemName] = [];
+                if (!priceHistory[itemName] || !priceHistory[itemName].history) {
+                     // This case handles loading a legacy save file.
+                     // We'll create a new history for it.
+                    priceHistory[itemName] = { history: [], predictions: [] };
                 }
-                // Only store a limited history, e.g., last 30 days
-                if (priceHistory[itemName].length >= 30) {
-                    priceHistory[itemName].shift();
+
+                // Add today's actual price to the history
+                priceHistory[itemName].history.push(items[itemName].cost);
+
+                // Keep the history to the last 4 days for the chart display
+                if (priceHistory[itemName].history.length > 4) {
+                    priceHistory[itemName].history.shift();
                 }
-                priceHistory[itemName].push(items[itemName].cost);
+
+                // Generate new predictions based on the updated history
+                priceHistory[itemName].predictions = generatePredictions(priceHistory[itemName].history);
             });
+
 
             // 4. Reset daily trackers for the new day
             dailyPlayerPurchases = {};
@@ -5138,16 +5199,12 @@
             if (!canvas.parentElement) return null;
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
-
             const ctx = canvas.getContext('2d');
-            const padding = 2;
-            const chartWidth = canvas.width - padding * 2;
-            const chartHeight = canvas.height - padding * 2;
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // --- Data Preparation ---
-            let dataPoints = [];
+            // --- Data Aggregation ---
+            let aggregatedHistory = [];
+            let aggregatedPredictions = [];
             const isArtCategory = storageCells.some(cell => cell.label === selectedKey);
             let itemsToAverage = [];
 
@@ -5158,53 +5215,94 @@
                 itemsToAverage = ['Beans', 'Milks', 'Sugar', 'Snacks'];
             }
 
-            if (itemsToAverage.length > 0) { // This is a category
-                const firstItemWithHistory = itemsToAverage.find(item => priceHistory[item] && priceHistory[item].length > 0);
-                const numDays = firstItemWithHistory ? priceHistory[firstItemWithHistory].length : 0;
-
-                if (numDays > 0) {
-                    for (let i = 0; i < numDays; i++) {
-                        let sum = 0;
-                        let count = 0;
-                        itemsToAverage.forEach(itemName => {
-                            if (priceHistory[itemName] && priceHistory[itemName][i] !== undefined) {
-                                sum += priceHistory[itemName][i];
-                                count++;
-                            }
-                        });
-                        dataPoints.push(count > 0 ? sum / count : 0);
-                    }
+            if (itemsToAverage.length > 0) { // Aggregate category data
+                for (let i = 0; i < 4; i++) { // History
+                    let sum = 0, count = 0;
+                    itemsToAverage.forEach(item => {
+                        if (priceHistory[item] && priceHistory[item].history[i] !== undefined) {
+                            sum += priceHistory[item].history[i];
+                            count++;
+                        }
+                    });
+                    aggregatedHistory.push(count > 0 ? sum / count : 0);
                 }
-            } else { // This must be an individual item
-                dataPoints = priceHistory[selectedKey] || [];
+                for (let i = 0; i < 3; i++) { // Predictions
+                    let sum = 0, count = 0;
+                    itemsToAverage.forEach(item => {
+                        if (priceHistory[item] && priceHistory[item].predictions[i] !== undefined) {
+                            sum += priceHistory[item].predictions[i];
+                            count++;
+                        }
+                    });
+                    aggregatedPredictions.push(count > 0 ? sum / count : 0);
+                }
+            } else { // Individual item data
+                const itemData = priceHistory[selectedKey];
+                if (itemData) {
+                    aggregatedHistory = itemData.history || [];
+                    aggregatedPredictions = itemData.predictions || [];
+                }
             }
 
-            if (dataPoints.length < 2) {
-                return null;
-            }
+            const allDataPoints = [...aggregatedHistory, ...aggregatedPredictions];
+            if (allDataPoints.length < 7) return null; // Not enough data to draw
 
             // --- Y-Axis Scaling ---
-            const maxVal = Math.max(...dataPoints);
-            const minVal = Math.min(...dataPoints);
+            const maxVal = Math.max(...allDataPoints);
+            const minVal = Math.min(...allDataPoints);
             const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
-            // --- Calculate Percentage Change ---
-            const lastPrice = dataPoints[dataPoints.length - 1];
-            const secondLastPrice = dataPoints[dataPoints.length - 2];
-            const percentChange = secondLastPrice === 0 ? 0 : ((lastPrice - secondLastPrice) / secondLastPrice) * 100;
+            // --- Percentage Change (Today vs. Yesterday) ---
+            const todayPrice = aggregatedHistory[3];
+            const yesterdayPrice = aggregatedHistory[2];
+            const percentChange = yesterdayPrice === 0 ? 0 : ((todayPrice - yesterdayPrice) / yesterdayPrice) * 100;
 
-            // --- Plot Data ---
+            // --- Drawing Setup ---
+            const padding = { top: 5, right: 5, bottom: 20, left: 5 };
+            const chartWidth = canvas.width - padding.left - padding.right;
+            const chartHeight = canvas.height - padding.top - padding.bottom;
+
+            // --- X-Axis Labels ---
+            const labels = ["-3d", "-2d", "-1d", "Today", "+1d", "+2d", "+3d"];
+            ctx.font = '10px "VT323"';
+            ctx.fillStyle = '#5d4037';
+            ctx.textAlign = 'center';
+            labels.forEach((label, index) => {
+                const x = padding.left + (index / (allDataPoints.length - 1)) * chartWidth;
+                ctx.fillText(label, x, canvas.height - 5);
+            });
+
+            // --- Historical Data (Solid Line) ---
             ctx.strokeStyle = percentChange >= 0 ? '#22c55e' : '#ef4444';
             ctx.lineWidth = 2;
             ctx.beginPath();
-
-            dataPoints.forEach((point, index) => {
-                const x = padding + (index / (dataPoints.length - 1)) * chartWidth;
-                const y = canvas.height - padding - ((point - minVal) / range) * chartHeight;
+            aggregatedHistory.forEach((point, index) => {
+                const x = padding.left + (index / (allDataPoints.length - 1)) * chartWidth;
+                const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
                 if (index === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
             ctx.stroke();
+
+            // --- Predicted Data (Dashed Line) ---
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            const todayX = padding.left + (3 / (allDataPoints.length - 1)) * chartWidth;
+            const todayY = padding.top + chartHeight - ((todayPrice - minVal) / range) * chartHeight;
+            ctx.moveTo(todayX, todayY); // Start from today's point
+            aggregatedPredictions.forEach((point, index) => {
+                const x = padding.left + ((4 + index) / (allDataPoints.length - 1)) * chartWidth;
+                const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
+                ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset to solid
+
+            // --- "Today's" Point ---
+            ctx.fillStyle = '#5d4037';
+            ctx.beginPath();
+            ctx.arc(todayX, todayY, 4, 0, Math.PI * 2);
+            ctx.fill();
 
             return percentChange;
         }
@@ -6716,6 +6814,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 marketEnabled = options.casual.market;
                 if (marketEnabled) {
                     marketType = options.casual.marketType;
+                    generateInitialMarketData();
                 }
             }
 

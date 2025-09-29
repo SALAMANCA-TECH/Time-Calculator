@@ -191,6 +191,16 @@
                                     <label for="continuous-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                                 </div>
                             </div>
+                            <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                                <label for="settings-market-style-select" class="text-lg">Market Style</label>
+                                <select id="settings-market-style-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80">
+                                    <option value="disabled">Disabled</option>
+                                    <option value="classic">Classic</option>
+                                    <option value="dailyMood">Daily Mood</option>
+                                    <option value="categoryFocus">Category Focus</option>
+                                    <option value="liveSimulation">Live Simulation</option>
+                                </select>
+                            </div>
                             <button id="new-game-btn" class="btn-style w-full py-2">Start New Game</button>
                         </div>
                     </div>
@@ -384,11 +394,14 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
-                    <label id="dev-market-label" for="dev-market-toggle" class="text-lg">Market</label>
-                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="dev-market-toggle" id="dev-market-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                        <label for="dev-market-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                    </div>
+                    <label for="dev-market-style-select" class="text-lg">Market Style</label>
+                    <select id="dev-market-style-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80">
+                        <option value="disabled">Disabled</option>
+                        <option value="classic" selected>Classic</option>
+                        <option value="dailyMood">Daily Mood</option>
+                        <option value="categoryFocus">Category Focus</option>
+                        <option value="liveSimulation">Live Simulation</option>
+                    </select>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-4 mb-6">
@@ -5456,6 +5469,18 @@
             };
         }
 
+        function openSettingsPanel() {
+            // Update the toggles to reflect the current game state when opening the panel
+            document.getElementById('developer-toggle').checked = developerMode;
+            document.getElementById('continuous-toggle').checked = continuousMode;
+
+            // Update the market dropdown
+            const settingsMarketDropdown = document.getElementById('settings-market-style-select');
+            settingsMarketDropdown.value = marketEnabled ? marketType : 'disabled';
+
+            showAppScreen('settings-panel');
+        }
+
         function openMarketPanel() {
             const container = document.getElementById('market-categories-container');
             container.innerHTML = ''; // Clear previous reports
@@ -5836,7 +5861,7 @@
                 { name: 'Customers', icon: '👤', panelId: 'customers-panel', action: openCustomersPanel },
                 { name: 'Unlocks', icon: '🔑', panelId: 'unlocks-panel', action: openUnlocksPanel },
                 { name: 'Market', icon: '📈', panelId: 'market-panel', action: openMarketPanel },
-                { name: 'Settings', icon: '⚙️', panelId: 'settings-panel', action: () => showAppScreen('settings-panel') },
+                { name: 'Settings', icon: '⚙️', panelId: 'settings-panel', action: openSettingsPanel },
             ];
 
             apps.forEach(app => {
@@ -6832,6 +6857,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 if (options.dev.startWithDebt) {
                     cash = -1000;
                 }
+                if (options.dev.market !== undefined) {
+                    marketEnabled = options.dev.market;
+                    marketType = options.dev.marketType;
+                }
             }
 
             if (options.family) {
@@ -6936,7 +6965,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 currentWeeklyAccruedBill, currentWeeklyLaborCost,
                 employeeWorkTimers,
                 employees: employeesToSave,
-                priceHistory
+                priceHistory,
+                marketEnabled,
+                marketType
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -6963,6 +6994,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     currentWeeklyAccruedBill = gameState.currentWeeklyAccruedBill || 0;
                     currentWeeklyLaborCost = gameState.currentWeeklyLaborCost || 0;
                     employeeWorkTimers = gameState.employeeWorkTimers || { cashier: 0, stocker: 0, barista: 0, manager: 0, salesperson: 0 };
+                    marketEnabled = gameState.marketEnabled !== undefined ? gameState.marketEnabled : true;
+                    marketType = gameState.marketType || 'classic';
+
 
                     if (gameState.employees) {
                         const allEmployees = { cashier, stocker, barista, manager, salesperson };
@@ -7123,11 +7157,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 showScreen('new-game-screen');
             });
             document.getElementById('dev-start-game-btn').addEventListener('click', () => {
+                const marketStyle = document.getElementById('dev-market-style-select').value;
                 const options = {
                     dev: {
                         freeUnlocks: document.getElementById('dev-unlocks-toggle').checked,
                         freeSupplies: document.getElementById('dev-supplies-toggle').checked,
-                        startWithDebt: document.getElementById('dev-debt-toggle').checked
+                        startWithDebt: document.getElementById('dev-debt-toggle').checked,
+                        market: marketStyle !== 'disabled',
+                        marketType: marketStyle === 'disabled' ? 'classic' : marketStyle
                     }
                 };
                 startGame(options);
@@ -7357,6 +7394,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             continuousToggle.checked = continuousMode;
             continuousToggle.addEventListener('change', (e) => {
                 continuousMode = e.target.checked;
+            });
+
+            const settingsMarketDropdown = document.getElementById('settings-market-style-select');
+            settingsMarketDropdown.addEventListener('change', (e) => {
+                const selection = e.target.value;
+                if (selection === 'disabled') {
+                    marketEnabled = false;
+                } else {
+                    marketEnabled = true;
+                    marketType = selection;
+                }
+                saveGame();
+                spawnFloatingText('Market settings will update next day.', player.x, player.y - 90, '#3b82f6');
             });
 
             loadSpriteSheet(); // Generate and load player spritesheet

@@ -796,6 +796,7 @@
         let currentWeeklyRentCost = 0;
         let currentWeeklyStorageCost = 0;
         let currentWeeklyCoffeeCost = 0;
+        let coffeeShopExists = true;
 
         const OPENING_DURATION = 30000; // 30 seconds
         const DAY_SHIFT_DURATION = 60000; // 1 minute
@@ -1619,6 +1620,43 @@
             ctx.fillRect(stoolX3, stoolY, stoolW, stoolH); // Seat
             ctx.fillRect(stoolX3 + stoolW * 0.15, stoolY + stoolH, legW, legH); // Leg 1
             ctx.fillRect(stoolX3 + stoolW * 0.7, stoolY + stoolH, legW, legH); // Leg 2
+        }
+
+        function drawComingSoonSign(x, y, shopWidth, shopHeight) {
+            const windowY = y + shopHeight * 0.3;
+            const windowHeight = shopHeight * 0.4;
+            const windowX = x + shopWidth * 0.03;
+            const windowWidth = shopWidth * 0.94;
+
+            const centerX = windowX + windowWidth / 2;
+            const centerY = windowY + windowHeight / 2;
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(-Math.PI / 12); // Diagonal angle
+
+            const signWidth = windowWidth * 0.9;
+            const signHeight = windowHeight * 0.4;
+            const signX = -signWidth / 2;
+            const signY = -signHeight / 2;
+
+            // Sign background
+            ctx.fillStyle = '#facc15'; // yellow-400
+            ctx.fillRect(signX, signY, signWidth, signHeight);
+
+            // Sign border
+            ctx.strokeStyle = '#1f2937'; // gray-800
+            ctx.lineWidth = 4;
+            ctx.strokeRect(signX, signY, signWidth, signHeight);
+
+            // Text
+            ctx.fillStyle = '#1f2937';
+            ctx.font = `bold ${signHeight * 0.4}px "VT323", monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('COMING SOON!', 0, 0);
+
+            ctx.restore();
         }
 
         function drawManagersOffice() {
@@ -3774,7 +3812,7 @@
             drawStoreBackground();
             const dynamicEntities = [...customers, { y: cashierCounter.y + cashierCounter.h, type: 'cashier-counter' }, ...shelves, player, stocker, cashier, barista, manager, salesperson];
 
-            if (unlocks.facilities.coffeeShop) {
+            if (coffeeShopExists) {
                 const { x, y, w: shopWidth, h: shopHeight } = coffeeShop.rect;
 
                 const signYPos = y + shopHeight * 0.1;
@@ -3793,18 +3831,24 @@
                     draw: () => {
                         drawCoffeeSign(x, y, shopWidth, shopHeight);
                         drawCoffeeWindow(x, y, shopWidth, shopHeight);
-                        drawEspressoMachine(x, y, shopWidth, shopHeight);
+                        if (unlocks.facilities.coffeeShop) {
+                            drawEspressoMachine(x, y, shopWidth, shopHeight);
+                        } else {
+                            drawComingSoonSign(x, y, shopWidth, shopHeight);
+                        }
                     }
                 });
 
                 // Foreground parts of the coffee shop
-                dynamicEntities.push({
-                    y: stoolYPos + stoolHeight + legHeight, // Sort by the bottom of the stools
-                    draw: () => {
-                        drawCoffeeCounter(x, y, shopWidth, shopHeight);
-                        drawStools(x, y, shopWidth, shopHeight);
-                    }
-                });
+                if (unlocks.facilities.coffeeShop) {
+                    dynamicEntities.push({
+                        y: stoolYPos + stoolHeight + legHeight, // Sort by the bottom of the stools
+                        draw: () => {
+                            drawCoffeeCounter(x, y, shopWidth, shopHeight);
+                            drawStools(x, y, shopWidth, shopHeight);
+                        }
+                    });
+                }
             }
 
             dynamicEntities.sort((a, b) => (a.y || (a.rect ? a.rect.y + a.rect.h : 0)) - (b.y || (b.rect ? b.rect.y + b.rect.h : 0)));
@@ -4308,7 +4352,7 @@
             ];
 
             // NEW COFFEE SHOP LOGIC
-            if (unlocks.facilities.coffeeShop) {
+            if (coffeeShopExists) {
                 const rightmostCell = storageCells[5];
                 const coffeeShopHeight = (desk.y + desk.height) * 0.58; // Proportional height
                 const coffeeShopWidth = coffeeShopHeight * (300 / 350);  // Maintain aspect ratio
@@ -6143,6 +6187,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             dailyEmployeeWorkTimes = {};
             cameraState = 'store';
             loadingDockPackages = [];
+            coffeeShopExists = true;
 
             unlocks = {
                 employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
@@ -6265,6 +6310,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
                 if (noCoffee) {
                     unlocks.facilities.coffeeShop = false;
+                    coffeeShopExists = false;
                 }
                 if (moreCustomers) {
                     CUSTOMER_SPAWN_INTERVAL = 4000; // Faster customer spawns

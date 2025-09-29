@@ -1447,7 +1447,8 @@
                             if (this.coffeeOrder.hasSnack) {
                                 floatingText += " (w/ Snack)";
                             }
-                            spawnFloatingText(floatingText, this.x, this.y - 120, '#654321');
+                            const saleOrigin = playerIsServing ? player : barista;
+                            spawnFloatingText(floatingText, saleOrigin.x, saleOrigin.y - 80, '#654321');
 
                             this.request = "Great, now to pay for everything else.";
                             this.showSpeechBubble = true;
@@ -3495,7 +3496,7 @@
             updateCharacterAnimation(player, deltaTime);
         }
 
-        function spawnFloatingText(text, x, y, color = 'green', duration = 1500) {
+        function spawnFloatingText(text, x, y, color = 'green', duration = 2500) { // Increased duration
             floatingTexts.push({ text, x, y, color, duration, life: duration });
         }
 
@@ -3510,6 +3511,11 @@
                 ctx.fillStyle = text.color;
                 ctx.font = 'bold 24px "Patrick Hand", cursive';
                 ctx.textAlign = 'center';
+
+                // Add glow effect
+                ctx.shadowColor = text.color;
+                ctx.shadowBlur = 10;
+
                 ctx.fillText(text.text, text.x, text.y);
                 ctx.restore();
             });
@@ -4033,7 +4039,9 @@
                 if (commission > 0) {
                     saleText += ` (-$${commission} comm.)`;
                 }
-                spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
+                const saleOrigin = isPlayerSale ? player : cashier;
+                spawnFloatingText(saleText, saleOrigin.x, saleOrigin.y - 80, '#22c55e');
+
 
                 // Track popularity of sold items
                 customer.order.forEach(item => {
@@ -4058,7 +4066,8 @@
 
                 customer.leaving = true;
                 customer.state = 'leaving';
-                spawnFloatingText('Too Expensive!', customer.x, customer.y - 80, '#ef4444');
+                const saleOrigin = isPlayerSale ? player : cashier;
+                spawnFloatingText('Too Expensive!', saleOrigin.x, saleOrigin.y - 80, '#ef4444');
             }
             logCustomerToSalesReport(customer, { finalPrice: salePrice, commission: commission });
             updateUI();

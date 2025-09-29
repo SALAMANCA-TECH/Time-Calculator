@@ -1436,6 +1436,16 @@
 
             ctx.restore(); // Restore context state, removing the clip
 
+            // Draw the dividing line if the coffee shop is unlocked
+            if (unlocks.facilities.coffeeShop) {
+                ctx.strokeStyle = 'rgba(93, 64, 55, 0.5)';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(coffeeShop.rect.x, loadingDock.y);
+                ctx.lineTo(coffeeShop.rect.x, loadingDock.y + loadingDock.height);
+                ctx.stroke();
+            }
+
             ctx.strokeStyle = '#5d4037';
             ctx.lineWidth = 2;
             ctx.strokeRect(loadingDock.x, loadingDock.y, loadingDock.width, loadingDock.height-1);
@@ -1633,6 +1643,53 @@
 
         }
 
+        function getPackageLayout() {
+            const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
+            const artPackages = [];
+            const coffeePackages = [];
+
+            loadingDockPackages.forEach((pkg, originalIndex) => {
+                const packageData = { ...pkg, originalIndex };
+                if (coffeeItems.includes(pkg.itemName)) {
+                    coffeePackages.push(packageData);
+                } else {
+                    artPackages.push(packageData);
+                }
+            });
+
+            const layout = [];
+            const startY = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
+            const packageSpacing = PACKAGE_WIDTH + 10;
+
+            // Art packages on the left
+            artPackages.forEach((pkg, index) => {
+                layout.push({
+                    ...pkg,
+                    x: loadingDock.x + 10 + index * packageSpacing,
+                    y: startY,
+                    w: PACKAGE_WIDTH,
+                    h: PACKAGE_HEIGHT
+                });
+            });
+
+            // Coffee packages on the right, aligned with the coffee shop
+            if (unlocks.facilities.coffeeShop) {
+                const coffeeStartX = coffeeShop.rect.x;
+                coffeePackages.forEach((pkg, index) => {
+                    layout.push({
+                        ...pkg,
+                        x: coffeeStartX + index * packageSpacing,
+                        y: startY,
+                        w: PACKAGE_WIDTH,
+                        h: PACKAGE_HEIGHT
+                    });
+                });
+            }
+
+
+            return layout;
+        }
+
         function drawPackage(pkg, x, y) {
             ctx.fillStyle = '#b9936c';
             ctx.strokeStyle = '#5d4037';
@@ -1656,10 +1713,9 @@
         }
 
         function drawPackages() {
-            loadingDockPackages.forEach((pkg, index) => {
-                const x = loadingDock.x + 10 + index * (PACKAGE_WIDTH + 10);
-                const y = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
-                drawPackage(pkg, x, y);
+            const packageLayout = getPackageLayout();
+            packageLayout.forEach(layoutInfo => {
+                drawPackage(layoutInfo, layoutInfo.x, layoutInfo.y);
             });
         }
 
@@ -3186,14 +3242,14 @@
                 }
 
                 if (stockLocation.fromDock > 0) {
-                    const packageIndex = loadingDockPackages.findIndex(p => p.itemName === itemToFetch);
-                    if (packageIndex !== -1) {
-                        const packageX = loadingDock.x + 10 + packageIndex * (PACKAGE_WIDTH + 10) + PACKAGE_WIDTH / 2;
+                    const packageLayout = getPackageLayout();
+                    const packageToFetch = packageLayout.find(p => p.itemName === itemToFetch);
+                    if (packageToFetch) {
                         return {
                             action: 'fetching_dock',
                             item: itemToFetch,
-                            packageIndex: packageIndex,
-                            target: { x: packageX, y: loadingDock.y - 40 }
+                            packageIndex: packageToFetch.originalIndex,
+                            target: { x: packageToFetch.x + packageToFetch.w / 2, y: loadingDock.y - 40 }
                         };
                     }
                 }
@@ -3212,18 +3268,16 @@
                 return null; // Storage is full.
             }
 
-            for (let i = 0; i < loadingDockPackages.length; i++) {
-                const pkg = loadingDockPackages[i];
-                // If there's a coffee package and the storage is not full, create a task.
-                if (coffeeItems.includes(pkg.itemName)) {
-                    const packageX = loadingDock.x + 10 + i * (PACKAGE_WIDTH + 10) + PACKAGE_WIDTH / 2;
-                    return {
-                        action: 'fetching_coffee',
-                        item: pkg.itemName,
-                        packageIndex: i,
-                        target: { x: packageX, y: loadingDock.y - 40 }
-                    };
-                }
+            const packageLayout = getPackageLayout();
+            const coffeePackageToFetch = packageLayout.find(p => coffeeItems.includes(p.itemName));
+
+            if (coffeePackageToFetch) {
+                return {
+                    action: 'fetching_coffee',
+                    item: coffeePackageToFetch.itemName,
+                    packageIndex: coffeePackageToFetch.originalIndex,
+                    target: { x: coffeePackageToFetch.x + coffeePackageToFetch.w / 2, y: loadingDock.y - 40 }
+                };
             }
             return null;
         }
@@ -4385,17 +4439,16 @@
 
             // Check for clicks on packages in the loading dock
             if (worldY >= loadingDock.y) {
-                 if (Math.hypot(player.x - worldX, player.y - worldY) < 150) {
-                     for(let i = 0; i < loadingDockPackages.length; i++) {
-                         const pkg = loadingDockPackages[i];
-                         const pkgX = loadingDock.x + 10 + i * (PACKAGE_WIDTH + 10);
-                         const pkgY = loadingDock.y + (loadingDock.height - PACKAGE_HEIGHT) / 2;
-                         if(worldX > pkgX && worldX < pkgX + PACKAGE_WIDTH && worldY > pkgY && worldY < pkgY + PACKAGE_HEIGHT) {
-                             takeItemFromPackage(i);
-                             return;
-                         }
-                     }
-                 }
+                if (Math.hypot(player.x - worldX, player.y - worldY) < 150) {
+                    const packageLayout = getPackageLayout();
+                    for (const layoutInfo of packageLayout) {
+                        if (worldX > layoutInfo.x && worldX < layoutInfo.x + layoutInfo.w &&
+                            worldY > layoutInfo.y && worldY < layoutInfo.y + layoutInfo.h) {
+                            takeItemFromPackage(layoutInfo.originalIndex);
+                            return; // Exit after handling one click
+                        }
+                    }
+                }
             }
 
             // Check for click on the single coffee storage cell

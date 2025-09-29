@@ -742,6 +742,36 @@
             return null; // Return null if no suitable customer is found
         }
 
+        function generateCoffeeOrder() {
+            if (!unlocks.facilities.coffeeShop || !coffeeShop.storage) {
+                return null;
+            }
+
+            const availableIngredients = coffeeShop.storage.items;
+
+            const availableRecipes = Object.keys(COFFEE_RECIPES).filter(recipeKey => {
+                const recipe = COFFEE_RECIPES[recipeKey];
+                return recipe.ingredients.every(ingredient => (availableIngredients[ingredient] || 0) > 0);
+            });
+
+            if (availableRecipes.length === 0) {
+                return null; // No coffee can be made
+            }
+
+            const chosenRecipeKey = availableRecipes[Math.floor(Math.random() * availableRecipes.length)];
+            const coffeeOrder = { ...COFFEE_RECIPES[chosenRecipeKey] }; // Create a copy
+            coffeeOrder.key = chosenRecipeKey; // Store the key for reference
+            coffeeOrder.hasSnack = false;
+
+            // 33% chance of adding a snack if available
+            if ((availableIngredients['Snacks'] || 0) > 0 && Math.random() < 0.33) {
+                coffeeOrder.hasSnack = true;
+                coffeeOrder.price += items['Snacks'].cost * 1.5; // Add snack price markup
+            }
+
+            return coffeeOrder;
+        }
+
         let cash = 100;
         let day = 1;
         let shopPoints = 0;
@@ -788,6 +818,13 @@
         let dailySupplyOrders = [];
         let dailyLaborCosts = {};
         let dailyEmployeeWorkTimes = {};
+
+        const COFFEE_RECIPES = {
+            plain: { name: "Plain Coffee", price: 3, ingredients: ["Beans"] },
+            tan: { name: "Tan Coffee", price: 7, ingredients: ["Beans", "Milks"] },
+            sweet: { name: "Sweet Coffee", price: 7, ingredients: ["Beans", "Sugar"] },
+            rich: { name: "Rich Coffee", price: 10, ingredients: ["Beans", "Milks", "Sugar"] }
+        };
 
         // Camera and zoom variables
         let cameraX = 0;
@@ -1080,6 +1117,7 @@
                 this.currentItemIndex = 0;
                 this.isWaitingForRestock = false;
                 this.boughtCoffee = false;
+                this.coffeeOrder = null;
 
                 this.spriteImage = new Image();
                 this.spriteSheetLoaded = false;
@@ -1235,15 +1273,17 @@
                                     this.order.push(currentItem);
                                     this.currentItemIndex++; // <-- FIX: This was missing!
                                      if(this.currentItemIndex >= this.requestedItems.length) {
-                                         if (unlocks.facilities.coffeeShop && !this.boughtCoffee && Math.random() < 0.5) {
-                                            this.request = "I could use a coffee now.";
+                                        const coffeeOrder = generateCoffeeOrder();
+                                        if (coffeeOrder) {
+                                            this.coffeeOrder = coffeeOrder;
+                                            this.request = `I'll take a ${this.coffeeOrder.name}${this.coffeeOrder.hasSnack ? ' and a snack' : ''}!`;
                                             this.showSpeechBubble = true;
                                             this.speechBubbleTimer = 3000;
                                             this.state = 'goingToCoffeeShop';
-                                         } else {
+                                        } else {
                                             this.request = `Got everything! Time to check out.`;
                                             this.state = 'queuing';
-                                         }
+                                        }
                                      } else {
                                          this.state = 'browsing';
                                          if(!this.findNextItemTarget()){
@@ -1358,16 +1398,34 @@
                         const playerIsServing = isPlayerInZone(coffeeShop.behindCounterZone);
                         const baristaIsServing = unlocks.employees.barista && !barista.onBreak && Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) < 10;
 
-                        if (playerIsServing || baristaIsServing) {
-                            cash += 10;
+                        if (this.coffeeOrder && (playerIsServing || baristaIsServing)) {
+                            this.coffeeOrder.ingredients.forEach(ingredient => {
+                                if (coffeeShop.storage.items[ingredient] > 0) {
+                                    coffeeShop.storage.items[ingredient]--;
+                                }
+                            });
+                            if (this.coffeeOrder.hasSnack) {
+                                if (coffeeShop.storage.items['Snacks'] > 0) {
+                                    coffeeShop.storage.items['Snacks']--;
+                                }
+                            }
+
+                            cash += this.coffeeOrder.price;
                             this.boughtCoffee = true;
-                            spawnFloatingText("Coffee! +$10", this.x, this.y - 120, '#654321');
-                            this.request = "Great, now to pay for everything.";
+
+                            let floatingText = `${this.coffeeOrder.name}! +$${this.coffeeOrder.price.toFixed(2)}`;
+                            if (this.coffeeOrder.hasSnack) {
+                                floatingText += " (w/ Snack)";
+                            }
+                            spawnFloatingText(floatingText, this.x, this.y - 120, '#654321');
+
+                            this.request = "Great, now to pay for everything else.";
                             this.showSpeechBubble = true;
                             this.speechBubbleTimer = 3000;
                             this.state = 'queuing';
+
                         } else if (this.stateTimer <= 0) {
-                            this.request = "Guess no one's working here...";
+                            this.request = "Guess no one's working at the coffee bar...";
                             this.showSpeechBubble = true;
                             this.speechBubbleTimer = 3000;
                             this.state = 'queuing';
@@ -3811,7 +3869,8 @@
                 waitTime: Math.round(customer.waitTimer),
                 patienceChange: customer.profile.patience - customer.initialPatience,
                 discount: customer.discount,
-                boughtCoffee: customer.boughtCoffee
+                boughtCoffee: customer.boughtCoffee,
+                coffeeOrder: customer.coffeeOrder
             });
         }
 
@@ -4123,24 +4182,37 @@
             // 3. Populate Coffee View
             const coffeeView = document.getElementById('report-view-coffee');
             coffeeView.innerHTML = ''; // Clear previous content
-            const coffeeCustomers = dailySalesReport.filter(r => r.boughtCoffee);
-            let totalCoffeeSales = 0;
+            const coffeeSales = dailySalesReport.filter(r => r.coffeeOrder);
+            let totalCoffeeRevenue = 0;
+            const coffeeTally = {};
+            let snackCount = 0;
 
-            if (coffeeCustomers.length > 0) {
-                let coffeeHtml = `<div class="space-y-3">`;
-                coffeeCustomers.forEach(report => {
-                    totalCoffeeSales += 10; // Assuming flat $10 price for now
-                    coffeeHtml += `
-                        <div class="p-2 border-b border-amber-800/10 flex justify-between items-center">
-                            <span class.font-handwritten>${report.name}</span>
-                            <span class="font-bold text-green-600">+$10.00</span>
-                        </div>
-                    `;
+            if (coffeeSales.length > 0) {
+                let coffeeHtml = `<div class="space-y-4">`;
+                coffeeSales.forEach(report => {
+                    const order = report.coffeeOrder;
+                    totalCoffeeRevenue += order.price;
+                    coffeeTally[order.name] = (coffeeTally[order.name] || 0) + 1;
+                    if (order.hasSnack) {
+                        snackCount++;
+                    }
                 });
+
+                coffeeHtml += `<div><h4 class="font-handwritten text-lg border-b border-amber-800/20 mb-2">Drinks Sold</h4>`;
+                for (const coffeeName in coffeeTally) {
+                    coffeeHtml += `<p class="flex justify-between"><span>${coffeeName}:</span> <span>x${coffeeTally[coffeeName]}</span></p>`;
+                }
+                coffeeHtml += `</div>`;
+
+                if (snackCount > 0) {
+                    coffeeHtml += `<div><h4 class="font-handwritten text-lg border-b border-amber-800/20 mb-2">Snacks Sold</h4>`;
+                    coffeeHtml += `<p class="flex justify-between"><span>Snacks:</span> <span>x${snackCount}</span></p></div>`;
+                }
+
                 coffeeHtml += `
-                    <div class="p-2 border-t-2 border-amber-800/30 flex justify-between items-center font-bold text-lg">
+                    <div class="p-2 border-t-2 border-amber-800/30 flex justify-between items-center font-bold text-lg mt-4">
                         <span>Total Coffee Revenue:</span>
-                        <span>$${totalCoffeeSales.toFixed(2)}</span>
+                        <span>$${totalCoffeeRevenue.toFixed(2)}</span>
                     </div>
                 `;
                 coffeeHtml += `</div>`;

@@ -1758,14 +1758,25 @@
                 ctx.lineWidth = 2;
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
 
+                // Capacity Bar
+                const quantity = cell.items[cell.label] || 0;
+                const fillPercent = Math.min(1, quantity / cell.capacity);
+                const barY = r.y + r.h - 12;
+                ctx.fillStyle = '#eeeeee';
+                ctx.fillRect(r.x + 4, barY, r.w - 8, 8);
+                ctx.fillStyle = '#76ff03';
+                ctx.fillRect(r.x + 4, barY, (r.w - 8) * fillPercent, 8);
+                ctx.strokeStyle = '#5d4037';
+                ctx.strokeRect(r.x + 4, barY, r.w - 8, 8);
+
+
                 // Simple label
                 ctx.fillStyle = '#f7e7d8';
                 ctx.font = '12px "Patrick Hand"';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const quantity = cell.items[cell.label] || 0;
-                ctx.fillText(`${cell.label.substring(0,5)}`, r.x + r.w / 2, r.y + r.h / 2 - 5);
-                ctx.fillText(`(${quantity})`, r.x + r.w / 2, r.y + r.h / 2 + 10);
+                ctx.fillText(`${cell.label.substring(0,5)}`, r.x + r.w / 2, r.y + (r.h / 2) - 8);
+                ctx.fillText(`(${quantity})`, r.x + r.w / 2, r.y + (r.h / 2) + 8);
             });
         }
 
@@ -2526,13 +2537,69 @@
             updateCharacterAnimation(barista, deltaTime);
             barista.stateTimer -= deltaTime;
 
-            // The barista's only job is to go to their idle spot for now.
-            // Coffee selling logic will be added later.
-            if (Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
-                barista.state = 'walk';
-                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
-            } else {
-                barista.state = 'idle';
+            switch(barista.state) {
+                case 'idle':
+                    if (barista.stateTimer <= 0) {
+                        const task = findCoffeeRestockingTask();
+                        if (task) {
+                            barista.task = task;
+                            barista.state = 'fetching_coffee';
+                        } else {
+                            barista.stateTimer = 3000;
+                            if(Math.hypot(barista.x - barista.idleX, barista.y - barista.idleY) > 5) {
+                                moveCharacterTowards(barista, barista.idleX, barista.idleY, deltaTime);
+                            }
+                        }
+                    }
+                    break;
+                case 'fetching_coffee':
+                    if (moveCharacterTowards(barista, barista.task.target.x, barista.task.target.y, deltaTime)) {
+                        const pkg = loadingDockPackages[barista.task.packageIndex];
+                        if (pkg && pkg.itemName === barista.task.item) {
+                            while(barista.basket.length < BARISTA_BASKET_SIZE && pkg.quantity > 0) {
+                                barista.basket.push(pkg.itemName);
+                                pkg.quantity--;
+                            }
+                            if (pkg.quantity <= 0) {
+                                loadingDockPackages.splice(barista.task.packageIndex, 1);
+                            }
+                        }
+                        barista.state = 'stocking_coffee';
+                        barista.task = null;
+                    }
+                    break;
+                case 'stocking_coffee':
+                     if (!barista.task) {
+                        if (barista.basket.length === 0) {
+                            barista.state = 'idle';
+                            break;
+                        }
+                        const itemToStock = barista.basket[0];
+                        const targetCell = coffeeShop.storage.find(c => c.label === itemToStock);
+                        if (targetCell) {
+                            barista.task = {
+                                item: itemToStock,
+                                target: { x: targetCell.rect.x + targetCell.rect.w / 2, y: targetCell.rect.y + targetCell.rect.h + 10 }
+                            };
+                        } else {
+                            barista.basket.shift();
+                        }
+                    }
+                    if (barista.task && moveCharacterTowards(barista, barista.task.target.x, barista.task.target.y, deltaTime)) {
+                        const itemToStock = barista.task.item;
+                        const cell = coffeeShop.storage.find(c => c.label === itemToStock);
+                        const itemIndexInBasket = barista.basket.indexOf(itemToStock);
+
+                        if (cell && itemIndexInBasket > -1) {
+                            const currentFill = cell.items[itemToStock] || 0;
+                            if (currentFill < cell.capacity) {
+                                 cell.items[itemToStock]++;
+                                 barista.basket.splice(itemIndexInBasket, 1);
+                            }
+                        }
+                        barista.task = null;
+                    }
+                    break;
             }
         }
 
@@ -3015,11 +3082,12 @@
         }
 
         function findRestockingTask() {
+            const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
             const availableStock = new Map();
             storageCells.forEach((cell, index) => {
                 if (unlocks.storage[index] && cell.items) {
                     for (const itemName in cell.items) {
-                        if (cell.items[itemName] > 0) {
+                        if (cell.items[itemName] > 0 && !coffeeItems.includes(itemName)) {
                             const currentStock = availableStock.get(itemName) || { fromStorage: 0, fromDock: 0 };
                             currentStock.fromStorage += cell.items[itemName];
                             availableStock.set(itemName, currentStock);
@@ -3028,9 +3096,11 @@
                 }
             });
             loadingDockPackages.forEach(pkg => {
-                const currentStock = availableStock.get(pkg.itemName) || { fromStorage: 0, fromDock: 0 };
-                currentStock.fromDock += pkg.quantity;
-                availableStock.set(pkg.itemName, currentStock);
+                if (!coffeeItems.includes(pkg.itemName)) {
+                    const currentStock = availableStock.get(pkg.itemName) || { fromStorage: 0, fromDock: 0 };
+                    currentStock.fromDock += pkg.quantity;
+                    availableStock.set(pkg.itemName, currentStock);
+                }
             });
 
             if (availableStock.size === 0) {
@@ -3057,6 +3127,15 @@
                     if (!isAssigned) {
                         unassignedAvailable.add(itemName);
                     }
+                }
+            }
+
+            const clickedCoffeeCell = coffeeShop.storage.find(c => worldX >= c.rect.x && worldX <= c.rect.x + c.rect.w && worldY >= c.rect.y && worldY <= c.rect.y + c.rect.h);
+            if (clickedCoffeeCell) {
+                if (Math.hypot(player.x - (clickedCoffeeCell.rect.x + clickedCoffeeCell.rect.w/2), player.y - (clickedCoffeeCell.rect.y + clickedCoffeeCell.rect.h)) < 150) {
+                    openClipboardPanel();
+                    openCoffeeStoragePanel(clickedCoffeeCell);
+                    return;
                 }
             }
 
@@ -3096,6 +3175,80 @@
             }
 
             return null;
+        }
+
+        function findCoffeeRestockingTask() {
+            const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
+            for (let i = 0; i < loadingDockPackages.length; i++) {
+                const pkg = loadingDockPackages[i];
+                if (coffeeItems.includes(pkg.itemName)) {
+                    const targetCell = coffeeShop.storage.find(c => c.label === pkg.itemName);
+                    if (targetCell) {
+                        const currentStock = targetCell.items[pkg.itemName] || 0;
+                        if (currentStock < targetCell.capacity) {
+                            const packageX = loadingDock.x + 10 + i * (PACKAGE_WIDTH + 10) + PACKAGE_WIDTH / 2;
+                            return {
+                                action: 'fetching_coffee',
+                                item: pkg.itemName,
+                                packageIndex: i,
+                                target: { x: packageX, y: loadingDock.y - 40 }
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function openCoffeeStoragePanel(cell) {
+            activeStorageCell = cell; // Use the same global for simplicity
+            const storageGrid = document.getElementById('storage-grid');
+            document.getElementById('storage-title').textContent = `Manage ${cell.label}`;
+            storageGrid.innerHTML = '';
+
+            const stockAllButtonContainer = document.createElement('div');
+            stockAllButtonContainer.className = 'p-2 col-span-2';
+            const stockAllButton = document.createElement('button');
+            stockAllButton.className = 'btn-style w-full py-2';
+            stockAllButton.textContent = `Stock All ${cell.label} from Basket`;
+            stockAllButton.onclick = () => stockAllCoffeeFromBasket(cell);
+            stockAllButton.disabled = !player.basket.includes(cell.label);
+            stockAllButtonContainer.appendChild(stockAllButton);
+            storageGrid.appendChild(stockAllButtonContainer);
+
+            showAppScreen('storage-panel');
+        }
+
+        function stockAllCoffeeFromBasket(cell) {
+            const itemsToMove = player.basket.filter(item => item === cell.label);
+            if (itemsToMove.length === 0) return;
+
+            const currentFill = cell.items[cell.label] || 0;
+            const capacity = cell.capacity;
+            const availableSpace = capacity - currentFill;
+
+            if (itemsToMove.length > availableSpace) {
+                showMessage(`Not enough space in ${cell.label} storage. Needs space for ${itemsToMove.length} items, but only has ${availableSpace}.`);
+                return;
+            }
+
+            // Remove from basket and add to storage
+            const newBasket = [];
+            let movedCount = 0;
+            for(const item of player.basket) {
+                if(item === cell.label && movedCount < itemsToMove.length) {
+                    cell.items[cell.label]++;
+                    movedCount++;
+                } else {
+                    newBasket.push(item);
+                }
+            }
+
+            player.basket = newBasket;
+            updateBasketUI();
+            spawnFloatingText(`Stocked ${itemsToMove.length} ${cell.label}!`, player.x, player.y - 90, '#22c55e');
+            saveGame();
+            openCoffeeStoragePanel(cell); // Refresh the panel
         }
 
         function updatePlayer(deltaTime) {
@@ -4042,10 +4195,11 @@
                             capacity: 50
                         });
                     }
-                } else { // Just update positions on resize
+                } else { // Just update positions and capacity on resize
                      for (let i = 0; i < coffeeItems.length; i++) {
                         coffeeShop.storage[i].rect.x = coffeeShop.rect.x + i * (coffeeCellWidth + coffeeCellPadding);
                         coffeeShop.storage[i].rect.y = coffeeStorageY;
+                        coffeeShop.storage[i].capacity = 50; // Ensure capacity is set
                     }
                 }
             }

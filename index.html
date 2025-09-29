@@ -294,6 +294,17 @@
                             <!-- Category reports will be dynamically inserted here -->
                         </div>
                     </div>
+
+                    <!-- Market Detail Panel (for individual items) -->
+                    <div id="market-detail-panel" class="phone-app-screen hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 id="market-detail-title" class="text-3xl font-handwritten">Category Details</h2>
+                            <button id="market-detail-back-btn" class="btn-style px-4 py-1">Back</button>
+                        </div>
+                        <div id="market-items-container" class="space-y-2">
+                            <!-- Individual item reports will be dynamically inserted here -->
+                        </div>
+                    </div>
                     <!-- Items Panel -->
                     <div id="items-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Toggle Items</h2>
@@ -5147,9 +5158,9 @@
                 itemsToAverage = ['Beans', 'Milks', 'Sugar', 'Snacks'];
             }
 
-            if (itemsToAverage.length > 0) {
-                const firstItemHistory = priceHistory[itemsToAverage[0]];
-                const numDays = firstItemHistory ? firstItemHistory.length : 0;
+            if (itemsToAverage.length > 0) { // This is a category
+                const firstItemWithHistory = itemsToAverage.find(item => priceHistory[item] && priceHistory[item].length > 0);
+                const numDays = firstItemWithHistory ? priceHistory[firstItemWithHistory].length : 0;
 
                 if (numDays > 0) {
                     for (let i = 0; i < numDays; i++) {
@@ -5164,6 +5175,8 @@
                         dataPoints.push(count > 0 ? sum / count : 0);
                     }
                 }
+            } else { // This must be an individual item
+                dataPoints = priceHistory[selectedKey] || [];
             }
 
             if (dataPoints.length < 2) {
@@ -5196,6 +5209,69 @@
             return percentChange;
         }
 
+        function openMarketDetailPanel(categoryKey) {
+            const detailPanel = document.getElementById('market-detail-panel');
+            const mainPanel = document.getElementById('market-panel');
+            const container = document.getElementById('market-items-container');
+            const title = document.getElementById('market-detail-title');
+
+            mainPanel.classList.add('hidden');
+            detailPanel.classList.remove('hidden');
+            container.innerHTML = '';
+            title.textContent = `${categoryKey}`;
+
+            let itemsToList = [];
+            if (categoryKey === "Coffee Supplies") {
+                itemsToList = ['Beans', 'Milks', 'Sugar', 'Snacks'];
+            } else {
+                const category = storageCells.find(cell => cell.label === categoryKey);
+                if (category) {
+                    itemsToList = category.allowedItems;
+                }
+            }
+
+            itemsToList.forEach((itemName, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4';
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'flex-grow';
+                infoDiv.innerHTML = `
+                    <h3 class="font-handwritten text-xl">${itemName}</h3>
+                    <div id="item-percent-change-${itemName.replace(/\s+/g, '-')}" class="text-lg font-bold">--%</div>
+                `;
+
+                const canvasContainer = document.createElement('div');
+                canvasContainer.className = 'w-32 h-16';
+                const canvas = document.createElement('canvas');
+                canvas.id = `market-chart-canvas-item-${itemName.replace(/\s+/g, '-')}`;
+
+                canvasContainer.appendChild(canvas);
+                itemDiv.appendChild(infoDiv);
+                itemDiv.appendChild(canvasContainer);
+                container.appendChild(itemDiv);
+
+                setTimeout(() => {
+                    const percentChange = drawMarketChart(canvas, itemName);
+                    const percentDiv = document.getElementById(`item-percent-change-${itemName.replace(/\s+/g, '-')}`);
+                    if (percentChange !== null && isFinite(percentChange)) {
+                        const sign = percentChange >= 0 ? '+' : '';
+                        const color = percentChange >= 0 ? 'text-green-600' : 'text-red-600';
+                        percentDiv.textContent = `${sign}${percentChange.toFixed(1)}%`;
+                        percentDiv.className = `text-lg font-bold ${color}`;
+                    } else {
+                        percentDiv.textContent = '...';
+                    }
+                }, 0);
+            });
+
+            const backBtn = document.getElementById('market-detail-back-btn');
+            backBtn.onclick = () => {
+                detailPanel.classList.add('hidden');
+                mainPanel.classList.remove('hidden');
+            };
+        }
+
         function openMarketPanel() {
             const container = document.getElementById('market-categories-container');
             container.innerHTML = ''; // Clear previous reports
@@ -5209,7 +5285,8 @@
                 if (categoryKey === "Coffee Supplies" && !unlocks.facilities.coffeeShop) return;
 
                 const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4';
+                categoryDiv.className = 'p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4 cursor-pointer hover:bg-amber-200/50 transition-colors';
+                categoryDiv.addEventListener('click', () => openMarketDetailPanel(categoryKey));
 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'flex-grow';

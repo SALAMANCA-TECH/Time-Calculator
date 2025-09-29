@@ -4081,6 +4081,17 @@
             showMessage(reason || defaultMessage, null);
         }
 
+        function applyClassicMarket() {
+            Object.keys(items).forEach(itemName => {
+                const baseCost = originalItemCosts[itemName];
+                // Fluctuate price by up to +/- 10% of the base cost each day
+                const fluctuation = (Math.random() - 0.5) * (baseCost * 0.2); // e.g. up to 20% swing
+                let newCost = items[itemName].cost + fluctuation; // Apply to current price
+                items[itemName].cost = parseFloat(newCost.toFixed(2));
+            });
+             spawnFloatingText("Market prices fluctuated overnight.", canvas.width / 2, 120, '#6b7280');
+        }
+
         function applyDailyMoodMarket() {
             const moods = [
                 { name: "Supplier Surplus", modifier: -0.15, message: "Supplier Surplus! All costs are down 15%!" },
@@ -4164,8 +4175,8 @@
                 let newCost = baseCost * demandFactor * supplyFactor;
 
                 // 4. Clamp the price to prevent extreme swings
-                const minCost = baseCost * 0.5; // Cannot go below 50% of base price
-                const maxCost = baseCost * 2.0; // Cannot go above 200% of base price
+                const minCost = baseCost * 0.25; // Cannot go below 25% of base price
+                const maxCost = baseCost * 1.75; // Cannot go above 175% of base price
                 newCost = Math.max(minCost, Math.min(maxCost, newCost));
 
                 // 5. Apply the new cost if it has changed
@@ -4218,7 +4229,14 @@
                 for (let i = 0; i < 4; i++) {
                     // Fluctuate price by up to +/- 20% of the base cost
                     const fluctuation = (Math.random() - 0.5) * (baseCost * 0.4);
-                    currentPrice = Math.max(1, parseFloat((baseCost + fluctuation).toFixed(2))); // Ensure price is at least 1
+                    let newPrice = baseCost + fluctuation;
+
+                    // Clamp the generated price to the 25%-175% range
+                    const minCost = baseCost * 0.25;
+                    const maxCost = baseCost * 1.75;
+                    currentPrice = Math.max(minCost, Math.min(maxCost, newPrice));
+                    currentPrice = parseFloat(currentPrice.toFixed(2));
+
                     history.push(currentPrice);
                 }
 
@@ -4237,15 +4255,17 @@
         function nextDay() {
             if (!dayStarted) return;
 
-            // 1. ALWAYS reset costs to baseline before applying new modifiers
-            Object.keys(items).forEach(key => {
-                if (originalItemCosts[key]) {
-                    items[key].cost = originalItemCosts[key];
-                }
-            });
-
-            // 2. Apply the market logic based on player's choice
+            // Apply the market logic based on player's choice
             if (marketEnabled) {
+                // For modes that are modifiers on a base price, reset costs first.
+                if (['dailyMood', 'categoryFocus', 'liveSimulation'].includes(marketType)) {
+                    Object.keys(items).forEach(key => {
+                        if (originalItemCosts[key]) {
+                            items[key].cost = originalItemCosts[key];
+                        }
+                    });
+                }
+
                 switch (marketType) {
                     case 'dailyMood':
                         applyDailyMoodMarket();
@@ -4258,11 +4278,27 @@
                         break;
                     case 'classic':
                     default:
-                        // Do nothing, prices are already reset to classic.
-                        spawnFloatingText("Market is stable today.", canvas.width / 2, 120, '#6b7280');
+                        applyClassicMarket();
                         break;
                 }
+            } else {
+                 // If market is off, prices should reset to base.
+                Object.keys(items).forEach(key => {
+                    if (originalItemCosts[key]) {
+                        items[key].cost = originalItemCosts[key];
+                    }
+                });
             }
+
+            // Clamp all prices after any market logic has been applied
+            Object.keys(items).forEach(itemName => {
+                if (originalItemCosts[itemName]) {
+                    const baseCost = originalItemCosts[itemName];
+                    const minCost = baseCost * 0.25;
+                    const maxCost = baseCost * 1.75;
+                    items[itemName].cost = Math.max(minCost, Math.min(maxCost, items[itemName].cost));
+                }
+            });
 
 
             // 3. Update and record price history for the new day

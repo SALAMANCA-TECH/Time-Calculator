@@ -5246,10 +5246,24 @@
             const minVal = Math.min(...historyData);
             const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
-            // --- Percentage Change (Today vs. Yesterday) ---
+            // --- Percentage Change (Today vs. Ideal) ---
+            let idealPrice = 0;
+            if (itemsToAverage.length > 0) { // It's a category
+                let sum = 0, count = 0;
+                itemsToAverage.forEach(item => {
+                    if (originalItemCosts[item] !== undefined) {
+                        sum += originalItemCosts[item];
+                        count++;
+                    }
+                });
+                idealPrice = count > 0 ? sum / count : 0;
+            } else { // It's an individual item
+                idealPrice = originalItemCosts[selectedKey] || 0;
+            }
+
             const todayPrice = historyData[historyData.length - 1];
-            const yesterdayPrice = historyData[historyData.length - 2];
-            const percentChange = yesterdayPrice === 0 ? 0 : ((todayPrice - yesterdayPrice) / yesterdayPrice) * 100;
+            const percentChange = idealPrice === 0 ? 0 : ((todayPrice - idealPrice) / idealPrice) * 100;
+
 
             // --- Drawing Setup ---
             const padding = { top: 5, right: 5, bottom: 20, left: 5 };
@@ -5277,7 +5291,7 @@
             });
 
             // --- Historical Data (Solid Line) ---
-            ctx.strokeStyle = percentChange >= 0 ? '#22c55e' : '#ef4444';
+            ctx.strokeStyle = percentChange > 0 ? '#ef4444' : '#22c55e'; // Red if > ideal, Green if <= ideal
             ctx.lineWidth = 2;
             ctx.beginPath();
             historyData.forEach((point, index) => {
@@ -5331,7 +5345,7 @@
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'flex-grow';
                 infoDiv.innerHTML = `
-                    <h3 class="font-handwritten text-xl">${itemName}</h3>
+                    <h3 class="font-handwritten text-xl">${itemName} <span class="text-sm text-gray-500">($${originalItemCosts[itemName].toFixed(2)})</span></h3>
                     <div id="item-percent-change-${itemName.replace(/\s+/g, '-')}" class="text-lg font-bold">--%</div>
                     <div class="text-sm">Today: <span id="today-price-${itemName.replace(/\s+/g, '-')}" class="font-handwritten">$--.--</span></div>
                     <div class="text-sm">Yesterday: <span id="yesterday-price-${itemName.replace(/\s+/g, '-')}" class="font-handwritten">$--.--</span></div>
@@ -5348,26 +5362,33 @@
                 container.appendChild(itemDiv);
 
                 setTimeout(() => {
-                    const percentChange = drawMarketChart(canvas, itemName);
+                    drawMarketChart(canvas, itemName); // Draw the chart, but ignore its return value now.
                     const percentDiv = document.getElementById(`item-percent-change-${itemName.replace(/\s+/g, '-')}`);
                     const todayPriceSpan = document.getElementById(`today-price-${itemName.replace(/\s+/g, '-')}`);
                     const yesterdayPriceSpan = document.getElementById(`yesterday-price-${itemName.replace(/\s+/g, '-')}`);
 
-                    if (percentChange !== null && isFinite(percentChange)) {
-                        const sign = percentChange >= 0 ? '+' : '';
-                        const color = percentChange >= 0 ? 'text-green-600' : 'text-red-600';
-                        percentDiv.textContent = `${sign}${percentChange.toFixed(1)}%`;
-                        percentDiv.className = `text-lg font-bold ${color}`;
-                    } else {
-                        percentDiv.textContent = '...';
-                    }
-
                     const itemHistory = priceHistory[itemName]?.history;
                     if (itemHistory && itemHistory.length > 0) {
-                        todayPriceSpan.textContent = `$${itemHistory[itemHistory.length - 1].toFixed(2)}`;
+                        const todayPrice = itemHistory[itemHistory.length - 1];
+                        const idealPrice = originalItemCosts[itemName];
+
+                        if (idealPrice > 0) {
+                            const percentChange = ((todayPrice - idealPrice) / idealPrice) * 100;
+                            const sign = percentChange >= 0 ? '+' : '';
+                            // Red if price is higher than ideal (bad for buying), Green if lower (good for buying)
+                            const color = percentChange > 0 ? 'text-red-600' : 'text-green-600';
+                            percentDiv.textContent = `${sign}${percentChange.toFixed(1)}%`;
+                            percentDiv.className = `text-lg font-bold ${color}`;
+                        } else {
+                             percentDiv.textContent = '...';
+                        }
+
+                        todayPriceSpan.textContent = `$${todayPrice.toFixed(2)}`;
                         if (itemHistory.length > 1) {
                             yesterdayPriceSpan.textContent = `$${itemHistory[itemHistory.length - 2].toFixed(2)}`;
                         }
+                    } else {
+                        percentDiv.textContent = '...';
                     }
                 }, 0);
             });

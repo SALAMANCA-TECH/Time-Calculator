@@ -1622,7 +1622,7 @@
             ctx.fillRect(stoolX3 + stoolW * 0.7, stoolY + stoolH, legW, legH); // Leg 2
         }
 
-        function drawComingSoonSign(x, y, shopWidth, shopHeight) {
+        function drawForRentSign(x, y, shopWidth, shopHeight) {
             const windowY = y + shopHeight * 0.3;
             const windowHeight = shopHeight * 0.4;
             const windowX = x + shopWidth * 0.03;
@@ -1633,28 +1633,28 @@
 
             ctx.save();
             ctx.translate(centerX, centerY);
-            ctx.rotate(-Math.PI / 12); // Diagonal angle
+            // No rotation for a straight sign
 
-            const signWidth = windowWidth * 0.9;
-            const signHeight = windowHeight * 0.4;
+            const signWidth = windowWidth * 0.8;
+            const signHeight = windowHeight * 0.3;
             const signX = -signWidth / 2;
             const signY = -signHeight / 2;
 
             // Sign background
-            ctx.fillStyle = '#facc15'; // yellow-400
+            ctx.fillStyle = '#ffffff'; // white
             ctx.fillRect(signX, signY, signWidth, signHeight);
 
             // Sign border
-            ctx.strokeStyle = '#1f2937'; // gray-800
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#000000'; // black
+            ctx.lineWidth = 3;
             ctx.strokeRect(signX, signY, signWidth, signHeight);
 
             // Text
-            ctx.fillStyle = '#1f2937';
-            ctx.font = `bold ${signHeight * 0.4}px "VT323", monospace`;
+            ctx.fillStyle = '#000000';
+            ctx.font = `bold ${signHeight * 0.5}px "VT323", monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('COMING SOON!', 0, 0);
+            ctx.fillText('FOR RENT', 0, 0);
 
             ctx.restore();
         }
@@ -3834,7 +3834,7 @@
                         if (unlocks.facilities.coffeeShop) {
                             drawEspressoMachine(x, y, shopWidth, shopHeight);
                         } else {
-                            drawComingSoonSign(x, y, shopWidth, shopHeight);
+                            drawForRentSign(x, y, shopWidth, shopHeight);
                         }
                     }
                 });

@@ -5242,8 +5242,21 @@
             if (historyData.length < 2) return null; // Need at least 2 points to draw a line
 
             // --- Y-Axis Scaling ---
-            const maxVal = Math.max(...historyData);
-            const minVal = Math.min(...historyData);
+            let idealPrice = 0;
+            if (itemsToAverage.length > 0) { // It's a category
+                let sum = 0, count = 0;
+                itemsToAverage.forEach(item => {
+                    if (originalItemCosts[item] !== undefined) {
+                        sum += originalItemCosts[item];
+                        count++;
+                    }
+                });
+                idealPrice = count > 0 ? sum / count : 0;
+            } else { // It's an individual item
+                idealPrice = originalItemCosts[selectedKey] || 0;
+            }
+            const maxVal = Math.max(...historyData, idealPrice);
+            const minVal = Math.min(...historyData, idealPrice);
             const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
             // --- Percentage Change (Today vs. Ideal) ---
@@ -5312,6 +5325,19 @@
                 ctx.beginPath();
                 ctx.arc(todayX, todayY, 4, 0, Math.PI * 2);
                 ctx.fill();
+            }
+
+            // --- Baseline (Ideal Price) ---
+            if (idealPrice > 0 && range > 0) {
+                const baselineY = padding.top + chartHeight - ((idealPrice - minVal) / range) * chartHeight;
+                ctx.strokeStyle = 'rgba(93, 64, 55, 0.4)'; // semi-transparent brown
+                ctx.lineWidth = 1;
+                ctx.setLineDash([2, 3]);
+                ctx.beginPath();
+                ctx.moveTo(padding.left, baselineY);
+                ctx.lineTo(padding.left + chartWidth, baselineY);
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset line dash
             }
 
             return percentChange;

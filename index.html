@@ -3554,32 +3554,26 @@
             // Draw the clock hand
             if (dayStarted) {
                 const handAngle = startAngle + ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
+                const handLength = radius * 0.9;
+                const endX = centerX + handLength * Math.cos(handAngle);
+                const endY = centerY + handLength * Math.sin(handAngle);
 
-                // 1. Draw the line to the border
-                const lineLength = radius;
-                const lineEndX = centerX + lineLength * Math.cos(handAngle);
-                const lineEndY = centerY + lineLength * Math.sin(handAngle);
+                // Line
                 pieClockCtx.save();
                 pieClockCtx.strokeStyle = 'white';
                 pieClockCtx.lineWidth = 1.5;
                 pieClockCtx.beginPath();
                 pieClockCtx.moveTo(centerX, centerY);
-                pieClockCtx.lineTo(lineEndX, lineEndY);
+                pieClockCtx.lineTo(endX, endY);
                 pieClockCtx.stroke();
                 pieClockCtx.restore();
 
-                // 2. Draw the inward-pointing triangle outside the border
-                const tipRadius = radius + 5; // A bit outside the border
-                const tipX = centerX + tipRadius * Math.cos(handAngle);
-                const tipY = centerY + tipRadius * Math.sin(handAngle);
-
+                // Flourished tip
                 pieClockCtx.save();
-                pieClockCtx.translate(tipX, tipY);
-                // Rotate so the triangle points back towards the center.
-                pieClockCtx.rotate(handAngle + Math.PI / 2 + Math.PI);
+                pieClockCtx.translate(endX, endY);
+                pieClockCtx.rotate(handAngle + Math.PI / 2);
                 pieClockCtx.fillStyle = 'white';
                 pieClockCtx.beginPath();
-                // A simple triangle shape. The rotation will handle the pointing.
                 pieClockCtx.moveTo(0, -2);
                 pieClockCtx.lineTo(-4, 5);
                 pieClockCtx.lineTo(4, 5);

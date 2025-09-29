@@ -287,10 +287,16 @@
                         <div id="all-customer-list" class="hidden flex-col space-y-2"></div>
                     </div>
 
-                     <!-- Reports Panel -->
-                    <div id="reports-panel" class="phone-app-screen hidden">
-                        <h2 class="text-3xl font-handwritten mb-4">Daily Reports</h2>
-                        <p>This feature is coming soon!</p>
+                     <!-- Market Panel -->
+                    <div id="market-panel" class="phone-app-screen hidden">
+                        <h2 class="text-3xl font-handwritten mb-4">Market Report</h2>
+                        <div class="mb-4">
+                            <label for="market-item-select" class="text-lg">View History For:</label>
+                            <select id="market-item-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80 w-full"></select>
+                        </div>
+                        <div class="relative w-full h-64 bg-white/50 rounded-md border-2 border-amber-800/20">
+                            <canvas id="market-chart-canvas"></canvas>
+                        </div>
                     </div>
                     <!-- Items Panel -->
                     <div id="items-panel" class="phone-app-screen hidden">
@@ -790,6 +796,7 @@
         let day = 1;
         let shopPoints = 0;
         let itemPopularity = {};
+        let priceHistory = {};
         let customers = [];
         let customerDemand = {};
         let canvas, ctx, pieClockCanvas, pieClockCtx;
@@ -4188,7 +4195,19 @@
             }
 
 
-            // 3. Reset daily trackers for the new day
+            // 3. Record price history for the day
+            Object.keys(items).forEach(itemName => {
+                if (!priceHistory[itemName]) {
+                    priceHistory[itemName] = [];
+                }
+                // Only store a limited history, e.g., last 30 days
+                if (priceHistory[itemName].length >= 30) {
+                    priceHistory[itemName].shift();
+                }
+                priceHistory[itemName].push(items[itemName].cost);
+            });
+
+            // 4. Reset daily trackers for the new day
             dailyPlayerPurchases = {};
 
             dayStarted = false;
@@ -4840,7 +4859,7 @@
                 worldY >= officeComputer.y && worldY <= officeComputer.y + officeComputer.h) {
                 if (Math.hypot(player.x - (officeComputer.x + officeComputer.w / 2), player.y - (officeComputer.y + officeComputer.h / 2)) < 150) {
                     openClipboardPanel();
-                    openEmployeesPanel();
+                    openMarketPanel();
                     return;
                 }
             }
@@ -5106,6 +5125,166 @@
                 });
                 customerList.appendChild(customerDiv);
             });
+        }
+
+        function drawMarketChart(selectedKey) {
+            const canvas = document.getElementById('market-chart-canvas');
+            if (!canvas.parentElement) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            const ctx = canvas.getContext('2d');
+            const padding = 40;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // --- Data Preparation ---
+            let dataPoints = [];
+            const isCategory = storageCells.some(cell => cell.label === selectedKey);
+
+            if (isCategory) {
+                const category = storageCells.find(cell => cell.label === selectedKey);
+                const itemsInCategory = category.allowedItems;
+                const numDays = priceHistory[itemsInCategory[0]] ? priceHistory[itemsInCategory[0]].length : 0;
+
+                for (let i = 0; i < numDays; i++) {
+                    let sum = 0;
+                    let count = 0;
+                    itemsInCategory.forEach(itemName => {
+                        if (priceHistory[itemName] && priceHistory[itemName][i] !== undefined) {
+                            sum += priceHistory[itemName][i];
+                            count++;
+                        }
+                    });
+                    if (count > 0) {
+                        dataPoints.push(sum / count);
+                    } else {
+                        dataPoints.push(0);
+                    }
+                }
+            } else {
+                // It's a single item
+                dataPoints = priceHistory[selectedKey] || [];
+            }
+
+
+            // Draw Axes
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.stroke();
+
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '14px "Patrick Hand"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Y-Axis Label
+            ctx.save();
+            ctx.translate(padding / 2 - 10, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Price ($)', 0, 0);
+            ctx.restore();
+
+            // X-Axis Label
+            ctx.fillText('Day', canvas.width / 2, canvas.height - padding / 2 + 10);
+
+
+            if (dataPoints.length < 2) {
+                ctx.textAlign = 'center';
+                ctx.fillText("Not enough data to display a chart.", canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            // --- Y-Axis Scaling ---
+            const maxVal = Math.max(...dataPoints) * 1.1; // Add 10% padding
+            const minVal = Math.min(...dataPoints) * 0.9; // Add 10% padding
+            const range = maxVal - minVal;
+
+            // Draw Y-axis labels
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i <= 5; i++) {
+                const value = minVal + (range / 5) * i;
+                const yPos = canvas.height - padding - (i / 5) * chartHeight;
+                ctx.fillText(value.toFixed(2), padding - 10, yPos);
+                // Grid line
+                ctx.strokeStyle = 'rgba(93, 64, 55, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(padding, yPos);
+                ctx.lineTo(canvas.width - padding, yPos);
+                ctx.stroke();
+            }
+
+            // --- Plot Data ---
+            ctx.strokeStyle = '#3b82f6'; // Blue for the line
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            dataPoints.forEach((point, index) => {
+                const x = padding + (index / (dataPoints.length - 1)) * chartWidth;
+                const y = canvas.height - padding - ((point - minVal) / range) * chartHeight;
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+
+            // Draw data points
+            ctx.fillStyle = '#1d4ed8'; // Darker blue for points
+            dataPoints.forEach((point, index) => {
+                const x = padding + (index / (dataPoints.length - 1)) * chartWidth;
+                const y = canvas.height - padding - ((point - minVal) / range) * chartHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function openMarketPanel() {
+            const select = document.getElementById('market-item-select');
+            const lastSelected = select.value;
+            select.innerHTML = ''; // Clear previous options
+
+            // Add categories
+            storageCells.forEach(cell => {
+                const option = document.createElement('option');
+                option.value = cell.label;
+                option.textContent = `Category: ${cell.label}`;
+                select.appendChild(option);
+            });
+
+            // Add individual items
+            Object.keys(items).forEach(itemName => {
+                const option = document.createElement('option');
+                option.value = itemName;
+                option.textContent = itemName;
+                select.appendChild(option);
+            });
+
+            // Restore last selection if it still exists
+            if (lastSelected && select.querySelector(`option[value="${lastSelected}"]`)) {
+                select.value = lastSelected;
+            }
+
+            select.removeEventListener('change', handleMarketSelectChange); // Prevent duplicate listeners
+            select.addEventListener('change', handleMarketSelectChange);
+
+            // Initial draw
+            drawMarketChart(select.value);
+            showAppScreen('market-panel');
+        }
+
+        function handleMarketSelectChange(event) {
+            drawMarketChart(event.target.value);
         }
 
         function openCustomersPanel() {
@@ -5436,7 +5615,7 @@
                 { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
                 { name: 'Customers', icon: '👤', panelId: 'customers-panel', action: openCustomersPanel },
                 { name: 'Unlocks', icon: '🔑', panelId: 'unlocks-panel', action: openUnlocksPanel },
-                { name: 'Reports', icon: '📈', panelId: 'reports-panel', action: () => showMessage("Daily reports coming soon!") },
+                { name: 'Market', icon: '📈', panelId: 'market-panel', action: openMarketPanel },
                 { name: 'Settings', icon: '⚙️', panelId: 'settings-panel', action: () => showAppScreen('settings-panel') },
             ];
 
@@ -6340,6 +6519,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             day = 1;
             shopPoints = 0;
             itemPopularity = {};
+            priceHistory = {};
             customers = [];
             customerDemand = {};
             lastTimestamp = 0;

@@ -3551,6 +3551,37 @@
                 pieClockCtx.fill();
             }
 
+            // Draw the clock hand
+            if (dayStarted) {
+                const handAngle = startAngle + ((DAY_DURATION - dayTimer) / DAY_DURATION) * 2 * Math.PI;
+                const handLength = radius * 0.9;
+                const endX = centerX + handLength * Math.cos(handAngle);
+                const endY = centerY + handLength * Math.sin(handAngle);
+
+                // Line
+                pieClockCtx.save();
+                pieClockCtx.strokeStyle = 'white';
+                pieClockCtx.lineWidth = 1.5;
+                pieClockCtx.beginPath();
+                pieClockCtx.moveTo(centerX, centerY);
+                pieClockCtx.lineTo(endX, endY);
+                pieClockCtx.stroke();
+                pieClockCtx.restore();
+
+                // Flourished tip
+                pieClockCtx.save();
+                pieClockCtx.translate(endX, endY);
+                pieClockCtx.rotate(handAngle + Math.PI / 2);
+                pieClockCtx.fillStyle = 'white';
+                pieClockCtx.beginPath();
+                pieClockCtx.moveTo(0, -2);
+                pieClockCtx.lineTo(-4, 5);
+                pieClockCtx.lineTo(4, 5);
+                pieClockCtx.closePath();
+                pieClockCtx.fill();
+                pieClockCtx.restore();
+            }
+
             // Border
             pieClockCtx.strokeStyle = '#5d4037';
             pieClockCtx.lineWidth = 2;

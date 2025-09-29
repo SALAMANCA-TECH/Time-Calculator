@@ -589,7 +589,7 @@
                 <button id="report-toggle-sales" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Sales</button>
                 <button id="report-toggle-coffee" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Coffee</button>
                 <button id="report-toggle-bills" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Bills</button>
-                <button id="report-toggle-market" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50" disabled>Market (Soon)</button>
+                <button id="report-toggle-market" class="report-toggle-btn flex-1 p-2 bg-amber-800/20 rounded-t-md bg-opacity-50">Market</button>
             </div>
 
             <!-- Report Views -->
@@ -612,6 +612,11 @@
                 <!-- Bills View -->
                 <div id="report-view-bills" class="report-view hidden">
                     <!-- Bills breakdown will be populated here -->
+                </div>
+
+                <!-- Market View -->
+                <div id="report-view-market" class="report-view hidden">
+                    <!-- Market predictions will be populated here -->
                 </div>
             </div>
 
@@ -4693,6 +4698,61 @@
             } else {
                 marketReportButton.textContent = 'Market (Soon)';
             }
+
+            // --- START: POPULATE MARKET REPORT VIEW ---
+            const marketView = document.getElementById('report-view-market');
+            if (marketEnabled && priceHistory) {
+                let marketHtml = `<div class="space-y-4">`;
+
+                // Add Market Style
+                const styleName = marketType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                marketHtml += `<div><h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Market Style: ${styleName}</h3></div>`;
+
+                // Function to get trend arrow and color
+                const getTrend = (current, next) => {
+                    if (next > current) return `<span class="text-red-500 font-bold">▲</span>`;
+                    if (next < current) return `<span class="text-green-500 font-bold">▼</span>`;
+                    return `<span class="text-gray-500 font-bold">▬</span>`;
+                };
+
+                const allCategories = [...storageCells, { label: "Coffee Supplies", allowedItems: ['Beans', 'Milks', 'Sugar', 'Snacks'] }];
+
+                allCategories.forEach(category => {
+                    // Skip empty or locked categories
+                    if (!unlocks.storage[storageCells.indexOf(category)] && category.label !== "Coffee Supplies") return;
+                    if (category.label === "Coffee Supplies" && !unlocks.facilities.coffeeShop) return;
+
+                    marketHtml += `<div><h4 class="font-handwritten text-lg border-b border-amber-800/20 mb-2">${category.label}</h4>`;
+                    marketHtml += `<div class="grid grid-cols-5 gap-x-2 text-sm text-center font-bold border-b border-amber-800/20 pb-1"><span class="text-left">Item</span><span>Today</span><span>+1 Day</span><span>+2 Days</span><span>+3 Days</span></div>`;
+                    marketHtml += `<div class="space-y-1 mt-1">`;
+
+                    category.allowedItems.forEach(itemName => {
+                        const itemData = priceHistory[itemName];
+                        if (itemData && itemData.predictions && itemData.predictions.length === 3) {
+                            const todayPrice = itemData.history[itemData.history.length - 1];
+                            const [pred1, pred2, pred3] = itemData.predictions;
+
+                            marketHtml += `
+                                <div class="grid grid-cols-5 gap-x-2 text-center items-center font-handwritten text-base">
+                                    <span class="text-left">${itemName}</span>
+                                    <span>$${todayPrice.toFixed(2)}</span>
+                                    <span>${getTrend(todayPrice, pred1)} $${pred1.toFixed(2)}</span>
+                                    <span>${getTrend(pred1, pred2)} $${pred2.toFixed(2)}</span>
+                                    <span>${getTrend(pred2, pred3)} $${pred3.toFixed(2)}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                    marketHtml += `</div></div>`;
+                });
+
+                marketHtml += `</div>`;
+                marketView.innerHTML = marketHtml;
+            } else {
+                marketView.innerHTML = `<p class="text-center p-4">The market is currently disabled.</p>`;
+            }
+            // --- END: POPULATE MARKET REPORT VIEW ---
+
 
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;

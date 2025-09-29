@@ -290,12 +290,8 @@
                      <!-- Market Panel -->
                     <div id="market-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Market Report</h2>
-                        <div class="mb-4">
-                            <label for="market-item-select" class="text-lg">View History For:</label>
-                            <select id="market-item-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80 w-full"></select>
-                        </div>
-                        <div class="relative w-full h-64 bg-white/50 rounded-md border-2 border-amber-800/20">
-                            <canvas id="market-chart-canvas"></canvas>
+                        <div id="market-categories-container" class="space-y-2">
+                            <!-- Category reports will be dynamically inserted here -->
                         </div>
                     </div>
                     <!-- Items Panel -->
@@ -5127,14 +5123,13 @@
             });
         }
 
-        function drawMarketChart(selectedKey) {
-            const canvas = document.getElementById('market-chart-canvas');
-            if (!canvas.parentElement) return;
+        function drawMarketChart(canvas, selectedKey) {
+            if (!canvas.parentElement) return null;
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
 
             const ctx = canvas.getContext('2d');
-            const padding = 40;
+            const padding = 2;
             const chartWidth = canvas.width - padding * 2;
             const chartHeight = canvas.height - padding * 2;
 
@@ -5142,149 +5137,113 @@
 
             // --- Data Preparation ---
             let dataPoints = [];
-            const isCategory = storageCells.some(cell => cell.label === selectedKey);
+            const isArtCategory = storageCells.some(cell => cell.label === selectedKey);
+            let itemsToAverage = [];
 
-            if (isCategory) {
+            if (isArtCategory) {
                 const category = storageCells.find(cell => cell.label === selectedKey);
-                const itemsInCategory = category.allowedItems;
-                const numDays = priceHistory[itemsInCategory[0]] ? priceHistory[itemsInCategory[0]].length : 0;
-
-                for (let i = 0; i < numDays; i++) {
-                    let sum = 0;
-                    let count = 0;
-                    itemsInCategory.forEach(itemName => {
-                        if (priceHistory[itemName] && priceHistory[itemName][i] !== undefined) {
-                            sum += priceHistory[itemName][i];
-                            count++;
-                        }
-                    });
-                    if (count > 0) {
-                        dataPoints.push(sum / count);
-                    } else {
-                        dataPoints.push(0);
-                    }
-                }
-            } else {
-                // It's a single item
-                dataPoints = priceHistory[selectedKey] || [];
+                itemsToAverage = category.allowedItems;
+            } else if (selectedKey === "Coffee Supplies") {
+                itemsToAverage = ['Beans', 'Milks', 'Sugar', 'Snacks'];
             }
 
+            if (itemsToAverage.length > 0) {
+                const firstItemHistory = priceHistory[itemsToAverage[0]];
+                const numDays = firstItemHistory ? firstItemHistory.length : 0;
 
-            // Draw Axes
-            ctx.strokeStyle = '#5d4037';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, canvas.height - padding);
-            ctx.lineTo(canvas.width - padding, canvas.height - padding);
-            ctx.stroke();
-
-            ctx.fillStyle = '#5d4037';
-            ctx.font = '14px "Patrick Hand"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            // Y-Axis Label
-            ctx.save();
-            ctx.translate(padding / 2 - 10, canvas.height / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText('Price ($)', 0, 0);
-            ctx.restore();
-
-            // X-Axis Label
-            ctx.fillText('Day', canvas.width / 2, canvas.height - padding / 2 + 10);
-
+                if (numDays > 0) {
+                    for (let i = 0; i < numDays; i++) {
+                        let sum = 0;
+                        let count = 0;
+                        itemsToAverage.forEach(itemName => {
+                            if (priceHistory[itemName] && priceHistory[itemName][i] !== undefined) {
+                                sum += priceHistory[itemName][i];
+                                count++;
+                            }
+                        });
+                        dataPoints.push(count > 0 ? sum / count : 0);
+                    }
+                }
+            }
 
             if (dataPoints.length < 2) {
-                ctx.textAlign = 'center';
-                ctx.fillText("Not enough data to display a chart.", canvas.width / 2, canvas.height / 2);
-                return;
+                return null;
             }
 
             // --- Y-Axis Scaling ---
-            const maxVal = Math.max(...dataPoints) * 1.1; // Add 10% padding
-            const minVal = Math.min(...dataPoints) * 0.9; // Add 10% padding
-            const range = maxVal - minVal;
+            const maxVal = Math.max(...dataPoints);
+            const minVal = Math.min(...dataPoints);
+            const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
-            // Draw Y-axis labels
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            for (let i = 0; i <= 5; i++) {
-                const value = minVal + (range / 5) * i;
-                const yPos = canvas.height - padding - (i / 5) * chartHeight;
-                ctx.fillText(value.toFixed(2), padding - 10, yPos);
-                // Grid line
-                ctx.strokeStyle = 'rgba(93, 64, 55, 0.2)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(padding, yPos);
-                ctx.lineTo(canvas.width - padding, yPos);
-                ctx.stroke();
-            }
+            // --- Calculate Percentage Change ---
+            const lastPrice = dataPoints[dataPoints.length - 1];
+            const secondLastPrice = dataPoints[dataPoints.length - 2];
+            const percentChange = secondLastPrice === 0 ? 0 : ((lastPrice - secondLastPrice) / secondLastPrice) * 100;
 
             // --- Plot Data ---
-            ctx.strokeStyle = '#3b82f6'; // Blue for the line
+            ctx.strokeStyle = percentChange >= 0 ? '#22c55e' : '#ef4444';
             ctx.lineWidth = 2;
             ctx.beginPath();
 
             dataPoints.forEach((point, index) => {
                 const x = padding + (index / (dataPoints.length - 1)) * chartWidth;
                 const y = canvas.height - padding - ((point - minVal) / range) * chartHeight;
-                if (index === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
             });
             ctx.stroke();
 
-            // Draw data points
-            ctx.fillStyle = '#1d4ed8'; // Darker blue for points
-            dataPoints.forEach((point, index) => {
-                const x = padding + (index / (dataPoints.length - 1)) * chartWidth;
-                const y = canvas.height - padding - ((point - minVal) / range) * chartHeight;
-                ctx.beginPath();
-                ctx.arc(x, y, 3, 0, Math.PI * 2);
-                ctx.fill();
-            });
+            return percentChange;
         }
 
         function openMarketPanel() {
-            const select = document.getElementById('market-item-select');
-            const lastSelected = select.value;
-            select.innerHTML = ''; // Clear previous options
+            const container = document.getElementById('market-categories-container');
+            container.innerHTML = ''; // Clear previous reports
 
-            // Add categories
-            storageCells.forEach(cell => {
-                const option = document.createElement('option');
-                option.value = cell.label;
-                option.textContent = `Category: ${cell.label}`;
-                select.appendChild(option);
+            const allCategories = [
+                ...storageCells.map(cell => cell.label),
+                "Coffee Supplies"
+            ];
+
+            allCategories.forEach((categoryKey, index) => {
+                if (categoryKey === "Coffee Supplies" && !unlocks.facilities.coffeeShop) return;
+
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4';
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'flex-grow';
+                infoDiv.innerHTML = `
+                    <h3 class="font-handwritten text-xl">${categoryKey}</h3>
+                    <div id="percent-change-${index}" class="text-lg font-bold">--%</div>
+                `;
+
+                const canvasContainer = document.createElement('div');
+                canvasContainer.className = 'w-32 h-16';
+                const canvas = document.createElement('canvas');
+                canvas.id = `market-chart-canvas-${index}`;
+
+                canvasContainer.appendChild(canvas);
+                categoryDiv.appendChild(infoDiv);
+                categoryDiv.appendChild(canvasContainer);
+                container.appendChild(categoryDiv);
+
+                // Wait a tick for the canvas to be in the DOM, then draw
+                setTimeout(() => {
+                    const percentChange = drawMarketChart(canvas, categoryKey);
+                    const percentDiv = document.getElementById(`percent-change-${index}`);
+                    if (percentChange !== null && isFinite(percentChange)) {
+                        const sign = percentChange >= 0 ? '+' : '';
+                        const color = percentChange >= 0 ? 'text-green-600' : 'text-red-600';
+                        percentDiv.textContent = `${sign}${percentChange.toFixed(1)}%`;
+                        percentDiv.className = `text-lg font-bold ${color}`;
+                    } else {
+                        percentDiv.textContent = '...';
+                    }
+                }, 0);
             });
 
-            // Add individual items
-            Object.keys(items).forEach(itemName => {
-                const option = document.createElement('option');
-                option.value = itemName;
-                option.textContent = itemName;
-                select.appendChild(option);
-            });
-
-            // Restore last selection if it still exists
-            if (lastSelected && select.querySelector(`option[value="${lastSelected}"]`)) {
-                select.value = lastSelected;
-            }
-
-            select.removeEventListener('change', handleMarketSelectChange); // Prevent duplicate listeners
-            select.addEventListener('change', handleMarketSelectChange);
-
-            // Initial draw
-            drawMarketChart(select.value);
             showAppScreen('market-panel');
-        }
-
-        function handleMarketSelectChange(event) {
-            drawMarketChart(event.target.value);
         }
 
         function openCustomersPanel() {

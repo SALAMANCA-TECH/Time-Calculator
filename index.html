@@ -3895,10 +3895,11 @@
 
             // Zone 1 point system
             if (dayStarted && isPlayerInZone(officeZone1)) {
+                const pointThreshold = 5000 / timeMultiplier;
                 zone1PointTimer += effectiveDeltaTime;
-                if (zone1PointTimer >= 5000) { // 5 seconds
+                if (zone1PointTimer >= pointThreshold) {
                     shopPoints++;
-                    zone1PointTimer -= 5000;
+                    zone1PointTimer -= pointThreshold;
                     updateUI();
                     spawnFloatingText("+1 Point", player.x, player.y - 90, "#f59e0b");
                 }
@@ -3908,10 +3909,11 @@
 
             // Coffee shop money making timer
             if (unlocks.facilities.coffeeShop && dayStarted && isPlayerInZone(coffeeShop.behindCounterZone)) {
+                const cashThreshold = 5000 / timeMultiplier;
                 coffeeShopBehindCounterTimer += effectiveDeltaTime;
-                if (coffeeShopBehindCounterTimer >= 5000) { // 5 seconds
+                if (coffeeShopBehindCounterTimer >= cashThreshold) {
                     cash++;
-                    coffeeShopBehindCounterTimer -= 5000;
+                    coffeeShopBehindCounterTimer -= cashThreshold;
                     updateUI();
                     spawnFloatingText("+$1", player.x, player.y - 90, "#22c55e");
                 }

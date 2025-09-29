@@ -892,7 +892,7 @@
             stocker: 1,
             barista: 3,
             manager: 5,
-            salesperson: 1
+            salesperson: 0
         };
 
         const dailyOperatingCosts = {
@@ -1095,6 +1095,7 @@
                 this.isInteractedWith = false;
                 this.needsAssistanceFulfilled = false;
                 this.hasReachedWaitingPoint = false;
+                this.helpedBySalesperson = false;
 
                 const rand = Math.random();
                 if (rand < 0.4) {
@@ -3091,6 +3092,7 @@
                             } else {
                                 // Original interaction logic
                                 customer.isInteractedWith = true;
+                                customer.helpedBySalesperson = true;
                                 spawnFloatingText("Let me help!", salesperson.x, salesperson.y - 90, '#3b82f6');
                             }
                         }
@@ -3202,6 +3204,7 @@
                         }
                         salesperson.task.customer.waitTimer = 0; // Reset wait timer
                         salesperson.task.customer.needsAssistanceFulfilled = true;
+                        salesperson.task.customer.helpedBySalesperson = true;
                         salesperson.task.customer.state = 'queuing';
                         salesperson.task.customer.request = "Thank you so much for your help!";
 
@@ -3860,7 +3863,7 @@
         }
 
 
-        function logCustomerToSalesReport(customer) {
+        function logCustomerToSalesReport(customer, transactionDetails = {}) {
             dailySalesReport.push({
                 name: customer.name,
                 typeKey: customer.customerType,
@@ -3870,7 +3873,10 @@
                 patienceChange: customer.profile.patience - customer.initialPatience,
                 discount: customer.discount,
                 boughtCoffee: customer.boughtCoffee,
-                coffeeOrder: customer.coffeeOrder
+                coffeeOrder: customer.coffeeOrder,
+                helpedBySalesperson: customer.helpedBySalesperson,
+                finalPrice: transactionDetails.finalPrice,
+                commission: transactionDetails.commission
             });
         }
 
@@ -3899,6 +3905,13 @@
                 salePrice = Math.ceil(salePrice * (1 - customer.discount));
             }
 
+            // REFACTOR: Apply salesperson commission
+            let commission = 0;
+            if (customer.helpedBySalesperson) {
+                commission = Math.ceil(salePrice * 0.10);
+                salePrice -= commission;
+            }
+
             customer.isServed = true;
 
             if (salePrice <= customer.budget) {
@@ -3911,7 +3924,10 @@
 
                 customer.leaving = true;
                 customer.state = 'leaving';
-                const saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
+                let saleText = customer.discount > 0 ? `+$${salePrice} (Discounted)` : `+$${salePrice}`;
+                if (commission > 0) {
+                    saleText += ` (-$${commission} comm.)`;
+                }
                 spawnFloatingText(saleText, customer.x, customer.y - 80, '#22c55e');
 
                 // Track popularity of sold items
@@ -3939,7 +3955,7 @@
                 customer.state = 'leaving';
                 spawnFloatingText('Too Expensive!', customer.x, customer.y - 80, '#ef4444');
             }
-            logCustomerToSalesReport(customer);
+            logCustomerToSalesReport(customer, { finalPrice: salePrice, commission: commission });
             updateUI();
             populateInStoreCustomers();
             saveGame();
@@ -4031,17 +4047,19 @@
                 const patienceColor = report.patienceChange < 0 ? 'text-red-600' : 'text-green-600';
                 const patienceSign = report.patienceChange >= 0 ? '+' : '';
                 let purchaseSummary = '<span class="text-red-600 font-bold">Left without buying</span>';
-                if (report.purchasedItems.length > 0) {
-                    const itemCosts = report.purchasedItems.map(item => items[item].cost);
-                    const totalCost = itemCosts.reduce((a, b) => a + b, 0);
-                    let salePrice = Math.ceil(totalCost * 1.5);
-                    if (report.discount > 0) {
-                        salePrice = Math.ceil(salePrice * (1 - report.discount));
-                    }
-                    grossSales += salePrice;
-                    purchaseSummary = `${report.purchasedItems.join(', ')} ($${salePrice})`;
-                    if (report.discount > 0) {
+                if (report.purchasedItems.length > 0 && report.finalPrice !== undefined) {
+                    const finalPrice = report.finalPrice || 0;
+                    const commission = report.commission || 0;
+                    const originalSalePrice = finalPrice + commission;
+
+                    grossSales += originalSalePrice;
+
+                    purchaseSummary = `${report.purchasedItems.join(', ')} ($${finalPrice.toFixed(2)} paid)`;
+                     if (report.discount > 0) {
                         purchaseSummary += ` <span class="text-red-600 font-bold">(${report.discount * 100}% off)</span>`;
+                    }
+                    if (commission > 0) {
+                        purchaseSummary += ` <span class="text-blue-600 font-bold">, $${commission.toFixed(2)} comm.</span>`;
                     }
                     report.purchasedItems.forEach(item => salesTally[item] = (salesTally[item] || 0) + 1);
                 }

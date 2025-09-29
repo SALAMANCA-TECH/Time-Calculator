@@ -5592,7 +5592,6 @@
                 infoDiv.className = 'flex-grow';
                 infoDiv.innerHTML = `
                     <h3 class="font-handwritten text-xl">${itemName} <span class="text-sm text-gray-500">($${originalItemCosts[itemName].toFixed(2)})</span></h3>
-                    <div id="item-percent-change-${itemName.replace(/\s+/g, '-')}" class="text-lg font-bold">--%</div>
                     <div class="text-sm">Today: <span id="today-price-${itemName.replace(/\s+/g, '-')}" class="font-handwritten">$--.--</span></div>
                     <div class="text-sm">Yesterday: <span id="yesterday-price-${itemName.replace(/\s+/g, '-')}" class="font-handwritten">$--.--</span></div>
                 `;
@@ -5609,7 +5608,6 @@
 
                 setTimeout(() => {
                     drawMarketChart(canvas, itemName); // Draw the chart, but ignore its return value now.
-                    const percentDiv = document.getElementById(`item-percent-change-${itemName.replace(/\s+/g, '-')}`);
                     const todayPriceSpan = document.getElementById(`today-price-${itemName.replace(/\s+/g, '-')}`);
                     const yesterdayPriceSpan = document.getElementById(`yesterday-price-${itemName.replace(/\s+/g, '-')}`);
 
@@ -5619,22 +5617,15 @@
                         const idealPrice = originalItemCosts[itemName];
 
                         if (idealPrice > 0) {
-                            const percentChange = ((todayPrice - idealPrice) / idealPrice) * 100;
-                            const sign = percentChange >= 0 ? '+' : '';
                             // Red if price is higher than ideal (bad for buying), Green if lower (good for buying)
-                            const color = percentChange > 0 ? 'text-red-600' : 'text-green-600';
-                            percentDiv.textContent = `${sign}${percentChange.toFixed(1)}%`;
-                            percentDiv.className = `text-lg font-bold ${color}`;
-                        } else {
-                             percentDiv.textContent = '...';
+                            const color = todayPrice > idealPrice ? 'text-red-600' : 'text-green-600';
+                            todayPriceSpan.className = `font-handwritten font-bold ${color}`;
                         }
 
                         todayPriceSpan.textContent = `$${todayPrice.toFixed(2)}`;
                         if (itemHistory.length > 1) {
                             yesterdayPriceSpan.textContent = `$${itemHistory[itemHistory.length - 2].toFixed(2)}`;
                         }
-                    } else {
-                        percentDiv.textContent = '...';
                     }
                 }, 0);
             });

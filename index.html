@@ -3857,7 +3857,7 @@
             updatePlayer(deltaTime);
 
             // Zone 1 point system
-            if (isPlayerInZone(officeZone1)) {
+            if (dayStarted && isPlayerInZone(officeZone1)) {
                 zone1PointTimer += deltaTime;
                 if (zone1PointTimer >= 5000) { // 5 seconds
                     shopPoints++;
@@ -3870,7 +3870,7 @@
             }
 
             // Coffee shop money making timer
-            if (dayStarted && isPlayerInZone(coffeeShop.behindCounterZone)) {
+            if (unlocks.facilities.coffeeShop && dayStarted && isPlayerInZone(coffeeShop.behindCounterZone)) {
                 coffeeShopBehindCounterTimer += deltaTime;
                 if (coffeeShopBehindCounterTimer >= 5000) { // 5 seconds
                     cash++;

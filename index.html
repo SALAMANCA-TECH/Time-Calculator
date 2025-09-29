@@ -5333,6 +5333,8 @@
                 infoDiv.innerHTML = `
                     <h3 class="font-handwritten text-xl">${itemName}</h3>
                     <div id="item-percent-change-${itemName.replace(/\s+/g, '-')}" class="text-lg font-bold">--%</div>
+                    <div class="text-sm">Today: <span id="today-price-${itemName.replace(/\s+/g, '-')}" class="font-handwritten">$--.--</span></div>
+                    <div class="text-sm">Yesterday: <span id="yesterday-price-${itemName.replace(/\s+/g, '-')}" class="font-handwritten">$--.--</span></div>
                 `;
 
                 const canvasContainer = document.createElement('div');
@@ -5348,6 +5350,9 @@
                 setTimeout(() => {
                     const percentChange = drawMarketChart(canvas, itemName);
                     const percentDiv = document.getElementById(`item-percent-change-${itemName.replace(/\s+/g, '-')}`);
+                    const todayPriceSpan = document.getElementById(`today-price-${itemName.replace(/\s+/g, '-')}`);
+                    const yesterdayPriceSpan = document.getElementById(`yesterday-price-${itemName.replace(/\s+/g, '-')}`);
+
                     if (percentChange !== null && isFinite(percentChange)) {
                         const sign = percentChange >= 0 ? '+' : '';
                         const color = percentChange >= 0 ? 'text-green-600' : 'text-red-600';
@@ -5355,6 +5360,14 @@
                         percentDiv.className = `text-lg font-bold ${color}`;
                     } else {
                         percentDiv.textContent = '...';
+                    }
+
+                    const itemHistory = priceHistory[itemName]?.history;
+                    if (itemHistory && itemHistory.length > 0) {
+                        todayPriceSpan.textContent = `$${itemHistory[itemHistory.length - 1].toFixed(2)}`;
+                        if (itemHistory.length > 1) {
+                            yesterdayPriceSpan.textContent = `$${itemHistory[itemHistory.length - 2].toFixed(2)}`;
+                        }
                     }
                 }, 0);
             });

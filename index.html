@@ -137,6 +137,15 @@
              </div>
              <button id="start-day-btn" class="btn-style px-6 py-3 rounded-lg text-xl hidden">Start Day</button>
              <canvas id="pie-clock-canvas" width="50" height="50"></canvas>
+            <div class="flex space-x-2">
+                <button id="pause-play-btn" class="p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm w-16 h-16 flex items-center justify-center">
+                    <svg id="play-icon" class="w-8 h-8 text-amber-900 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 0 0 4 4.11V15.89a1.5 1.5 0 0 0 2.3 1.269l9.344-5.89a1.5 1.5 0 0 0 0-2.538L6.3 2.84Z"></path></svg>
+                    <svg id="pause-icon" class="w-8 h-8 text-amber-900" fill="currentColor" viewBox="0 0 20 20"><path d="M5.75 4.5a.75.75 0 0 0-.75.75v9.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V5.25a.75.75 0 0 0-.75-.75h-1.5zM12.75 4.5a.75.75 0 0 0-.75.75v9.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V5.25a.75.75 0 0 0-.75-.75h-1.5z"></path></svg>
+                </button>
+                <button id="double-time-btn" class="p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm w-16 h-16 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-amber-900" fill="currentColor" viewBox="0 0 20 20"><path d="M15.243 12.132a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.061L13.633 13H4.75a.75.75 0 0 1 0-1.5h8.883l-3.7-3.7a.75.75 0 0 1 1.06-1.06l4.25 4.25a.75.75 0 0 1-.001 1.061z M8.75 3.75a.75.75 0 0 0-1.5 0v12.5a.75.75 0 0 0 1.5 0V3.75z"></path></svg>
+                </button>
+            </div>
             <div id="basket-container" class="relative">
                 <div id="basket-icon-container" class="relative p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm cursor-pointer flex items-center justify-center w-16 h-16">
                     <svg class="w-8 h-8 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -902,6 +911,8 @@
         let currentWeeklyStorageCost = 0;
         let currentWeeklyCoffeeCost = 0;
         let coffeeShopExists = true;
+        let isPaused = false;
+        let timeMultiplier = 1;
 
         const OPENING_DURATION = 30000; // 30 seconds
         const DAY_SHIFT_DURATION = 60000; // 1 minute
@@ -3604,6 +3615,14 @@
             const radius = Math.min(centerX, centerY) - 2;
             pieClockCtx.clearRect(0, 0, pieClockCanvas.width, pieClockCanvas.height);
 
+            // Visual indicator for double time
+            if (timeMultiplier > 1) {
+                pieClockCtx.fillStyle = 'rgba(255, 255, 150, 0.3)'; // Light yellow glow
+                pieClockCtx.beginPath();
+                pieClockCtx.arc(centerX, centerY, radius + 2, 0, 2 * Math.PI);
+                pieClockCtx.fill();
+            }
+
             const startAngle = -Math.PI / 2;
             const openingAngle = (OPENING_DURATION / DAY_DURATION) * 2 * Math.PI;
             const dayShiftAngle = (DAY_SHIFT_DURATION / DAY_DURATION) * 2 * Math.PI;
@@ -3724,6 +3743,14 @@
             pieClockCtx.stroke();
 
             pieClockCtx.restore(); // Restore to solid lines
+
+            // Darken the clock if paused
+            if (isPaused) {
+                pieClockCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                pieClockCtx.beginPath();
+                pieClockCtx.arc(centerX, centerY, radius + 1, 0, 2 * Math.PI);
+                pieClockCtx.fill();
+            }
         }
 
         function handleClockClick() {
@@ -3763,16 +3790,19 @@
             const deltaTime = timestamp - lastTimestamp;
             lastTimestamp = timestamp;
 
-            if (dayStarted) {
-                dayTimer -= deltaTime;
+            if (!isPaused) {
+                const effectiveDeltaTime = deltaTime * timeMultiplier;
 
-                // Track employee work time based on shift
+                if (dayStarted) {
+                    dayTimer -= effectiveDeltaTime;
+
+                    // Track employee work time based on shift
                 const employees = { cashier, stocker, barista, manager, salesperson };
                 const currentShiftPhase = dayPhase.replace('-', ' '); // "day-shift" -> "day shift"
                 for (const empKey in employees) {
                     const employee = employees[empKey];
                     if (unlocks.employees[empKey] && !employee.onBreak && employee.shift.map(s => s.toLowerCase()).includes(currentShiftPhase.toLowerCase())) {
-                        employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + deltaTime;
+                        employeeWorkTimers[empKey] = (employeeWorkTimers[empKey] || 0) + effectiveDeltaTime;
                     }
                 }
 
@@ -3861,11 +3891,11 @@
                 }
             }
 
-            updatePlayer(deltaTime);
+            updatePlayer(effectiveDeltaTime);
 
             // Zone 1 point system
             if (dayStarted && isPlayerInZone(officeZone1)) {
-                zone1PointTimer += deltaTime;
+                zone1PointTimer += effectiveDeltaTime;
                 if (zone1PointTimer >= 5000) { // 5 seconds
                     shopPoints++;
                     zone1PointTimer -= 5000;
@@ -3878,7 +3908,7 @@
 
             // Coffee shop money making timer
             if (unlocks.facilities.coffeeShop && dayStarted && isPlayerInZone(coffeeShop.behindCounterZone)) {
-                coffeeShopBehindCounterTimer += deltaTime;
+                coffeeShopBehindCounterTimer += effectiveDeltaTime;
                 if (coffeeShopBehindCounterTimer >= 5000) { // 5 seconds
                     cash++;
                     coffeeShopBehindCounterTimer -= 5000;
@@ -3889,26 +3919,38 @@
                 coffeeShopBehindCounterTimer = 0;
             }
 
-            // Update progress bars
-            const cashProgressBar = document.getElementById('cash-progress-bar');
-            if (cashProgressBar) {
-                const cashProgress = Math.min(100, (coffeeShopBehindCounterTimer / 5000) * 100);
-                cashProgressBar.style.width = `${cashProgress}%`;
+            updateStocker(effectiveDeltaTime);
+            updateCashier(effectiveDeltaTime);
+            updateBarista(effectiveDeltaTime);
+            updateManager(effectiveDeltaTime);
+            updateSalesperson(effectiveDeltaTime);
+
+            if (dayPhase === 'day-shift' || dayPhase === 'night-shift') {
+                timeSinceLastCustomer += effectiveDeltaTime;
+                if (timeSinceLastCustomer >= CUSTOMER_SPAWN_INTERVAL) {
+                    timeSinceLastCustomer = 0;
+                    spawnNewCustomer();
+                }
             }
 
-            const pointsProgressBar = document.getElementById('points-progress-bar');
-            if (pointsProgressBar) {
-                const pointsProgress = Math.min(100, (zone1PointTimer / 5000) * 100);
-                pointsProgressBar.style.width = `${pointsProgress}%`;
-            }
+            customers.forEach(customer => customer.update(effectiveDeltaTime));
+            customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
+        }
 
-            updateStocker(deltaTime);
-            updateCashier(deltaTime);
-            updateBarista(deltaTime);
-            updateManager(deltaTime);
-            updateSalesperson(deltaTime);
+        // Update things that should run even when paused (e.g. UI animations)
+        const cashProgressBar = document.getElementById('cash-progress-bar');
+        if (cashProgressBar) {
+            const cashProgress = isPaused ? 0 : Math.min(100, (coffeeShopBehindCounterTimer / 5000) * 100);
+            cashProgressBar.style.width = `${cashProgress}%`;
+        }
 
-            if (activeShelf) {
+        const pointsProgressBar = document.getElementById('points-progress-bar');
+        if (pointsProgressBar) {
+            const pointsProgress = isPaused ? 0 : Math.min(100, (zone1PointTimer / 5000) * 100);
+            pointsProgressBar.style.width = `${pointsProgress}%`;
+        }
+
+        if (activeShelf) {
                 const shelf = activeShelf;
                 const dist = Math.hypot(player.x - (shelf.rect.x + shelf.rect.w/2), player.y - (shelf.rect.y + shelf.rect.h/2));
                 if (dist > 200) {
@@ -3923,23 +3965,12 @@
                 }
             }
 
-            if (dayPhase === 'day-shift' || dayPhase === 'night-shift') {
-                timeSinceLastCustomer += deltaTime;
-                if (timeSinceLastCustomer >= CUSTOMER_SPAWN_INTERVAL) {
-                    timeSinceLastCustomer = 0;
-                    spawnNewCustomer();
-                }
-            }
-
-            customers.forEach(customer => customer.update(deltaTime));
-            customers = customers.filter(c => c.x < canvas.width + 100 && c.x > -100);
             populateInStoreCustomers();
 
             // Real-time clipboard updates
             clipboardUpdateTimer += deltaTime;
             if (activePanel === 'customers' && clipboardUpdateTimer >= CLIPBOARD_UPDATE_INTERVAL) {
                 const inStoreList = document.getElementById('in-store-customer-list');
-                // Only update if the "In Store" tab is visible
                 if (inStoreList && inStoreList.offsetParent !== null) {
                     populateInStoreCustomers();
                 }
@@ -4336,8 +4367,23 @@
             });
         }
 
+        function toggleDoubleTime() {
+            if (timeMultiplier > 1) {
+                timeMultiplier = 1;
+                document.getElementById('double-time-btn').classList.remove('bg-yellow-300');
+            } else {
+                timeMultiplier = 2;
+                document.getElementById('double-time-btn').classList.add('bg-yellow-300');
+            }
+        }
+
         function nextDay() {
             if (!dayStarted) return;
+
+            // Reset double time at the end of the day
+            timeMultiplier = 1;
+            document.getElementById('double-time-btn').classList.remove('bg-yellow-300');
+
 
             // Apply the market logic based on player's choice
             if (marketEnabled) {
@@ -7194,6 +7240,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             basketContents.classList.toggle('hidden');
         }
 
+        function togglePause() {
+            isPaused = !isPaused;
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            if (isPaused) {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            } else {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            }
+        }
+
         function init() {
             Object.keys(items).forEach(key => {
                 originalItemCosts[key] = items[key].cost;
@@ -7203,7 +7262,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             pieClockCanvas = document.getElementById('pie-clock-canvas');
             pieClockCtx = pieClockCanvas.getContext('2d');
 
+            document.getElementById('pause-play-btn').addEventListener('click', togglePause);
             document.getElementById('basket-icon-container').addEventListener('click', toggleBasketExpansion);
+            document.getElementById('double-time-btn').addEventListener('click', toggleDoubleTime);
 
             const hasSave = localStorage.getItem('artEmporiumSave');
             if (hasSave) {

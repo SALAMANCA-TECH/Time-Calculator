@@ -5260,20 +5260,6 @@
             const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
             // --- Percentage Change (Today vs. Ideal) ---
-            let idealPrice = 0;
-            if (itemsToAverage.length > 0) { // It's a category
-                let sum = 0, count = 0;
-                itemsToAverage.forEach(item => {
-                    if (originalItemCosts[item] !== undefined) {
-                        sum += originalItemCosts[item];
-                        count++;
-                    }
-                });
-                idealPrice = count > 0 ? sum / count : 0;
-            } else { // It's an individual item
-                idealPrice = originalItemCosts[selectedKey] || 0;
-            }
-
             const todayPrice = historyData[historyData.length - 1];
             const percentChange = idealPrice === 0 ? 0 : ((todayPrice - idealPrice) / idealPrice) * 100;
 

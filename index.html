@@ -2873,7 +2873,7 @@
                                 const availableCash = cash - 30;
 
                                 for (const orderItem of shoppingList) {
-                                    const itemCost = parseFloat((items[orderItem.itemName].cost * 0.75).toFixed(2)) * orderItem.quantity;
+                                    const itemCost = items[orderItem.itemName].cost * orderItem.quantity;
                                     if (totalCost + itemCost <= availableCash) {
                                         totalCost += itemCost;
                                         finalOrderList.push(orderItem);
@@ -2996,7 +2996,7 @@
                                     orderedBy: 'Manager',
                                     itemName: orderItem.itemName,
                                     quantity: orderItem.quantity,
-                                    cost: parseFloat((items[orderItem.itemName].cost * 0.75).toFixed(2)) * orderItem.quantity
+                                    cost: items[orderItem.itemName].cost * orderItem.quantity
                                 });
                                 let remainingQuantity = orderItem.quantity;
                                 while (remainingQuantity > 0) {
@@ -3010,7 +3010,7 @@
                             // Single item order logic
                             const itemToOrder = orderTask.item;
                             const quantityToOrder = orderTask.isUrgent ? orderTask.requiredQuantity : 1;
-                            const restockPrice = parseFloat((items[itemToOrder].cost * 0.75).toFixed(2));
+                            const restockPrice = items[itemToOrder].cost;
                             const totalCost = restockPrice * quantityToOrder;
 
                             if (cash - totalCost < 30) {
@@ -5894,7 +5894,7 @@
 
         function openOrderQuantityModal(itemName) {
             const itemData = items[itemName];
-            const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+            const restockPrice = itemData.cost;
 
             document.getElementById('order-quantity-item-name').textContent = itemName;
             document.getElementById('order-quantity-item-cost').textContent = `$${restockPrice.toFixed(2)}`;
@@ -6093,7 +6093,7 @@
             for (const itemName in currentRestockOrder) {
                 const quantity = currentRestockOrder[itemName];
                 const itemData = items[itemName];
-                const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                const restockPrice = itemData.cost;
                 total += restockPrice * quantity;
             }
             document.getElementById('restock-total').textContent = total.toFixed(2);
@@ -6102,7 +6102,7 @@
         function buyNow(itemName) {
             const quantity = 5;
             const itemData = items[itemName];
-            const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+            const restockPrice = itemData.cost;
             const totalCost = restockPrice * quantity;
 
             const packagesFromOrder = Math.ceil(quantity / MAX_PACKAGE_SIZE);
@@ -6122,7 +6122,7 @@
         function buyNowOne(itemName) {
             const quantity = 1;
             const itemData = items[itemName];
-            const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+            const restockPrice = itemData.cost;
             const totalCost = restockPrice * quantity;
 
             const packagesFromOrder = Math.ceil(quantity / MAX_PACKAGE_SIZE);
@@ -6150,7 +6150,7 @@
                 const quantity = orderSource[itemName];
                 if (quantity > 0) {
                     const itemData = items[itemName];
-                    const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                    const restockPrice = itemData.cost;
                     totalCost += restockPrice * quantity;
                     itemsToOrder++;
                     packagesFromOrder += Math.ceil(quantity / MAX_PACKAGE_SIZE);
@@ -6170,7 +6170,7 @@
                     if (quantityToOrder > 0) {
                         dailyPlayerPurchases[itemName] = (dailyPlayerPurchases[itemName] || 0) + quantityToOrder;
                         const itemData = items[itemName];
-                        const restockPrice = parseFloat((itemData.cost * 0.75).toFixed(2));
+                        const restockPrice = itemData.cost;
                         dailySupplyOrders.push({
                             orderedBy: 'Player',
                             itemName: itemName,

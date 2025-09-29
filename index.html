@@ -6808,15 +6808,23 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
             }
 
+        // Enable market by default for all new games.
+        marketEnabled = true;
+        marketType = 'classic';
+
             if (options.casual) {
                 casualNoBreaks = options.casual.noBreaks;
                 casualNoDebtPenalty = options.casual.noDebtPenalty;
-                marketEnabled = options.casual.market;
+            marketEnabled = options.casual.market; // Casual options can override
                 if (marketEnabled) {
                     marketType = options.casual.marketType;
-                    generateInitialMarketData();
                 }
             }
+
+        // Generate data if market is enabled, after all options are processed.
+        if (marketEnabled) {
+            generateInitialMarketData();
+        }
 
             // 4. Finalize setup
             initializeLayout();

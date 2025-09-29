@@ -3727,8 +3727,15 @@
         }
 
         function handleClockClick() {
-            if (!dayStarted) return;
+            if (!dayStarted) {
+                // If the day hasn't started and we are not in continuous mode, clicking the clock starts the day.
+                if (!continuousMode) {
+                    document.getElementById('start-day-btn').click();
+                }
+                return; // In either case, if day hasn't started, do nothing else.
+            }
 
+            // The rest of the function is for skipping parts of an already started day.
             if (dayPhase === 'opening') {
                 dayTimer = DAY_SHIFT_DURATION + NIGHT_SHIFT_DURATION + CLOSING_DURATION;
                 dayPhase = 'day-shift';
@@ -4768,7 +4775,9 @@
                 saveGame();
                 reportPanel.classList.add('hidden');
                 dailySalesReport = [];
-                document.getElementById('start-day-btn').click();
+                if (continuousMode) {
+                    document.getElementById('start-day-btn').click();
+                }
             };
         }
 
@@ -7070,7 +7079,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 employeeWorkTimers,
                 employees: employeesToSave,
                 priceHistory,
-                marketType, marketEnabled
+                marketType, marketEnabled,
+                continuousMode
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -7140,6 +7150,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     // Load market settings, with fallbacks for older saves
                     marketEnabled = gameState.marketEnabled !== undefined ? gameState.marketEnabled : true;
                     marketType = gameState.marketType || 'classic';
+
+                    continuousMode = gameState.continuousMode || false;
 
 
                 } catch (e) {
@@ -7521,6 +7533,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             continuousToggle.checked = continuousMode;
             continuousToggle.addEventListener('change', (e) => {
                 continuousMode = e.target.checked;
+                saveGame();
             });
 
             loadSpriteSheet(); // Generate and load player spritesheet

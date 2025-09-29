@@ -4248,7 +4248,8 @@
                 const supplyFactor = 1 - (playerBuys * 0.015);
 
                 // 3. Calculate New Cost
-                let newCost = baseCost * demandFactor * supplyFactor;
+                // The new cost is based on the *previous day's* price, not the original base cost.
+                let newCost = items[itemName].cost * demandFactor * supplyFactor;
 
                 // 4. Clamp the price to prevent extreme swings
                 const minCost = baseCost * 0.25; // Cannot go below 25% of base price
@@ -4334,7 +4335,7 @@
             // Apply the market logic based on player's choice
             if (marketEnabled) {
                 // For modes that are modifiers on a base price, reset costs first.
-                if (['dailyMood', 'categoryFocus', 'liveSimulation'].includes(marketType)) {
+                if (['dailyMood', 'categoryFocus'].includes(marketType)) {
                     Object.keys(items).forEach(key => {
                         if (originalItemCosts[key]) {
                             items[key].cost = originalItemCosts[key];

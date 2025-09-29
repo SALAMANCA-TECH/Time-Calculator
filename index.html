@@ -2618,6 +2618,8 @@
                             }
                         }
                     }
+
+                    priceHistory = gameState.priceHistory || priceHistory;
                     break;
                 case 'fetching':
                     if (moveCharacterTowards(stocker, stocker.task.target.x, stocker.task.target.y, deltaTime)) {
@@ -4265,8 +4267,8 @@
                 // Add today's actual price to the history
                 priceHistory[itemName].history.push(items[itemName].cost);
 
-                // Keep the history to the last 4 days for the chart display
-                if (priceHistory[itemName].history.length > 4) {
+                // Keep the history to the last 7 days for the chart display
+                if (priceHistory[itemName].history.length > 7) {
                     priceHistory[itemName].history.shift();
                 }
 
@@ -5204,7 +5206,6 @@
 
             // --- Data Aggregation ---
             let aggregatedHistory = [];
-            let aggregatedPredictions = [];
             const isArtCategory = storageCells.some(cell => cell.label === selectedKey);
             let itemsToAverage = [];
 
@@ -5216,7 +5217,11 @@
             }
 
             if (itemsToAverage.length > 0) { // Aggregate category data
-                for (let i = 0; i < 4; i++) { // History
+                const firstItemHistory = priceHistory[itemsToAverage[0]]?.history;
+                if (!firstItemHistory) return null;
+
+                const historyLength = firstItemHistory.length;
+                for (let i = 0; i < historyLength; i++) {
                     let sum = 0, count = 0;
                     itemsToAverage.forEach(item => {
                         if (priceHistory[item] && priceHistory[item].history[i] !== undefined) {
@@ -5226,35 +5231,24 @@
                     });
                     aggregatedHistory.push(count > 0 ? sum / count : 0);
                 }
-                for (let i = 0; i < 3; i++) { // Predictions
-                    let sum = 0, count = 0;
-                    itemsToAverage.forEach(item => {
-                        if (priceHistory[item] && priceHistory[item].predictions[i] !== undefined) {
-                            sum += priceHistory[item].predictions[i];
-                            count++;
-                        }
-                    });
-                    aggregatedPredictions.push(count > 0 ? sum / count : 0);
-                }
             } else { // Individual item data
                 const itemData = priceHistory[selectedKey];
                 if (itemData) {
                     aggregatedHistory = itemData.history || [];
-                    aggregatedPredictions = itemData.predictions || [];
                 }
             }
 
-            const allDataPoints = [...aggregatedHistory, ...aggregatedPredictions];
-            if (allDataPoints.length < 7) return null; // Not enough data to draw
+            const historyData = aggregatedHistory;
+            if (historyData.length < 2) return null; // Need at least 2 points to draw a line
 
             // --- Y-Axis Scaling ---
-            const maxVal = Math.max(...allDataPoints);
-            const minVal = Math.min(...allDataPoints);
+            const maxVal = Math.max(...historyData);
+            const minVal = Math.min(...historyData);
             const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
             // --- Percentage Change (Today vs. Yesterday) ---
-            const todayPrice = aggregatedHistory[3];
-            const yesterdayPrice = aggregatedHistory[2];
+            const todayPrice = historyData[historyData.length - 1];
+            const yesterdayPrice = historyData[historyData.length - 2];
             const percentChange = yesterdayPrice === 0 ? 0 : ((todayPrice - yesterdayPrice) / yesterdayPrice) * 100;
 
             // --- Drawing Setup ---
@@ -5263,46 +5257,48 @@
             const chartHeight = canvas.height - padding.top - padding.bottom;
 
             // --- X-Axis Labels ---
-            const labels = ["-3d", "-2d", "-1d", "Today", "+1d", "+2d", "+3d"];
+            const labels = [];
+            for (let i = 0; i < historyData.length; i++) {
+                const dayDiff = i - (historyData.length - 1);
+                if (dayDiff === 0) {
+                    labels.push("Today");
+                } else {
+                    labels.push(`${dayDiff}d`);
+                }
+            }
             ctx.font = '10px "VT323"';
             ctx.fillStyle = '#5d4037';
             ctx.textAlign = 'center';
             labels.forEach((label, index) => {
-                const x = padding.left + (index / (allDataPoints.length - 1)) * chartWidth;
-                ctx.fillText(label, x, canvas.height - 5);
+                if (historyData.length > 1) {
+                    const x = padding.left + (index / (historyData.length - 1)) * chartWidth;
+                    ctx.fillText(label, x, canvas.height - 5);
+                }
             });
 
             // --- Historical Data (Solid Line) ---
             ctx.strokeStyle = percentChange >= 0 ? '#22c55e' : '#ef4444';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            aggregatedHistory.forEach((point, index) => {
-                const x = padding.left + (index / (allDataPoints.length - 1)) * chartWidth;
-                const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
-                if (index === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+            historyData.forEach((point, index) => {
+                 if (historyData.length > 1) {
+                    const x = padding.left + (index / (historyData.length - 1)) * chartWidth;
+                    const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
+                    if (index === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
             });
             ctx.stroke();
-
-            // --- Predicted Data (Dashed Line) ---
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath();
-            const todayX = padding.left + (3 / (allDataPoints.length - 1)) * chartWidth;
-            const todayY = padding.top + chartHeight - ((todayPrice - minVal) / range) * chartHeight;
-            ctx.moveTo(todayX, todayY); // Start from today's point
-            aggregatedPredictions.forEach((point, index) => {
-                const x = padding.left + ((4 + index) / (allDataPoints.length - 1)) * chartWidth;
-                const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
-                ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-            ctx.setLineDash([]); // Reset to solid
 
             // --- "Today's" Point ---
-            ctx.fillStyle = '#5d4037';
-            ctx.beginPath();
-            ctx.arc(todayX, todayY, 4, 0, Math.PI * 2);
-            ctx.fill();
+             if (historyData.length > 1) {
+                const todayX = padding.left + chartWidth;
+                const todayY = padding.top + chartHeight - ((todayPrice - minVal) / range) * chartHeight;
+                ctx.fillStyle = '#5d4037';
+                ctx.beginPath();
+                ctx.arc(todayX, todayY, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
             return percentChange;
         }
@@ -6849,7 +6845,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 customerProfiles, enabledItems,
                 currentWeeklyAccruedBill, currentWeeklyLaborCost,
                 employeeWorkTimers,
-                employees: employeesToSave
+                employees: employeesToSave,
+                priceHistory
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }

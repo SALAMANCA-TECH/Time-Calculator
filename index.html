@@ -7373,8 +7373,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const unlockedItems = new Set();
             // Add items from unlocked storage cells
             unlocks.storage.forEach((isUnlocked, index) => {
-                if (isUnlocked) {
-                    storageCells[index].allowedItems.forEach(item => unlockedItems.add(item));
+                const category = storageCells[index];
+                // Ensure the category and its allowedItems exist before access.
+                if (isUnlocked && category && category.allowedItems) {
+                    category.allowedItems.forEach(item => unlockedItems.add(item));
                 }
             });
 
@@ -8479,6 +8481,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
                 hostConnection.on('data', (data) => {
                     if (data.action === 'click') {
+                        // Special handling for the back button to ensure it works.
+                        if (data.elementId === 'phone-back-btn') {
+                            console.log('Host executing special action for phone-back-btn');
+                            showAppGrid();
+                            sendFullGameStateToCompanion();
+                            return;
+                        }
+
                         const element = document.getElementById(data.elementId);
                         if (element) {
                             console.log(`Host executing click on: #${data.elementId}`);

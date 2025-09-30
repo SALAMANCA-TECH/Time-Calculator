@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Patrick+Hand&family=VT323&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Patrick+Hand&family=VT323&family=Playfair+Display:wght@700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Patrick Hand', cursive;
@@ -115,6 +115,15 @@
         }
         .toggle-checkbox:checked + .toggle-label {
             background-color: #f7e7d8;
+        }
+
+        /* Newspaper Styles */
+        .font-playfair { font-family: 'Playfair Display', serif; }
+        .font-merriweather { font-family: 'Merriweather', serif; }
+        .newspaper-container {
+            max-height: 90vh;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAMqADAAQAAAABAAAAMgAAAADXPWSMAAAAcUlEQVR4Ae3aQQ0AIAwEQf//6G0pAh5Ej5oJo0yS9ACCeM3Gk2SoeDPZfGk2gT1BtybYt2T7Jtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJvQG4AAdx4c33/AAAAAElFTkSuQmCC');
+            background-repeat: repeat;
         }
     </style>
 </head>
@@ -570,10 +579,32 @@
         </div>
     </div>
 
+    <!-- Newspaper Modal -->
+    <div id="newspaper-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-5000 p-4">
+        <div class="bg-[#fdf6e3] w-full max-w-3xl p-6 rounded-lg shadow-2xl border-4 border-amber-900 text-amber-900 flex flex-col relative newspaper-container">
+            <button id="close-newspaper-btn" class="absolute -top-4 -right-4 bg-red-700 text-white rounded-full w-10 h-10 text-2xl font-bold border-4 border-white hover:bg-red-600 transition-transform hover:scale-110">&times;</button>
+            <div class="text-center mb-4">
+                <h1 class="font-playfair text-5xl font-bold text-purple-900 pb-2 border-b-4 border-double border-purple-900">The Daily Mood</h1>
+                <p class="text-lg text-gray-600 mt-2">Edition: Day <span id="newspaper-day">1</span></p>
+            </div>
+            <div class="flex-grow overflow-y-auto p-4 border-t border-gray-300">
+                <h2 id="newspaper-headline" class="font-playfair text-3xl font-bold text-gray-800 mb-4"></h2>
+                <p id="newspaper-description" class="font-merriweather text-lg leading-relaxed text-gray-700"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- End of Day Report Panel -->
     <div id="end-of-day-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-2000">
         <div class="bg-amber-100 w-full max-w-4xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 90vh;">
-            <h2 class="text-3xl font-handwritten text-center mb-4 flex-shrink-0">End of Day Report</h2>
+            <div class="flex justify-center items-center relative mb-4 flex-shrink-0">
+                <h2 class="text-3xl font-handwritten text-center">End of Day Report</h2>
+                <button id="eod-newspaper-btn" class="absolute right-0 btn-style p-2 hidden" title="Read Today's News">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 12h6m-6-4h6" />
+                    </svg>
+                </button>
+            </div>
 
             <!-- Summary Section -->
             <div class="grid grid-cols-2 gap-6 mb-4 flex-shrink-0">
@@ -847,6 +878,133 @@
             liveSimulation: "<strong>Live Simulation:</strong> The most dynamic option. Prices react directly to your actions. Buying lots of one item will decrease its cost tomorrow, while high customer demand will increase it."
         };
 
+        const dailyMoodHeadlines = [
+            // Positive Events
+            {
+                headline: "Titanium White Surplus Floods Market!",
+                description: "A major paint manufacturer discovered a new, efficient refinement process, leading to a massive surplus of white pigment. Artists rejoice as a key component becomes cheaper than ever.",
+                effects: [{ category: "Painting", modifier: -0.20, items: "all" }]
+            },
+            {
+                headline: "Recycled Lumber Initiative Gains Traction",
+                description: "Local initiatives to reclaim and process used lumber have proven successful, reducing the cost of raw materials for woodworkers. The program is being hailed as an environmental and economic victory.",
+                effects: [{ category: "Woodworking", modifier: -0.15, items: "all" }]
+            },
+            {
+                headline: "\"Sketch Daily\" App Goes Viral",
+                description: "A new mobile app encouraging daily drawing habits has exploded in popularity, causing a boom in demand for basic supplies. Suppliers are offering discounts to capture the new wave of artists.",
+                effects: [{ category: "Drawing", modifier: -0.10, items: "all" }]
+            },
+            {
+                headline: "3D Printing Glues Deemed Overkill for Hobbyists",
+                description: "A study reveals that most hobbyists are overpaying for industrial-strength glues when simpler, cheaper alternatives work just as well. This has led to a price correction in the model adhesive market.",
+                effects: [{ category: "Models", modifier: -0.25, items: ["Glue"] }]
+            },
+            {
+                headline: "Bountiful Harvest for Linseed Farmers",
+                description: "Ideal weather conditions have resulted in a record-breaking harvest for linseed, a key ingredient in oil paints and wood stainers. The abundance of raw material is passing savings on to consumers.",
+                effects: [
+                    { category: "Painting", modifier: -0.10, items: "all" },
+                    { category: "Woodworking", modifier: -0.10, items: "all" }
+                ]
+            },
+            {
+                headline: "Global Shipping Lanes Clear Up",
+                description: "Recent international agreements have streamlined customs and reduced port congestion. The resulting drop in shipping costs has had a positive, deflationary effect on all imported goods.",
+                effects: [{ category: "All", modifier: -0.05, items: "all" }]
+            },
+            // Negative Events
+            {
+                headline: "Rare Earth Pigment Mine Collapse Halts Production",
+                description: "A critical mine supplying rare earth minerals for vibrant paint pigments has collapsed. The scarcity is expected to cause a sharp increase in the price of high-quality paints.",
+                effects: [{ category: "Painting", modifier: 0.30, items: "all" }]
+            },
+            {
+                headline: "Spotted Lanternfly Infestation Threatens Maple Trees",
+                description: "A widespread infestation of the Spotted Lanternfly is devastating maple forests, a popular source of wood for sculptors and woodworkers. The cost of quality, unblemished lumber is soaring.",
+                effects: [
+                    { category: "Woodworking", modifier: 0.20, items: "all" },
+                    { category: "Sculpture", modifier: 0.20, items: "all" }
+                ]
+            },
+            {
+                headline: "Architectural Firm Wins Prestigious Award With New Marker Style",
+                description: "After a local firm won the Pritzker Prize, their lead architect credited a specific brand of \"Fancy Markers\" for their unique design style. This celebrity endorsement has caused a run on the markers, and prices have skyrocketed.",
+                effects: [{ category: "Architectural", modifier: 0.25, items: ["Fancy Markers"] }]
+            },
+            {
+                headline: "Factory Fire Destroys Model Kit Molds",
+                description: "A fire at the largest model kit factory in the region has destroyed irreplaceable molds for classic and popular kits. Collectors and hobbyists are scrambling to buy up existing stock, driving up prices.",
+                effects: [{ category: "Models", modifier: 0.40, items: "all" }]
+            },
+            {
+                headline: "Graphite Dust Regulations Tighten",
+                description: "New environmental regulations on graphite dust are forcing pencil and charcoal manufacturers to install expensive filtration systems. The cost is being passed on to the consumer.",
+                effects: [{ category: "Drawing", modifier: 0.15, items: "all" }]
+            },
+            {
+                headline: "Local Quarries Face Labor Dispute",
+                description: "Ongoing labor disputes at several regional stone quarries have significantly slowed the supply of marble and carving stone. The shortage is causing major price hikes for sculptors.",
+                effects: [{ category: "Sculpture", modifier: 0.35, items: "all" }]
+            },
+            {
+                headline: "Inflation Concerns Spark Widespread Price Hikes",
+                description: "Rising energy and labor costs are affecting all sectors of the economy. Art supply distributors have announced a general price increase across all product lines to compensate.",
+                effects: [{ category: "All", modifier: 0.10, items: "all" }]
+            },
+            // Mixed Events
+            {
+                headline: "New Polymer Clay Praised for Wood-Like Finish",
+                description: "A tech startup has released a new polymer clay that perfectly mimics the texture and finish of carved wood. Sculptors and model makers are flocking to the cheaper, easier-to-use material, causing a slump in the traditional lumber market.",
+                effects: [
+                    { category: "Sculpture", modifier: -0.15, items: "all" },
+                    { category: "Woodworking", modifier: 0.05, items: "all" }
+                ]
+            },
+            {
+                headline: "\"The Great Outdoors\" Painting Competition Announced",
+                description: "A national \"en plein air\" painting competition with a huge cash prize has been announced. The event has sparked a massive demand for portable canvases and watercolor sets, leading to supplier price hikes.",
+                effects: [
+                    { category: "Painting", modifier: 0.15, items: "all" },
+                    { category: "Drawing", modifier: 0.05, items: "all" }
+                ]
+            },
+            {
+                headline: "Chemical Plant Fire Disrupts Supply Chain",
+                description: "A fire at a key chemical manufacturing plant has created a critical shortage of solvents and acrylic polymers. This affects a wide range of products, from paints and glues to markers and finishing sprays.",
+                effects: [
+                    { category: "Painting", modifier: 0.10, items: "all" },
+                    { category: "Models", modifier: 0.15, items: "all" },
+                    { category: "Architectural", modifier: 0.05, items: "all" }
+                ]
+            },
+            {
+                headline: "Viral Trend Sees Artists \"Upcycling\" Old Tech",
+                description: "A new art trend has artists creating sculptures from old computer parts and electronics. This has created a demand for strong glues and precision razors, while reducing the demand for traditional art paper and sketchbooks.",
+                effects: [
+                    { category: "Models", modifier: 0.10, items: "all" },
+                    { category: "Drawing", modifier: -0.05, items: "all" }
+                ]
+            },
+            {
+                headline: "Film Studio Buys Bulk Vellum for Animated Feature",
+                description: "A major animation studio has purchased nearly the entire global supply of high-grade vellum for a traditionally animated film. The move has created a shortage for architects, but has unexpectedly boosted sales of cheaper sketchbooks as an alternative.",
+                effects: [
+                    { category: "Architectural", modifier: 0.30, items: "all" },
+                    { category: "Drawing", modifier: -0.05, items: "all" }
+                ]
+            },
+            {
+                headline: "Renowned Painter Denounces Digital Art",
+                description: "Influential artist Jean-Pierre Monet publicly criticized the rise of digital art, calling for a return to \"pure, physical media.\" The speech has inspired a surge in oil and acrylic sales, but architectural firms, heavily reliant on digital drafting, are seeing supply costs drop as demand wanes.",
+                effects: [
+                    { category: "Painting", modifier: 0.15, items: "all" },
+                    { category: "Architectural", modifier: -0.10, items: "all" }
+                ]
+            }
+        ];
+
+        let currentDailyMood = null; // This will store the active headline object for the day.
         let tempMarketStyle = 'classic'; // To hold selection before confirming
 
         function openMarketStyleModal() {
@@ -4197,6 +4355,26 @@
             showMessage(reason || defaultMessage, null);
         }
 
+function openNewspaperModal() {
+    if (!currentDailyMood) {
+        console.warn("Tried to open newspaper, but no daily mood is set.");
+        return;
+    }
+
+    const modal = document.getElementById('newspaper-modal');
+    // The news is for the *upcoming* day
+    document.getElementById('newspaper-day').textContent = day + 1;
+    document.getElementById('newspaper-headline').textContent = currentDailyMood.headline;
+    document.getElementById('newspaper-description').textContent = currentDailyMood.description;
+
+    modal.classList.remove('hidden');
+}
+
+function closeNewspaperModal() {
+    const modal = document.getElementById('newspaper-modal');
+    modal.classList.add('hidden');
+}
+
         function applyClassicMarket() {
             Object.keys(items).forEach(itemName => {
                 const baseCost = originalItemCosts[itemName];
@@ -4209,26 +4387,38 @@
         }
 
         function applyDailyMoodMarket() {
-            const moods = [
-                { name: "Supplier Surplus", modifier: -0.15, message: "Supplier Surplus! All costs are down 15%!" },
-                { name: "High Demand", modifier: 0.20, message: "High Demand! All costs are up 20%!" },
-                { name: "Price Crash", modifier: -0.30, message: "Market Crash! All costs are down 30% today!" },
-                { name: "Shipping Crisis", modifier: 0.50, message: "Shipping Crisis! Costs have spiked by 50%!" },
-                { name: "Stable Market", modifier: 0, message: "The market is stable today." }
-            ];
+            // Select a random headline from the new data structure
+            currentDailyMood = dailyMoodHeadlines[Math.floor(Math.random() * dailyMoodHeadlines.length)];
 
-            // Select a random mood (you can adjust probabilities later if you want)
-            const currentMood = moods[Math.floor(Math.random() * moods.length)];
+            if (!currentDailyMood) return;
 
-            if (currentMood.modifier !== 0) {
-                Object.keys(items).forEach(itemName => {
-                    const baseCost = items[itemName].cost;
-                    items[itemName].cost = parseFloat((baseCost * (1 + currentMood.modifier)).toFixed(2));
+            // Apply each effect listed in the headline object
+            currentDailyMood.effects.forEach(effect => {
+                const { category, modifier, items: affectedItems } = effect;
+
+                let targetItems = [];
+
+                if (category === "All") {
+                    targetItems = Object.keys(items);
+                } else {
+                    const storageCategory = storageCells.find(cell => cell.label === category);
+                    if (storageCategory) {
+                        targetItems = storageCategory.allowedItems;
+                    }
+                }
+
+                targetItems.forEach(itemName => {
+                    // Check if this specific item should be affected
+                    if (affectedItems === "all" || affectedItems.includes(itemName)) {
+                        const baseCost = items[itemName].cost;
+                        items[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                    }
                 });
-            }
+            });
 
-            // Display the news to the player
-            spawnFloatingText(currentMood.message, canvas.width / 2, 120, '#3b82f6');
+
+            // Display the headline to the player
+            spawnFloatingText(currentDailyMood.headline, canvas.width / 2, 120, '#3b82f6');
         }
 
         function applyCategoryFocusMarket() {
@@ -4735,6 +4925,15 @@
             // --- END: POPULATE NEW REPORT VIEWS ---
 
             reportPanel.classList.remove('hidden');
+
+            // --- Newspaper & Market Report Logic ---
+            const eodNewspaperBtn = document.getElementById('eod-newspaper-btn');
+            if (marketType === 'dailyMood' && currentDailyMood) {
+                eodNewspaperBtn.classList.remove('hidden');
+                openNewspaperModal();
+            } else {
+                eodNewspaperBtn.classList.add('hidden');
+            }
 
             // Default to customer view
             document.getElementById('report-view-customers').classList.remove('hidden');
@@ -5640,6 +5839,21 @@
         function openMarketPanel() {
             const container = document.getElementById('market-categories-container');
             container.innerHTML = ''; // Clear previous reports
+
+            // --- Add Market Style and Newspaper Button ---
+            const styleName = marketType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            let headerHtml = `<div class="flex justify-between items-center border-b-2 border-amber-800/30 mb-2">`;
+            headerHtml += `<h3 class="text-xl font-handwritten">Market Style: ${styleName}</h3>`;
+            if (marketType === 'dailyMood' && currentDailyMood) {
+                headerHtml += `<button id="market-app-newspaper-btn" class="btn-style p-2" title="Read Today's News">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 12h6m-6-4h6" />
+                    </svg>
+                </button>`;
+            }
+            headerHtml += `</div>`;
+            container.innerHTML += headerHtml;
+
 
             const allCategories = [
                 ...storageCells.map(cell => cell.label),
@@ -7119,7 +7333,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 employees: employeesToSave,
                 priceHistory,
                 marketType, marketEnabled,
-                continuousMode
+                continuousMode,
+                currentDailyMood
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -7191,6 +7406,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     marketType = gameState.marketType || 'classic';
 
                     continuousMode = gameState.continuousMode || false;
+                    currentDailyMood = gameState.currentDailyMood || null;
 
 
                 } catch (e) {
@@ -7454,6 +7670,17 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 saveGame();
                 closeMarketStyleModal();
             });
+
+            // Newspaper Modal Listeners
+            document.getElementById('close-newspaper-btn').addEventListener('click', closeNewspaperModal);
+            document.getElementById('eod-newspaper-btn').addEventListener('click', openNewspaperModal);
+            // Use event delegation for the button inside the phone app, as it's created dynamically
+            document.getElementById('market-categories-container').addEventListener('click', (e) => {
+                if (e.target.closest('#market-app-newspaper-btn')) {
+                    openNewspaperModal();
+                }
+            });
+
 
             document.querySelectorAll('.market-style-btn').forEach(button => {
                 button.addEventListener('click', (e) => {

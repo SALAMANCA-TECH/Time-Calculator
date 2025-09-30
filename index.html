@@ -454,7 +454,10 @@
             <p class="mb-4 text-center">Scan this QR code with your companion device to sync.</p>
             <canvas id="qr-code-canvas" class="border-4 border-amber-800/50 rounded-lg"></canvas>
             <p id="host-status" class="mt-4 mb-6 text-sm text-center">Waiting for connection...</p>
-            <button id="host-sync-close-btn" class="btn-style px-6 py-2">Close</button>
+            <div class="flex space-x-4">
+                <button id="host-sync-close-btn" class="btn-style px-6 py-2">Close</button>
+                <a id="open-in-tab-btn" href="#" target="_blank" class="btn-style bg-blue-600 hover:bg-blue-500 px-6 py-2 hidden">Open in Tab</a>
+            </div>
         </div>
     </div>
 
@@ -8421,6 +8424,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             document.getElementById('host-sync-modal').classList.remove('hidden');
             document.getElementById('host-status').textContent = 'Generating connection...';
+            document.getElementById('open-in-tab-btn').classList.add('hidden'); // Hide button initially
 
             // Let PeerJS generate a unique ID for us.
             peer = new Peer();
@@ -8433,6 +8437,11 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 try {
                     const baseUrl = window.location.origin + window.location.pathname;
                     const companionUrl = `${baseUrl}?companion_id=${id}`;
+
+                    // Set up the "Open in Tab" button
+                    const openInTabBtn = document.getElementById('open-in-tab-btn');
+                    openInTabBtn.href = companionUrl;
+                    openInTabBtn.classList.remove('hidden');
 
                     const qr = qrcode(0, 'L');
                     qr.addData(companionUrl);

@@ -590,6 +590,12 @@
             <div class="flex-grow overflow-y-auto p-4 border-t border-gray-300">
                 <h2 id="newspaper-headline" class="font-playfair text-3xl font-bold text-gray-800 mb-4"></h2>
                 <p id="newspaper-description" class="font-merriweather text-lg leading-relaxed text-gray-700"></p>
+                <div class="text-center mt-6">
+                    <button id="newspaper-hint-btn" class="btn-style px-6 py-2">Show Hint</button>
+                </div>
+                <div id="newspaper-hint-display" class="hidden mt-4 p-3 bg-purple-100/50 border-2 border-purple-200 rounded-lg text-center">
+                    <!-- Hint text will be populated here -->
+                </div>
             </div>
         </div>
     </div>
@@ -4362,10 +4368,17 @@ function openNewspaperModal() {
     }
 
     const modal = document.getElementById('newspaper-modal');
+    const hintBtn = document.getElementById('newspaper-hint-btn');
+    const hintDisplay = document.getElementById('newspaper-hint-display');
+
     // The news is for the *upcoming* day
     document.getElementById('newspaper-day').textContent = day + 1;
     document.getElementById('newspaper-headline').textContent = currentDailyMood.headline;
     document.getElementById('newspaper-description').textContent = currentDailyMood.description;
+
+    // Reset hint state every time the modal is opened
+    hintDisplay.classList.add('hidden');
+    hintBtn.classList.remove('hidden');
 
     modal.classList.remove('hidden');
 }
@@ -4373,6 +4386,39 @@ function openNewspaperModal() {
 function closeNewspaperModal() {
     const modal = document.getElementById('newspaper-modal');
     modal.classList.add('hidden');
+}
+
+function generateHintText() {
+    if (!currentDailyMood || !currentDailyMood.effects) {
+        return "No market effect information available.";
+    }
+
+    const hintParts = currentDailyMood.effects.map(effect => {
+        const { category, modifier, items: affectedItems } = effect;
+        const percentage = (modifier * 100).toFixed(0);
+        const sign = modifier > 0 ? '+' : '';
+        const color = modifier > 0 ? 'text-red-600' : 'text-green-600';
+
+        let itemLimiter = '';
+        if (Array.isArray(affectedItems)) {
+            itemLimiter = ` (${affectedItems.join(', ')} only)`;
+        }
+
+        return `<span class="font-bold ${color}">${category}${itemLimiter}: ${sign}${percentage}%</span>`;
+    });
+
+    return hintParts.join('<br>');
+}
+
+function showHint() {
+    const hintDisplay = document.getElementById('newspaper-hint-display');
+    const hintBtn = document.getElementById('newspaper-hint-btn');
+
+    const hintText = generateHintText();
+    hintDisplay.innerHTML = hintText;
+
+    hintDisplay.classList.remove('hidden');
+    hintBtn.classList.add('hidden');
 }
 
         function applyClassicMarket() {
@@ -7674,6 +7720,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             // Newspaper Modal Listeners
             document.getElementById('close-newspaper-btn').addEventListener('click', closeNewspaperModal);
             document.getElementById('eod-newspaper-btn').addEventListener('click', openNewspaperModal);
+            document.getElementById('newspaper-hint-btn').addEventListener('click', showHint);
             // Use event delegation for the button inside the phone app, as it's created dynamically
             document.getElementById('market-categories-container').addEventListener('click', (e) => {
                 if (e.target.closest('#market-app-newspaper-btn')) {

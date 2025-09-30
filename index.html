@@ -1192,7 +1192,6 @@
         let hostConnection = null;
         let companionConnection = null;
         let lastSentState = null;
-        const PEER_PREFIX = 'art-supply-emporium-';
 
         const OPENING_DURATION = 30000; // 30 seconds
         const DAY_SHIFT_DURATION = 60000; // 1 minute
@@ -7917,14 +7916,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     // If we have an ID from the QR code, connect immediately.
                     connectToHost(companionId);
                 } else {
-                    // Otherwise, show the sync screen for manual entry.
+                    // Otherwise, show the sync screen to wait for a QR scan.
                     showAppScreen('companion-sync-screen');
                     document.getElementById('phone-back-btn').classList.add('hidden');
-                     if (isSmallScreen && !isCompanion) {
-                        // Show the specific warning message for small screens
-                        const instructions = document.getElementById('companion-instructions');
-                        instructions.innerHTML = "Your screen is small! To play the full game, please enlarge your browser window. <br>To use this as a companion controller, enter the code from your main game screen below.";
-                    }
                 }
                 return; // Stop normal game initialization for companion
             }
@@ -7946,7 +7940,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('host-sync-close-btn').addEventListener('click', () => document.getElementById('host-sync-modal').classList.add('hidden'));
 
             // Companion listeners
-            document.getElementById('companion-connect-btn').addEventListener('click', () => connectToHost()); // Manual connection
+            // The manual connection button has been removed, so this listener is no longer needed.
+            // document.getElementById('companion-connect-btn').addEventListener('click', () => connectToHost());
 
 
             const hasSave = localStorage.getItem('artEmporiumSave');

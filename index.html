@@ -8486,36 +8486,112 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             shelves = state.shelves;
             storageCells = state.storageCells;
             loadingDockPackages = state.loadingDockPackages;
+            customerProfiles = state.customerProfiles;
+            enabledItems = state.enabledItems;
+            priceHistory = state.priceHistory;
+            marketType = state.marketType;
+            marketEnabled = state.marketEnabled;
+            items = state.items; // Make sure item costs are updated
+            developerMode = state.developerMode;
+            dayPhase = state.dayPhase;
+            continuousMode = state.continuousMode;
+            originalItemCosts = state.originalItemCosts;
+            player.basket = state.player.basket;
+            isMandatoryBreak = state.isMandatoryBreak;
+            currentRestockOrder = state.currentRestockOrder;
+
+
+            // Update employee data from the host
+            const allEmployees = { cashier, stocker, barista, manager, salesperson };
+            if (state.employees) {
+                for (const empKey in state.employees) {
+                    if (allEmployees[empKey]) {
+                        allEmployees[empKey].shift = state.employees[empKey].shift;
+                        allEmployees[empKey].breakPreference = state.employees[empKey].breakPreference;
+                        allEmployees[empKey].onBreak = state.employees[empKey].onBreak;
+                    }
+                }
+            }
+
             // We need to re-attach the draw method to shelves
             shelves.forEach(shelf => shelf.draw = drawShelf);
 
-
             // Now, refresh any open UI panels to reflect the new state
             updateUI(); // Updates top-level cash, day, points displays
+            updateBasketUI(); // Update basket display
+
             if (activePhoneScreen) {
                 // This is a simple way to refresh. Find the function that opens the current screen and call it.
                 // This re-renders the content with the new data.
                 switch(activePhoneScreen) {
                     case 'restock-panel': openRestockPanel(); break;
+                    case 'order-quantity-modal':
+                        const item = document.getElementById('order-quantity-input')?.dataset.item;
+                        if(item) openOrderQuantityModal(item);
+                        else openRestockPanel(); // Fallback if item is not found
+                        break;
                     case 'unlocks-panel': openUnlocksPanel(); break;
                     case 'shelf-assignment-panel': openShelfAssignmentPanel(); break;
-                    case 'shelf-panel': if(activeShelf) openShelfPanel(activeShelf); break;
-                    case 'storage-panel': if(activeStorageCell) openStorageCell(activeStorageCell); break;
+                    case 'shelf-panel':
+                         // Find the correct shelf object to pass. Don't rely on the potentially stale activeShelf.
+                        const shelfTitle = document.getElementById('shelf-title')?.textContent || '';
+                        const shelfIndexMatch = shelfTitle.match(/Shelf (\d+)/);
+                        if (shelfIndexMatch) {
+                            const shelfIndex = parseInt(shelfIndexMatch[1], 10) - 1;
+                            if (shelves[shelfIndex]) openShelfPanel(shelves[shelfIndex]);
+                        }
+                        break;
+                    case 'storage-panel':
+                        const storageTitle = document.getElementById('storage-title')?.textContent || '';
+                        const cell = storageCells.find(c => c.label === storageTitle);
+                        if (cell) openStorageCell(cell);
+                        break;
+                     case 'assignment-panel':
+                        // This panel is transient; it's better to go back one level.
+                        openShelfAssignmentPanel();
+                        break;
                     case 'employees-panel': openEmployeesPanel(); break;
                     case 'customers-panel': openCustomersPanel(); break;
                     case 'market-panel': openMarketPanel(); break;
-                    // Add other panels as needed
+                    case 'market-detail-panel':
+                        const detailTitle = document.getElementById('market-detail-title')?.textContent || '';
+                        if(detailTitle) openMarketDetailPanel(detailTitle);
+                        break;
+                    case 'market-item-deep-dive-panel':
+                         const deepDiveTitle = document.getElementById('market-deep-dive-title')?.textContent || '';
+                         if(deepDiveTitle) openMarketItemDeepDivePanel(deepDiveTitle);
+                         break;
+                    case 'settings-panel': showAppScreen('settings-panel'); break; // No data refresh needed, just show
+                    case 'items-panel': openItemsPanel(); break;
                 }
             }
         }
 
         function sendFullGameStateToCompanion() {
             if (hostConnection && hostConnection.open) {
+                const employeesToSave = {};
+                const employeeObjects = { cashier, stocker, barista, manager, salesperson };
+                for (const key in employeeObjects) {
+                    if(employeeObjects[key]) {
+                        employeesToSave[key] = {
+                            shift: employeeObjects[key].shift,
+                            breakPreference: employeeObjects[key].breakPreference,
+                            onBreak: employeeObjects[key].onBreak
+                        };
+                    }
+                }
+
                 const gameState = {
                     cash, day, shopPoints, itemPopularity,
                     inventory, storageCells, shelves,
                     unlocks, loadingDockPackages, customerDemand,
-                    customerProfiles, enabledItems
+                    customerProfiles, enabledItems,
+                    priceHistory, marketType, marketEnabled, items,
+                    developerMode, dayPhase, continuousMode, originalItemCosts,
+                    player: { basket: player.basket },
+                    employees: employeesToSave,
+                    isMandatoryBreak,
+                    currentRestockOrder
                 };
 
                 // Prune the draw function before sending

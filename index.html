@@ -95,7 +95,7 @@
             right: 0;
             transform: translateX(100%);
             transition: transform 0.3s ease-in-out;
-            z-index: 30;
+            z-index: 3000;
         }
 
         #clipboard-panel.open {
@@ -5925,8 +5925,11 @@ function showHint() {
 
                     updateUI();
                     saveGame();
-                    closeClipboard();
+                    // closeClipboard(); // <-- REMOVED to keep phone open
                     showMessage(`Ordered ${quantity} ${itemName} for $${totalCost.toFixed(2)}!`);
+                    // Go back to the market detail panel after ordering
+                    const itemCategoryKey = Object.keys(storageCells).find(key => storageCells[key].allowedItems.includes(itemName)) || "Coffee Supplies";
+                    openMarketDetailPanel(itemCategoryKey);
                 } else {
                     showMessage(`You can't afford this. You need $${totalCost.toFixed(2)}.`);
                 }
@@ -6969,8 +6972,9 @@ function showHint() {
                 currentRestockOrder = {};
                 updateUI();
                 saveGame();
-                closeClipboard();
+                // closeClipboard(); // <-- REMOVED to keep phone open
                 showMessage(`Order placed for $${totalCost.toFixed(2)}! The supplies have been delivered to the loading dock.`);
+                openRestockPanel(); // Refresh the restock panel
             } else {
                 showMessage(`You can't afford this order! You need $${totalCost.toFixed(2)} but only have $${cash.toFixed(2)}.`);
             }
@@ -8115,6 +8119,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const reportViews = document.querySelectorAll('.report-view');
             reportToggleButtons.forEach(button => {
                 button.addEventListener('click', () => {
+                    // SPECIAL CASE: The market button now opens the phone app.
+                    if (button.id === 'report-toggle-market') {
+                        openClipboardPanel();
+                        openMarketPanel();
+                        return; // Stop further processing for this button
+                    }
+
                     const targetViewId = button.id.replace('report-toggle-', 'report-view-');
 
                     // Toggle views

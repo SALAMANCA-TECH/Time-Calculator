@@ -8501,21 +8501,50 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 document.getElementById('host-status').textContent = '✅ Connected!';
                 document.getElementById('companion-sync-btn').classList.add('bg-green-500');
 
+                // This map links button IDs from the companion to functions on the host.
+                // This is more reliable than simulating clicks.
+                const actionMap = new Map([
+                    // Main App Grid
+                    ['app-btn-order', openRestockPanel],
+                    ['app-btn-shelves', openShelfAssignmentPanel],
+                    ['app-btn-items', openItemsPanel],
+                    ['app-btn-employees', openEmployeesPanel],
+                    ['app-btn-customers', openCustomersPanel],
+                    ['app-btn-unlocks', openUnlocksPanel],
+                    ['app-btn-market', openMarketPanel],
+                    ['app-btn-settings', () => showAppScreen('settings-panel')],
+                    // Navigation
+                    ['phone-back-btn', showAppGrid],
+                    ['market-detail-back-btn', openMarketPanel],
+                    // Order Screen
+                    ['place-order-btn', () => placeOrder(false)],
+                    ['order-quantity-done-btn', openRestockPanel],
+                    // Settings Screen
+                    ['new-game-btn', () => showScreen('new-game-screen')]
+                ]);
+
                 hostConnection.on('data', (data) => {
                     if (data.action === 'click') {
-                        if (data.elementId === 'phone-back-btn') {
-                            console.log('Host executing special action for phone-back-btn');
-                            showAppGrid();
-                            sendFullGameStateToCompanion();
-                            return;
-                        }
+                        const elementId = data.elementId;
+                        console.log(`Host received click command for #${elementId}`);
+                        const directAction = actionMap.get(elementId);
 
-                        const element = document.getElementById(data.elementId);
-                        if (element) {
-                            console.log(`Host executing click on: #${data.elementId}`);
-                            element.click();
-                            sendFullGameStateToCompanion();
+                        if (directAction) {
+                            console.log(`...found direct action, executing function.`);
+                            directAction();
+                        } else {
+                            // Fallback for buttons that are dynamically generated or not in the map
+                            const element = document.getElementById(elementId);
+                            if (element) {
+                                console.log(`...no direct action found, using fallback dispatchEvent.`);
+                                element.dispatchEvent(new Event('click', { bubbles: true }));
+                            } else {
+                                console.warn(`...no element found for ID: #${elementId}`);
+                            }
                         }
+                        // Always send the latest state back after any action.
+                        sendFullGameStateToCompanion();
+
                     } else if (data.action === 'input') {
                         const element = document.getElementById(data.elementId);
                         if (element) {

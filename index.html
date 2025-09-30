@@ -170,22 +170,8 @@
             display: none !important;
         }
 
-        /* Host Overlay for Companion Mode */
-        #host-clipboard-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(93, 64, 55, 0.7); /* semi-transparent brown */
-            z-index: 4000; /* Above the paper, below the clip */
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: #f7e7d8;
-            padding: 2rem;
-            border-radius: 0.5rem; /* Match paper's rounded corners */
-            pointer-events: all; /* Make sure it captures clicks */
+        #companion-sync-btn.phone-connected {
+            background-color: #22c55e; /* green-500 */
         }
     </style>
 </head>
@@ -245,11 +231,6 @@
                 <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-20 bg-slate-400 border-4 border-slate-600 rounded-lg shadow-md">
                     <div class="w-full h-full bg-gradient-to-b from-slate-300 to-slate-500 rounded-md"></div>
                     <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-3 bg-slate-600 rounded-sm"></div>
-                </div>
-
-                <!-- Host Overlay -->
-                <div id="host-clipboard-overlay" class="hidden flex">
-                    <p class="text-2xl font-handwritten">The phone is being controlled by a companion device.</p>
                 </div>
 
                 <!-- The Paper -->
@@ -8481,13 +8462,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 console.log('Companion has connected!');
                 hostConnection = conn;
                 document.getElementById('host-status').textContent = '✅ Connected!';
-                document.getElementById('companion-sync-btn').classList.add('bg-green-500');
-
-                // Open the clipboard panel so the companion can control it,
-                // then immediately hide the paper and show the overlay.
-                openClipboardPanel();
-                document.getElementById('host-clipboard-overlay').classList.remove('hidden');
-                document.getElementById('clipboard-paper').classList.add('hidden');
+                document.getElementById('companion-sync-btn').classList.add('phone-connected');
 
 
                 // This map links button IDs from the companion to functions on the host.
@@ -8550,13 +8525,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 hostConnection.on('close', () => {
                     console.log('Companion disconnected.');
                     document.getElementById('host-status').textContent = 'Companion disconnected.';
-                    document.getElementById('companion-sync-btn').classList.remove('bg-green-500');
+                    document.getElementById('companion-sync-btn').classList.remove('phone-connected');
                     hostConnection = null;
-
-                    // Hide the overlay, show the paper, and close the clipboard for the host
-                    document.getElementById('host-clipboard-overlay').classList.add('hidden');
-                    document.getElementById('clipboard-paper').classList.remove('hidden');
-                    closeClipboard();
                 });
             });
         }

@@ -8638,6 +8638,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             player.basket = state.player.basket;
             isMandatoryBreak = state.isMandatoryBreak;
             currentRestockOrder = state.currentRestockOrder;
+            customers = state.customers || []; // Apply the received customer list
 
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             if (state.employees) {
@@ -8708,6 +8709,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     }
                 }
 
+                const activeCustomers = customers.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    state: c.state,
+                    waitTimer: c.waitTimer,
+                    requestedItems: c.requestedItems
+                }));
+
                 const gameState = {
                     cash, day, shopPoints, itemPopularity,
                     inventory, storageCells, shelves,
@@ -8720,7 +8729,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     isMandatoryBreak,
                     currentRestockOrder,
                     activePhoneScreen,
-                    phoneScreenContext
+                    phoneScreenContext,
+                    customers: activeCustomers
                 };
 
                 // DEBUG: Log the state being sent from the host

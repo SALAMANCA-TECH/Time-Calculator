@@ -8525,7 +8525,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 document.getElementById('host-status').textContent = '✅ Connected!';
                 document.getElementById('companion-sync-btn').classList.add('bg-green-500');
 
-                // Show the overlay on the host's clipboard and hide the paper
+                // Open the clipboard panel so the companion can control it,
+                // then immediately hide the paper and show the overlay.
+                openClipboardPanel();
                 document.getElementById('host-clipboard-overlay').classList.remove('hidden');
                 document.getElementById('clipboard-paper').classList.add('hidden');
 

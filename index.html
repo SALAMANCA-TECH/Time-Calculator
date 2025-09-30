@@ -6373,12 +6373,6 @@ function showHint() {
                         statusText = '<span class="text-gray-500">Waiting for Shift</span>';
                     }
 
-                    const shiftButtonsHtml = shiftOptions.map(opt => {
-                        const isSelected = employee.shift.includes(opt.value);
-                        const selectedClass = isSelected ? 'bg-green-700 !text-white' : 'bg-amber-700/60';
-                        return `<button class="shift-btn btn-style !px-2 !py-1 !text-sm ${selectedClass}" data-shift-value="${opt.value}" title="${opt.value}">${opt.label}</button>`;
-                    }).join('');
-
                     empDiv.innerHTML = `
                         <div class="font-bold text-lg">${empKey.charAt(0).toUpperCase() + empKey.slice(1)}</div>
 
@@ -6386,7 +6380,6 @@ function showHint() {
                         <div class="flex items-center">
                             <label class="text-sm mr-2">Shift:</label>
                             <div class="flex space-x-1 flex-wrap" data-emp-key="${empKey}">
-                                ${shiftButtonsHtml}
                             </div>
                         </div>
 
@@ -6403,10 +6396,23 @@ function showHint() {
                             Status: <span class="font-handwritten">${statusText}</span>
                         </div>
                     `;
+
+                    const shiftButtonContainer = empDiv.querySelector(`div[data-emp-key="${empKey}"]`);
+                    shiftOptions.forEach(opt => {
+                        const isSelected = employee.shift.includes(opt.value);
+                        const selectedClass = isSelected ? 'bg-green-700 !text-white' : 'bg-amber-700/60';
+                        const button = document.createElement('button');
+                        button.className = `shift-btn btn-style !px-2 !py-1 !text-sm ${selectedClass}`;
+                        button.id = `set-shift-${empKey}-${opt.value.replace(/\s+/g, '-')}`;
+                        button.dataset.shiftValue = opt.value;
+                        button.title = opt.value;
+                        button.textContent = opt.label;
+                        shiftButtonContainer.appendChild(button);
+                    });
+
                     employeeList.appendChild(empDiv);
 
                     // Add event listeners
-                    const shiftButtonContainer = empDiv.querySelector(`div[data-emp-key="${empKey}"]`);
                     shiftButtonContainer.addEventListener('click', (e) => {
                         if (e.target.classList.contains('shift-btn')) {
                             const newShift = e.target.dataset.shiftValue;
@@ -6470,6 +6476,7 @@ function showHint() {
                 if (unlocks.shelves[index]) {
                     const shelfButton = document.createElement('button');
                     shelfButton.className = 'btn-style p-4';
+                    shelfButton.id = `assign-shelf-${index}`;
                     shelfButton.textContent = `Shelf ${index + 1}`;
                     shelfButton.onclick = () => {
                         showShelfSlotsForAssignment(shelf);
@@ -6537,6 +6544,7 @@ function showHint() {
             // Add a back button
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600 col-span-2';
+            backButton.id = 'back-to-shelves-btn';
             backButton.textContent = '← Back to Shelves';
             backButton.onclick = openShelfAssignmentPanel;
             shelfAssignmentGrid.appendChild(backButton);
@@ -6545,6 +6553,7 @@ function showHint() {
                 const slot = shelf.items[i];
                 const slotButton = document.createElement('button');
                 slotButton.className = 'btn-style p-4';
+                slotButton.id = `assign-shelf-${shelves.indexOf(shelf)}-slot-${i}`;
                 let buttonText = `Slot ${i + 1}`;
                 if (slot.assignedItem) {
                     buttonText += ` (${slot.assignedItem.substring(0,8)})`;
@@ -6714,15 +6723,42 @@ function showHint() {
                 for (const itemName of availableItems) {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'grid grid-cols-6 gap-x-2 items-center py-2 border-b border-amber-800/10';
-                    itemDiv.innerHTML = `
-                        <span class="text-lg col-span-2">${itemName}</span>
-                        <span class="text-right text-lg">${getTotalStock(itemName)}</span>
-                        <div class="flex space-x-1 col-span-3">
-                            <button class="btn-style order-item-btn text-sm px-2 py-1" data-item="${itemName}">Order</button>
-                            <button class="btn-style buy-now-one-btn text-sm px-2 py-1 bg-blue-600 hover:bg-blue-500" data-item="${itemName}">Buy 1</button>
-                            <button class="btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500" data-item="${itemName}">Buy 5</button>
-                        </div>
-                    `;
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'text-lg col-span-2';
+                    nameSpan.textContent = itemName;
+
+                    const stockSpan = document.createElement('span');
+                    stockSpan.className = 'text-right text-lg';
+                    stockSpan.textContent = getTotalStock(itemName);
+
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'flex space-x-1 col-span-3';
+
+                    const orderButton = document.createElement('button');
+                    orderButton.className = 'btn-style order-item-btn text-sm px-2 py-1';
+                    orderButton.id = `order-item-${itemName.replace(/\s+/g, '-')}`;
+                    orderButton.dataset.item = itemName;
+                    orderButton.textContent = 'Order';
+
+                    const buyOneButton = document.createElement('button');
+                    buyOneButton.className = 'btn-style buy-now-one-btn text-sm px-2 py-1 bg-blue-600 hover:bg-blue-500';
+                    buyOneButton.id = `buy-now-one-${itemName.replace(/\s+/g, '-')}`;
+                    buyOneButton.dataset.item = itemName;
+                    buyOneButton.textContent = 'Buy 1';
+
+                    const buyFiveButton = document.createElement('button');
+                    buyFiveButton.className = 'btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500';
+                    buyFiveButton.id = `buy-now-five-${itemName.replace(/\s+/g, '-')}`;
+                    buyFiveButton.dataset.item = itemName;
+                    buyFiveButton.textContent = 'Buy 5';
+
+                    buttonContainer.appendChild(orderButton);
+                    buttonContainer.appendChild(buyOneButton);
+                    buttonContainer.appendChild(buyFiveButton);
+
+                    itemDiv.appendChild(nameSpan);
+                    itemDiv.appendChild(stockSpan);
+                    itemDiv.appendChild(buttonContainer);
                     itemsContainer.appendChild(itemDiv);
                 }
             };
@@ -6880,6 +6916,7 @@ function showHint() {
 
                 const button = document.createElement('button');
                 button.className = 'btn-style px-4 py-1';
+                button.id = `unlock-employee-${emp}`;
                 button.dataset.type = 'employee';
                 button.dataset.key = emp;
                 button.disabled = isUnlocked || !canAfford || !prerequisiteMet;
@@ -6908,15 +6945,21 @@ function showHint() {
                 const prerequisiteMet = unlocks.shelves[i - 1];
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-                div.innerHTML = `
-                    <div>
-                        <span class="text-lg">Shelf ${i + 1}</span>
-                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
-                    </div>
-                    <button class="btn-style px-4 py-1" data-type="shelf" data-key="${i}" ${isUnlocked || !prerequisiteMet || !canAfford ? 'disabled' : ''}>
-                        ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
-                    </button>
+                const textDiv = document.createElement('div');
+                textDiv.innerHTML = `
+                    <span class="text-lg">Shelf ${i + 1}</span>
+                    <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                 `;
+                const button = document.createElement('button');
+                button.className = 'btn-style px-4 py-1';
+                button.id = `unlock-shelf-${i}`;
+                button.dataset.type = 'shelf';
+                button.dataset.key = i;
+                button.disabled = isUnlocked || !prerequisiteMet || !canAfford;
+                button.textContent = isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked');
+
+                div.appendChild(textDiv);
+                div.appendChild(button);
                 shelvesContainer.appendChild(div);
             }
 
@@ -6926,15 +6969,21 @@ function showHint() {
             const canAffordCoffeeShop = shopPoints >= coffeeShopCost;
             const coffeeDiv = document.createElement('div');
             coffeeDiv.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-            coffeeDiv.innerHTML = `
-                <div>
-                    <span class="text-lg">Coffee Shop</span>
-                    <span class="text-sm text-amber-800/80 block">Cost: ${coffeeShopCost} Points</span>
-                </div>
-                <button class="btn-style px-4 py-1" data-type="facility" data-key="coffeeShop" ${isCoffeeShopUnlocked || !canAffordCoffeeShop ? 'disabled' : ''}>
-                    ${isCoffeeShopUnlocked ? 'Unlocked' : 'Buy'}
-                </button>
+            const coffeeTextDiv = document.createElement('div');
+            coffeeTextDiv.innerHTML = `
+                <span class="text-lg">Coffee Shop</span>
+                <span class="text-sm text-amber-800/80 block">Cost: ${coffeeShopCost} Points</span>
             `;
+            const coffeeButton = document.createElement('button');
+            coffeeButton.className = 'btn-style px-4 py-1';
+            coffeeButton.id = 'unlock-facility-coffeeShop';
+            coffeeButton.dataset.type = 'facility';
+            coffeeButton.dataset.key = 'coffeeShop';
+            coffeeButton.disabled = isCoffeeShopUnlocked || !canAffordCoffeeShop;
+            coffeeButton.textContent = isCoffeeShopUnlocked ? 'Unlocked' : 'Buy';
+
+            coffeeDiv.appendChild(coffeeTextDiv);
+            coffeeDiv.appendChild(coffeeButton);
             facilitiesContainer.appendChild(coffeeDiv);
 
 
@@ -6946,15 +6995,21 @@ function showHint() {
                 const prerequisiteMet = i === 0 || unlocks.storage[i - 1];
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
-                div.innerHTML = `
-                    <div>
-                        <span class="text-lg">${storageCells[i].label} Storage</span>
-                        <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
-                    </div>
-                    <button class="btn-style px-4 py-1" data-type="storage" data-key="${i}" ${isUnlocked || !prerequisiteMet ? 'disabled' : ''} ${!canAfford && !isUnlocked ? 'disabled' : ''}>
-                        ${isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked')}
-                    </button>
+                const textDiv = document.createElement('div');
+                textDiv.innerHTML = `
+                    <span class="text-lg">${storageCells[i].label} Storage</span>
+                    <span class="text-sm text-amber-800/80 block">Cost: ${cost} Points</span>
                 `;
+                const button = document.createElement('button');
+                button.className = 'btn-style px-4 py-1';
+                button.id = `unlock-storage-${i}`;
+                button.dataset.type = 'storage';
+                button.dataset.key = i;
+                button.disabled = isUnlocked || !prerequisiteMet || !canAfford;
+                button.textContent = isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked');
+
+                div.appendChild(textDiv);
+                div.appendChild(button);
                 storageContainer.appendChild(div);
             }
 
@@ -7113,6 +7168,7 @@ function showHint() {
             stockAllButtonContainer.className = 'p-2 col-span-2'; // Span across grid
             const stockAllButton = document.createElement('button');
             stockAllButton.className = 'btn-style w-full py-2';
+            stockAllButton.id = `stock-all-storage-${cell.label.replace(/\s+/g, '-')}`;
             stockAllButton.textContent = 'Stock All Relevant from Basket';
             stockAllButton.onclick = () => stockAllRelevantToStorage(cell);
             stockAllButton.disabled = !player.basket.some(item => cell.allowedItems.includes(item));
@@ -7120,21 +7176,43 @@ function showHint() {
             storageGrid.appendChild(stockAllButtonContainer);
 
             if (cell.allowedItems.length === 0) {
-                storageGrid.innerHTML = `<p class="col-span-4 text-center">No items are stored here.</p>`;
+                storageGrid.innerHTML += `<p class="col-span-2 text-center">No items are stored here.</p>`;
             }
             cell.allowedItems.forEach(itemName => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `p-2 text-center border-2 border-amber-900 rounded-lg bg-white shadow-sm`;
                 const inStock = cell.items[itemName] > 0;
                 const canPutBack = player.basket.includes(itemName);
-                itemDiv.innerHTML = `
+
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `
                     <div class="font-handwritten text-xl">${itemName}</div>
                     <div class="text-xs">In Stock: ${cell.items[itemName] || 0}</div>
-                    <div class="mt-2 flex justify-center space-x-2">
-                        <button class="btn-style px-3 py-1 text-sm" data-action="take" data-item="${itemName}" ${!inStock || player.basket.length >= MAX_BASKET_SIZE ? 'disabled' : ''}>Take 1</button>
-                        <button class="btn-style px-3 py-1 text-sm" data-action="put_back" data-item="${itemName}" ${!canPutBack ? 'disabled' : ''}>Put Back 1</button>
-                    </div>
                 `;
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'mt-2 flex justify-center space-x-2';
+
+                const takeButton = document.createElement('button');
+                takeButton.className = 'btn-style px-3 py-1 text-sm';
+                takeButton.id = `take-from-storage-${cell.label.replace(/\s+/g, '-')}-${itemName.replace(/\s+/g, '-')}`;
+                takeButton.dataset.action = 'take';
+                takeButton.dataset.item = itemName;
+                takeButton.disabled = !inStock || player.basket.length >= MAX_BASKET_SIZE;
+                takeButton.textContent = 'Take 1';
+
+                const putBackButton = document.createElement('button');
+                putBackButton.className = 'btn-style px-3 py-1 text-sm';
+                putBackButton.id = `put-in-storage-${cell.label.replace(/\s+/g, '-')}-${itemName.replace(/\s+/g, '-')}`;
+                putBackButton.dataset.action = 'put_back';
+                putBackButton.dataset.item = itemName;
+                putBackButton.disabled = !canPutBack;
+                putBackButton.textContent = 'Put Back 1';
+
+                buttonContainer.appendChild(takeButton);
+                buttonContainer.appendChild(putBackButton);
+                itemDiv.appendChild(infoDiv);
+                itemDiv.appendChild(buttonContainer);
                 storageGrid.appendChild(itemDiv);
             });
             storageGrid.querySelectorAll('button').forEach(button => {
@@ -7162,12 +7240,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             const backButton = document.createElement('button');
             backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
+            backButton.id = `back-to-shelf-slots-${shelves.indexOf(shelf)}`;
             backButton.textContent = '← Back';
             backButton.onclick = () => showShelfSlotsForAssignment(shelf);
             assignmentGrid.appendChild(backButton);
 
             const clearButton = document.createElement('button');
             clearButton.className = 'btn-style bg-red-700/80 hover:bg-red-600';
+            clearButton.id = `clear-shelf-${shelves.indexOf(shelf)}-slot-${slotIndex}`;
             clearButton.textContent = 'Clear';
             clearButton.onclick = () => {
                 const itemToMove = currentSlot.assignedItem;
@@ -7207,6 +7287,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             for (const itemName of unlockedItems) {
                 const button = document.createElement('button');
                 button.className = 'btn-style';
+                button.id = `assign-item-${itemName.replace(/\s+/g, '-')}-to-shelf-${shelves.indexOf(shelf)}-slot-${slotIndex}`;
                 button.textContent = itemName;
                 button.dataset.item = itemName;
                 button.onclick = () => {
@@ -7336,6 +7417,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             stockAllButtonContainer.className = 'p-2';
             const stockAllButton = document.createElement('button');
             stockAllButton.className = 'btn-style w-full py-2';
+            stockAllButton.id = `stock-all-shelf-${shelves.indexOf(shelf)}`;
             stockAllButton.textContent = 'Stock All Relevant from Basket';
             stockAllButton.onclick = () => stockAllRelevantFromBasket(shelf);
 
@@ -7352,25 +7434,52 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 const slot = shelf.items[i];
                 const slotDiv = document.createElement('div');
                 slotDiv.className = 'p-2 text-center border-2 border-dashed border-amber-700 rounded-lg flex flex-col justify-between min-h-[100px]';
-                let content = '';
 
                 if (slot.assignedItem) {
                     const canPlaceMore = player.basket.includes(slot.assignedItem) && slot.quantity < MAX_SHELF_STACK;
                     const canTake = slot.quantity > 0 && player.basket.length < MAX_BASKET_SIZE;
-                    content = `
-                        <div>
-                            <div class="font-handwritten text-lg">${slot.assignedItem}</div>
-                            <div>${slot.quantity} / ${MAX_SHELF_STACK}</div>
-                        </div>
-                        <div class="mt-2 flex justify-center space-x-2">
-                            <button class="btn-style px-2 py-1 text-sm" data-action="take" data-shelf="${shelves.indexOf(shelf)}" data-slot="${i}" ${!canTake ? 'disabled' : ''}>Take</button>
-                            <button class="btn-style px-2 py-1 text-sm" data-action="place" data-shelf="${shelves.indexOf(shelf)}" data-slot="${i}" ${!canPlaceMore ? 'disabled' : ''}>Place</button>
-                        </div>
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.innerHTML = `
+                        <div class="font-handwritten text-lg">${slot.assignedItem}</div>
+                        <div>${slot.quantity} / ${MAX_SHELF_STACK}</div>
                     `;
+
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'mt-2 flex justify-center space-x-2';
+
+                    const takeButton = document.createElement('button');
+                    takeButton.className = 'btn-style px-2 py-1 text-sm';
+                    takeButton.id = `take-from-shelf-${shelves.indexOf(shelf)}-slot-${i}`;
+                    takeButton.dataset.action = 'take';
+                    takeButton.dataset.shelf = shelves.indexOf(shelf);
+                    takeButton.dataset.slot = i;
+                    takeButton.disabled = !canTake;
+                    takeButton.textContent = 'Take';
+
+                    const placeButton = document.createElement('button');
+                    placeButton.className = 'btn-style px-2 py-1 text-sm';
+                    placeButton.id = `place-on-shelf-${shelves.indexOf(shelf)}-slot-${i}`;
+                    placeButton.dataset.action = 'place';
+                    placeButton.dataset.shelf = shelves.indexOf(shelf);
+                    placeButton.dataset.slot = i;
+                    placeButton.disabled = !canPlaceMore;
+                    placeButton.textContent = 'Place';
+
+                    buttonContainer.appendChild(takeButton);
+                    buttonContainer.appendChild(placeButton);
+                    slotDiv.appendChild(infoDiv);
+                    slotDiv.appendChild(buttonContainer);
                 } else {
-                    content = `<button class="btn-style w-full h-full flex items-center justify-center" data-action="assign" data-shelf="${shelves.indexOf(shelf)}" data-slot="${i}">Assign Item</button>`;
+                    const assignButton = document.createElement('button');
+                    assignButton.className = 'btn-style w-full h-full flex items-center justify-center';
+                    assignButton.id = `assign-to-shelf-${shelves.indexOf(shelf)}-slot-${i}`;
+                    assignButton.dataset.action = 'assign';
+                    assignButton.dataset.shelf = shelves.indexOf(shelf);
+                    assignButton.dataset.slot = i;
+                    assignButton.textContent = 'Assign Item';
+                    slotDiv.appendChild(assignButton);
                 }
-                slotDiv.innerHTML = content;
                 shelfGrid.appendChild(slotDiv);
             }
 
@@ -8597,9 +8706,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             clipboard.addEventListener('click', (e) => {
                 const button = e.target.closest('button');
                 if (button && button.id) {
-                    // If the back button is clicked, let the default action happen.
                     // Also, if the clicked button is inside the sync screen, let it proceed.
-                    if (button.id === 'phone-back-btn' || button.closest('#companion-sync-screen')) {
+                    if (button.closest('#companion-sync-screen')) {
                         return;
                     }
 

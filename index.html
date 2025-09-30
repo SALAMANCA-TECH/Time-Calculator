@@ -5793,9 +5793,10 @@ function showHint() {
             }
 
             activeCustomers.forEach(customer => {
-                const customerDiv = document.createElement('div');
-                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 cursor-pointer hover:bg-amber-200/50 transition-colors';
-                customerDiv.dataset.customerId = customer.id;
+                const customerButton = document.createElement('button');
+                customerButton.id = `customer-in-store-${customer.id}`;
+                customerButton.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 text-left hover:bg-amber-200/50 transition-colors w-full';
+                customerButton.dataset.customerId = customer.id;
 
                 let status = '';
                 if (customer.waitTimer > 60) {
@@ -5806,7 +5807,7 @@ function showHint() {
                     status = `<span class="text-gray-500">${customer.state}</span>`;
                 }
 
-                customerDiv.innerHTML = `
+                customerButton.innerHTML = `
                     <div class="flex justify-between items-center">
                         <div class="font-bold text-lg">${customer.name}</div>
                         <div>${status}</div>
@@ -5815,14 +5816,15 @@ function showHint() {
                     <div class="text-xs mt-1">Looking for: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
                 `;
 
-                customerDiv.addEventListener('click', () => {
+                customerButton.addEventListener('click', () => {
                     const targetCustomer = customers.find(c => c.id === customer.id);
                     if (targetCustomer) {
-                        player.targetX = targetCustomer.x;
-                        player.targetY = targetCustomer.y + 20; // Target slightly below for better pathing
+                        // When a customer is clicked, pan the camera to them
+                        targetCameraX = -targetCustomer.x + canvas.width / 2;
+                        closeClipboard();
                     }
                 });
-                customerList.appendChild(customerDiv);
+                customerList.appendChild(customerButton);
             });
         }
 
@@ -6218,9 +6220,10 @@ function showHint() {
             }
 
             itemsToList.forEach((itemName, index) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4 cursor-pointer hover:bg-amber-200/50 transition-colors';
-                itemDiv.addEventListener('click', () => openMarketItemDeepDivePanel(itemName));
+                const itemButton = document.createElement('button');
+                itemButton.id = `market-item-${categoryKey.replace(/\s+/g, '-')}-${index}`;
+                itemButton.className = 'w-full p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4 text-left hover:bg-amber-200/50 transition-colors';
+                itemButton.addEventListener('click', () => openMarketItemDeepDivePanel(itemName));
 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'flex-grow';
@@ -6236,9 +6239,9 @@ function showHint() {
                 canvas.id = `market-chart-canvas-item-${itemName.replace(/\s+/g, '-')}`;
 
                 canvasContainer.appendChild(canvas);
-                itemDiv.appendChild(infoDiv);
-                itemDiv.appendChild(canvasContainer);
-                container.appendChild(itemDiv);
+                itemButton.appendChild(infoDiv);
+                itemButton.appendChild(canvasContainer);
+                container.appendChild(itemButton);
 
                 setTimeout(() => {
                     drawMarketChart(canvas, itemName); // Draw the chart, but ignore its return value now.
@@ -6298,9 +6301,10 @@ function showHint() {
             allCategories.forEach((categoryKey, index) => {
                 if (categoryKey === "Coffee Supplies" && !unlocks.facilities.coffeeShop) return;
 
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4 cursor-pointer hover:bg-amber-200/50 transition-colors';
-                categoryDiv.addEventListener('click', () => openMarketDetailPanel(categoryKey));
+                const categoryButton = document.createElement('button');
+                categoryButton.id = `market-category-${index}`;
+                categoryButton.className = 'w-full p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4 text-left hover:bg-amber-200/50 transition-colors';
+                categoryButton.addEventListener('click', () => openMarketDetailPanel(categoryKey));
 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'flex-grow';
@@ -6315,9 +6319,9 @@ function showHint() {
                 canvas.id = `market-chart-canvas-${index}`;
 
                 canvasContainer.appendChild(canvas);
-                categoryDiv.appendChild(infoDiv);
-                categoryDiv.appendChild(canvasContainer);
-                container.appendChild(categoryDiv);
+                categoryButton.appendChild(infoDiv);
+                categoryButton.appendChild(canvasContainer);
+                container.appendChild(categoryButton);
 
                 // Wait a tick for the canvas to be in the DOM, then draw
                 setTimeout(() => {
@@ -6514,52 +6518,6 @@ function showHint() {
             showAppScreen('shelf-assignment-panel');
         }
 
-        function populateInStoreCustomers() {
-            const customerList = document.getElementById('in-store-customer-list');
-            if (!customerList) return; // Exit if the panel isn't open/doesn't exist
-            customerList.innerHTML = '';
-
-            const activeCustomers = customers.filter(c => !c.leaving);
-
-            if (activeCustomers.length === 0) {
-                customerList.innerHTML = `<p class="text-center p-4">No customers in the shop.</p>`;
-                return;
-            }
-
-            activeCustomers.forEach(customer => {
-                const customerDiv = document.createElement('div');
-                customerDiv.className = 'p-3 border-2 border-amber-800/50 rounded-lg bg-white/50 cursor-pointer hover:bg-amber-200/50 transition-colors';
-                customerDiv.dataset.customerId = customer.id;
-
-                let status = '';
-                if (customer.waitTimer > 60) {
-                    status = `<span class="font-bold text-yellow-600 animate-pulse">Needs Attention!</span>`;
-                } else if (customer.state === 'waitingAtCounter') {
-                    status = `<span class="font-bold text-green-600">Ready to Checkout</span>`;
-                } else {
-                    status = `<span class="text-gray-500">${customer.state}</span>`;
-                }
-
-                customerDiv.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div class="font-bold text-lg">${customer.name}</div>
-                        <div>${status}</div>
-                    </div>
-                    <div class="text-sm">Wait Time: ${Math.round(customer.waitTimer)}s</div>
-                    <div class="text-xs mt-1">Looking for: <span class="font-handwritten">${customer.requestedItems.join(', ')}</span></div>
-                `;
-
-                customerDiv.addEventListener('click', () => {
-                    const targetCustomer = customers.find(c => c.id === customer.id);
-                    if (targetCustomer) {
-                        // When a customer is clicked, pan the camera to them
-                        targetCameraX = -targetCustomer.x + canvas.width / 2;
-                        closeClipboard();
-                    }
-                });
-                customerList.appendChild(customerDiv);
-            });
-        }
 
         function showShelfSlotsForAssignment(shelf) {
             const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');

@@ -6595,14 +6595,36 @@ function showHint() {
             const coffeeItems = ['Beans', 'Milks', 'Sugar', 'Snacks'];
 
             // Helper function to render a list of items for ordering
-            const renderOrderList = (title, itemsToRender, container) => {
-                const availableItems = itemsToRender.filter(item => enabledItems[item]);
+            const renderOrderList = (title, itemsToRender, container, isInitiallyCollapsed = false) => {
+                // MODIFICATION: No longer filtering by enabledItems. Show all unlocked items.
+                const availableItems = itemsToRender;
                 if (availableItems.length === 0) return;
 
+                const sectionContainer = document.createElement('div');
+                container.appendChild(sectionContainer);
+
                 const sectionHeader = document.createElement('h3');
-                sectionHeader.className = 'text-xl font-handwritten border-b-2 border-amber-800/30 mb-2 mt-4';
-                sectionHeader.textContent = title;
-                container.appendChild(sectionHeader);
+                sectionHeader.className = 'text-xl font-handwritten border-b-2 border-amber-800/30 mb-2 mt-4 flex justify-between items-center cursor-pointer';
+                sectionHeader.innerHTML = `<span>${title}</span><span class="text-sm mr-2">[+]</span>`;
+                sectionContainer.appendChild(sectionHeader);
+
+                const itemsContainer = document.createElement('div');
+                itemsContainer.className = 'item-group-container'; // Add a class for easier selection
+                sectionContainer.appendChild(itemsContainer);
+
+                if (isInitiallyCollapsed) {
+                    itemsContainer.classList.add('hidden');
+                    sectionHeader.querySelector('span:last-child').textContent = '[+]';
+                } else {
+                    sectionHeader.querySelector('span:last-child').textContent = '[-]';
+                }
+
+
+                sectionHeader.addEventListener('click', () => {
+                    const isHidden = itemsContainer.classList.toggle('hidden');
+                    sectionHeader.querySelector('span:last-child').textContent = isHidden ? '[+]' : '[-]';
+                });
+
 
                 const headerRow = document.createElement('div');
                  headerRow.className = 'grid grid-cols-6 gap-x-2 border-b-2 border-amber-800/20 pb-2 text-lg font-handwritten';
@@ -6611,7 +6633,7 @@ function showHint() {
                     <span class="text-right font-bold">Stock</span>
                     <span class="col-span-3"></span> <!-- Header for buttons -->
                 `;
-                container.appendChild(headerRow);
+                itemsContainer.appendChild(headerRow);
 
                 for (const itemName of availableItems) {
                     const itemDiv = document.createElement('div');
@@ -6625,7 +6647,7 @@ function showHint() {
                             <button class="btn-style buy-now-btn text-sm px-2 py-1 bg-green-600 hover:bg-green-500" data-item="${itemName}">Buy 5</button>
                         </div>
                     `;
-                    container.appendChild(itemDiv);
+                    itemsContainer.appendChild(itemDiv);
                 }
             };
 
@@ -6640,7 +6662,7 @@ function showHint() {
                     // Filter out coffee items, just in case they overlap in the future
                     const artItemsForCell = cell.allowedItems.filter(item => !coffeeItems.includes(item));
                      if (artItemsForCell.length > 0) {
-                        renderOrderList(cell.label, artItemsForCell, restockGrid);
+                        renderOrderList(cell.label, artItemsForCell, restockGrid, true); // Collapse by default
                     }
                 }
             });
@@ -6648,7 +6670,7 @@ function showHint() {
 
             // Check if any items were rendered at all
             if (restockGrid.children.length === 0) {
-                 restockGrid.innerHTML = `<p class="text-center p-4">No items are enabled for ordering. Check the 'Items' app or unlock more storage.</p>`;
+                 restockGrid.innerHTML = `<p class="text-center p-4">No items are available for ordering. Unlock more storage.</p>`;
             }
 
             // Attach event listeners to all generated buttons

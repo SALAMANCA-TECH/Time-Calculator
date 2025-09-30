@@ -239,10 +239,9 @@
                     <!-- Companion Sync Screen (for Companion Device) -->
                     <div id="companion-sync-screen" class="phone-app-screen hidden h-full flex flex-col items-center justify-center text-center p-4">
                         <h2 class="text-3xl font-handwritten mb-4">Companion Sync</h2>
-                        <p id="companion-instructions" class="mb-4">Enter the 4-digit code displayed on your main screen.</p>
-                        <input type="text" id="companion-code-input" maxlength="4" class="w-48 p-2 text-center text-3xl font-bold tracking-widest border-4 border-amber-800 rounded-md bg-white/80 mb-4">
-                        <button id="companion-connect-btn" class="btn-style px-8 py-3 text-xl">Connect</button>
-                        <p id="companion-status" class="mt-4 text-sm text-amber-800/80"></p>
+                        <p id="companion-instructions" class="mb-4">To connect, please use your device's camera to scan the QR code on the main game screen.</p>
+                        <!-- The input and manual connect button are removed -->
+                        <p id="companion-status" class="mt-4 text-sm text-amber-800/80">Waiting for QR code scan...</p>
                     </div>
 
 
@@ -452,11 +451,9 @@
     <div id="host-sync-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-5000">
         <div class="bg-amber-100 w-full max-w-md p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col items-center">
             <h2 class="text-3xl font-handwritten text-center mb-4">Companion Sync</h2>
-            <p class="mb-2 text-center">Scan this QR code with your companion device.</p>
+            <p class="mb-4 text-center">Scan this QR code with your companion device to sync.</p>
             <canvas id="qr-code-canvas" class="border-4 border-amber-800/50 rounded-lg"></canvas>
-            <p class="mt-4 mb-2 text-center">Or, enter this code manually:</p>
-            <div id="host-code-display" class="p-2 text-4xl font-bold tracking-widest bg-white/80 border-4 border-amber-800/50 rounded-lg mb-4">----</div>
-            <p id="host-status" class="mb-6 text-sm text-center">Waiting for connection...</p>
+            <p id="host-status" class="mt-4 mb-6 text-sm text-center">Waiting for connection...</p>
             <button id="host-sync-close-btn" class="btn-style px-6 py-2">Close</button>
         </div>
     </div>
@@ -8318,49 +8315,47 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 peer.destroy();
             }
 
-            const hostCode = Math.floor(1000 + Math.random() * 9000).toString();
-            const fullPeerId = PEER_PREFIX + hostCode;
-
-            document.getElementById('host-code-display').textContent = hostCode;
             document.getElementById('host-sync-modal').classList.remove('hidden');
-            document.getElementById('host-status').textContent = 'Waiting for connection...';
+            document.getElementById('host-status').textContent = 'Generating connection...';
 
-            // Generate and display the QR code
-            try {
-                const baseUrl = window.location.origin + window.location.pathname;
-                const companionUrl = `${baseUrl}?companion_id=${fullPeerId}`;
-
-                const qr = qrcode(0, 'L');
-                qr.addData(companionUrl);
-                qr.make();
-                const canvas = document.getElementById('qr-code-canvas');
-                const ctx = canvas.getContext('2d');
-                const cellSize = 4; // Size of each QR code module
-                const margin = cellSize * 4;
-                const qrSize = qr.getModuleCount() * cellSize;
-                canvas.width = qrSize + margin * 2;
-                canvas.height = qrSize + margin * 2;
-                ctx.fillStyle = "#f7e7d8"; // Background color
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "#5d4037"; // QR code color
-
-                for (let row = 0; row < qr.getModuleCount(); row++) {
-                    for (let col = 0; col < qr.getModuleCount(); col++) {
-                        if (qr.isDark(row, col)) {
-                            ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("QR Code generation failed:", err);
-                document.getElementById('qr-code-canvas').style.display = 'none'; // Hide if it fails
-            }
-
-
-            peer = new Peer(fullPeerId);
+            // Let PeerJS generate a unique ID for us.
+            peer = new Peer();
 
             peer.on('open', id => {
                 console.log('Host PeerJS ID:', id);
+                document.getElementById('host-status').textContent = 'Waiting for connection...';
+
+                // Generate and display the QR code now that we have the unique ID
+                try {
+                    const baseUrl = window.location.origin + window.location.pathname;
+                    const companionUrl = `${baseUrl}?companion_id=${id}`;
+
+                    const qr = qrcode(0, 'L');
+                    qr.addData(companionUrl);
+                    qr.make();
+                    const canvas = document.getElementById('qr-code-canvas');
+                    const ctx = canvas.getContext('2d');
+                    const cellSize = 4; // Size of each QR code module
+                    const margin = cellSize * 4;
+                    const qrSize = qr.getModuleCount() * cellSize;
+                    canvas.width = qrSize + margin * 2;
+                    canvas.height = qrSize + margin * 2;
+                    ctx.fillStyle = "#f7e7d8"; // Background color
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "#5d4037"; // QR code color
+
+                    for (let row = 0; row < qr.getModuleCount(); row++) {
+                        for (let col = 0; col < qr.getModuleCount(); col++) {
+                            if (qr.isDark(row, col)) {
+                                ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("QR Code generation failed:", err);
+                    document.getElementById('qr-code-canvas').style.display = 'none'; // Hide if it fails
+                    document.getElementById('host-status').textContent = 'QR generation failed.';
+                }
             });
 
             peer.on('connection', (conn) => {
@@ -8421,18 +8416,11 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             });
         }
 
-        function connectToHost(fullPeerId = null) {
-            let connectId = fullPeerId;
-
-            if (!connectId) {
-                const code = document.getElementById('companion-code-input').value;
-                if (!code || code.length !== 4) {
-                    updateCompanionStatus('Please enter a valid 4-digit code.');
-                    return;
-                }
-                connectId = PEER_PREFIX + code;
+        function connectToHost(fullPeerId) {
+            if (!fullPeerId) {
+                updateCompanionStatus('No connection ID provided. Please scan the QR code again.');
+                return;
             }
-
 
             if (!peer) {
                  updateCompanionStatus('Peer object not initialized.');
@@ -8441,6 +8429,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             updateCompanionStatus(`Connecting to host...`);
 
+            const connectId = fullPeerId;
             companionConnection = peer.connect(connectId);
 
             companionConnection.on('open', () => {

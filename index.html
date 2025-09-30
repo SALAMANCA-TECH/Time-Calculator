@@ -8463,11 +8463,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 hostConnection = conn;
                 document.getElementById('host-status').textContent = '✅ Connected!';
                 document.getElementById('companion-sync-btn').classList.add('phone-connected');
-              
-                // Open the clipboard for the companion, but hide the UI on the host.
-                openClipboardPanel();
-                document.getElementById('clipboard-paper').classList.add('hidden');
-
 
 
                 // This map links button IDs from the companion to functions on the host.
@@ -8532,10 +8527,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     document.getElementById('host-status').textContent = 'Companion disconnected.';
                     document.getElementById('companion-sync-btn').classList.remove('phone-connected');
                     hostConnection = null;
-
-                    // Restore the host's view.
-                    document.getElementById('clipboard-paper').classList.remove('hidden');
-                    closeClipboard();
                 });
             });
         }

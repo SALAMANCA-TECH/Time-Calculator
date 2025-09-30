@@ -8474,6 +8474,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             clipboard.addEventListener('click', (e) => {
                 const button = e.target.closest('button');
                 if (button && button.id) {
+                    // Check if the clicked button is inside the sync screen.
+                    // If it is, we let the event proceed normally for local connection.
+                    if (button.closest('#companion-sync-screen')) {
+                        return;
+                    }
+
                     e.stopPropagation(); // Prevent the event from bubbling further
                     e.preventDefault(); // Stop the default action
                     console.log(`Companion sending click for #${button.id}`);

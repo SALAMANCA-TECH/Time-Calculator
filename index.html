@@ -232,7 +232,7 @@
                     <!-- Companion Sync Screen (for Companion Device) -->
                     <div id="companion-sync-screen" class="phone-app-screen hidden h-full flex flex-col items-center justify-center text-center p-4">
                         <h2 class="text-3xl font-handwritten mb-4">Companion Sync</h2>
-                        <p class="mb-4">Enter the 4-digit code displayed on your main screen.</p>
+                        <p id="companion-instructions" class="mb-4">Enter the 4-digit code displayed on your main screen.</p>
                         <input type="text" id="companion-code-input" maxlength="4" class="w-48 p-2 text-center text-3xl font-bold tracking-widest border-4 border-amber-800 rounded-md bg-white/80 mb-4">
                         <button id="companion-connect-btn" class="btn-style px-8 py-3 text-xl">Connect</button>
                         <p id="companion-status" class="mt-4 text-sm text-amber-800/80"></p>
@@ -7899,15 +7899,25 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function init() {
-            // Companion Mode Check
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'companion') {
+            const isCompanion = urlParams.get('mode') === 'companion';
+            const isSmallScreen = window.innerWidth < 768;
+
+            // Automatically enter companion mode on small screens or with the URL parameter.
+            if (isCompanion || isSmallScreen) {
                 document.body.classList.add('companion-mode');
                 openClipboardPanel();
-                showAppScreen('companion-sync-screen'); // Show the code entry screen
-                document.getElementById('phone-back-btn').classList.add('hidden'); // Hide back button on initial sync screen
+                showAppScreen('companion-sync-screen');
+                document.getElementById('phone-back-btn').classList.add('hidden');
+
+                if (isSmallScreen && !isCompanion) {
+                    // Show the specific warning message for small screens
+                    const instructions = document.getElementById('companion-instructions');
+                    instructions.innerHTML = "Your screen is small! To play the full game, please enlarge your browser window. <br>To use this as a companion controller, enter the code from your main game screen below.";
+                }
+
                 initializeCompanion();
-                setupCompanionActionListeners(); // Add the action listeners
+                setupCompanionActionListeners();
                 return; // Stop normal game initialization for companion
             }
 

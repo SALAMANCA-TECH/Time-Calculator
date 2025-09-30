@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Art Supply Emporium</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -125,6 +126,47 @@
             background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAMqADAAQAAAABAAAAMgAAAADXPWSMAAAAcUlEQVR4Ae3aQQ0AIAwEQf//6G0pAh5Ej5oJo0yS9ACCeM3Gk2SoeDPZfGk2gT1BtybYt2T7Jtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJtm3ZNsm2bdk2ybZt2TbJvQG4AAdx4c33/AAAAAElFTkSuQmCC');
             background-repeat: repeat;
         }
+
+        /* Companion Mode Styles */
+        body.companion-mode #game-ui,
+        body.companion-mode #game-canvas,
+        body.companion-mode #message-box,
+        body.companion-mode #new-game-screen,
+        body.companion-mode #dev-mode-screen,
+        body.companion-mode #family-store-screen,
+        body.companion-mode #specialty-store-screen,
+        body.companion-mode #casual-mode-screen,
+        body.companion-mode #market-style-modal,
+        body.companion-mode #newspaper-modal,
+        body.companion-mode #end-of-day-panel {
+            display: none !important;
+        }
+
+        body.companion-mode {
+            background-color: #000; /* Black background for the phone */
+        }
+
+        body.companion-mode #clipboard-panel {
+            display: block !important; /* Ensure it's visible */
+            transform: translateX(0) !important; /* Override the hiding transform */
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important; /* No rounded corners on fullscreen */
+        }
+
+        /* Hide the physical "close" button on the phone UI in companion mode,
+           but keep the back button functional. */
+        body.companion-mode #close-phone {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="p-4 flex flex-col items-center justify-center h-screen">
@@ -153,6 +195,9 @@
                 </button>
                 <button id="double-time-btn" class="p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm w-16 h-16 flex items-center justify-center">
                     <svg class="w-8 h-8 text-amber-900" fill="currentColor" viewBox="0 0 20 20"><path d="M15.243 12.132a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.061L13.633 13H4.75a.75.75 0 0 1 0-1.5h8.883l-3.7-3.7a.75.75 0 0 1 1.06-1.06l4.25 4.25a.75.75 0 0 1-.001 1.061z M8.75 3.75a.75.75 0 0 0-1.5 0v12.5a.75.75 0 0 0 1.5 0V3.75z"></path></svg>
+                </button>
+                <button id="companion-sync-btn" class="p-3 border-2 border-amber-900 rounded-lg bg-amber-100/80 shadow-md backdrop-blur-sm w-16 h-16 flex items-center justify-center" title="Companion Sync">
+                    <svg class="w-8 h-8 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                 </button>
             </div>
             <div id="basket-container" class="relative">
@@ -184,6 +229,15 @@
 
                 <!-- The Paper -->
                 <div id="clipboard-paper" class="bg-amber-50 rounded-lg h-full flex flex-col overflow-hidden m-2 p-2 border-2 border-amber-900/20">
+                    <!-- Companion Sync Screen (for Companion Device) -->
+                    <div id="companion-sync-screen" class="phone-app-screen hidden h-full flex flex-col items-center justify-center text-center p-4">
+                        <h2 class="text-3xl font-handwritten mb-4">Companion Sync</h2>
+                        <p class="mb-4">Enter the 4-digit code displayed on your main screen.</p>
+                        <input type="text" id="companion-code-input" maxlength="4" class="w-48 p-2 text-center text-3xl font-bold tracking-widest border-4 border-amber-800 rounded-md bg-white/80 mb-4">
+                        <button id="companion-connect-btn" class="btn-style px-8 py-3 text-xl">Connect</button>
+                        <p id="companion-status" class="mt-4 text-sm text-amber-800/80"></p>
+                    </div>
+
                     <!-- Apps Grid -->
                     <div id="phone-apps-grid" class="grid grid-cols-4 gap-x-2 gap-y-4 p-4 flex-grow overflow-y-auto">
                         <!-- App icons will be populated here by JS -->
@@ -391,6 +445,17 @@
     <div id="message-box" class="hidden rounded-lg">
         <p id="message-text" class="text-lg"></p>
         <button id="message-ok-btn" class="btn-style mt-4 px-4 py-2 rounded-lg">OK</button>
+    </div>
+
+    <!-- Host Sync Modal (for Host Device) -->
+    <div id="host-sync-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-5000">
+        <div class="bg-amber-100 w-full max-w-md p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col items-center">
+            <h2 class="text-3xl font-handwritten text-center mb-4">Companion Sync</h2>
+            <p class="mb-4 text-center">Enter this code on your companion device:</p>
+            <div id="host-code-display" class="p-4 text-5xl font-bold tracking-widest bg-white/80 border-4 border-amber-800/50 rounded-lg mb-4">----</div>
+            <p id="host-status" class="mb-6 text-sm text-center">Waiting for connection...</p>
+            <button id="host-sync-close-btn" class="btn-style px-6 py-2">Close</button>
+        </div>
     </div>
 
     <!-- New Game Screen -->
@@ -714,6 +779,11 @@
 
     <script>
         function showMessage(text, callback) {
+            // If we are the host with a connection, send the message to the companion.
+            if (hostConnection && hostConnection.open) {
+                hostConnection.send({ type: 'feedbackMessage', message: text });
+            }
+
             const msgBox = document.getElementById('message-box');
             const msgText = document.getElementById('message-text');
             const msgBtn = document.getElementById('message-ok-btn');
@@ -1116,6 +1186,13 @@
         let coffeeShopExists = true;
         let isPaused = false;
         let timeMultiplier = 1;
+
+        // WebRTC Companion Variables
+        let peer = null;
+        let hostConnection = null;
+        let companionConnection = null;
+        let lastSentState = null;
+        const PEER_PREFIX = 'art-supply-emporium-';
 
         const OPENING_DURATION = 30000; // 30 seconds
         const DAY_SHIFT_DURATION = 60000; // 1 minute
@@ -7822,6 +7899,18 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function init() {
+            // Companion Mode Check
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'companion') {
+                document.body.classList.add('companion-mode');
+                openClipboardPanel();
+                showAppScreen('companion-sync-screen'); // Show the code entry screen
+                document.getElementById('phone-back-btn').classList.add('hidden'); // Hide back button on initial sync screen
+                initializeCompanion();
+                setupCompanionActionListeners(); // Add the action listeners
+                return; // Stop normal game initialization for companion
+            }
+
             Object.keys(items).forEach(key => {
                 originalItemCosts[key] = items[key].cost;
             });
@@ -7833,6 +7922,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('pause-play-btn').addEventListener('click', togglePause);
             document.getElementById('basket-icon-container').addEventListener('click', toggleBasketExpansion);
             document.getElementById('double-time-btn').addEventListener('click', toggleDoubleTime);
+            document.getElementById('companion-sync-btn').addEventListener('click', initializeHost);
+            document.getElementById('host-sync-close-btn').addEventListener('click', () => document.getElementById('host-sync-modal').classList.add('hidden'));
+            document.getElementById('companion-connect-btn').addEventListener('click', connectToHost);
+
 
             const hasSave = localStorage.getItem('artEmporiumSave');
             if (hasSave) {
@@ -8191,6 +8284,204 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         window.addEventListener('load', init);
+
+        // --- Companion Mode Networking ---
+
+        function initializeHost() {
+            // If a peer object already exists, destroy the old one
+            if (peer) {
+                peer.destroy();
+            }
+
+            const hostCode = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('host-code-display').textContent = hostCode;
+            document.getElementById('host-sync-modal').classList.remove('hidden');
+            document.getElementById('host-status').textContent = 'Waiting for connection...';
+
+            peer = new Peer(PEER_PREFIX + hostCode);
+
+            peer.on('open', id => {
+                console.log('Host PeerJS ID:', id);
+            });
+
+            peer.on('connection', (conn) => {
+                console.log('Companion has connected!');
+                hostConnection = conn;
+                document.getElementById('host-status').textContent = '✅ Connected!';
+                document.getElementById('companion-sync-btn').classList.add('bg-green-500'); // Indicate connection
+
+                hostConnection.on('data', (data) => {
+                    if (data.action === 'click') {
+                        const element = document.getElementById(data.elementId);
+                        if (element) {
+                            console.log(`Host executing click on: #${data.elementId}`);
+                            element.click();
+                            // After any action, send the latest game state back
+                            sendFullGameStateToCompanion();
+                        }
+                    } else if (data.action === 'input') {
+                        const element = document.getElementById(data.elementId);
+                        if (element) {
+                             console.log(`Host setting input on: #${data.elementId} to ${data.value}`);
+                             element.value = data.value;
+                             // Dispatch an input event to trigger any listeners
+                             element.dispatchEvent(new Event('input', { bubbles: true }));
+                             sendFullGameStateToCompanion();
+                        }
+                    }
+                });
+
+                // Send the initial state right after connecting
+                sendFullGameStateToCompanion();
+
+                hostConnection.on('close', () => {
+                    console.log('Companion disconnected.');
+                    document.getElementById('host-status').textContent = 'Companion disconnected.';
+                    document.getElementById('companion-sync-btn').classList.remove('bg-green-500');
+                    hostConnection = null;
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                document.getElementById('host-status').textContent = `Error: ${err.type}`;
+            });
+        }
+
+        function initializeCompanion() {
+            if (peer) {
+                peer.destroy();
+            }
+            peer = new Peer(); // Create a peer with a random ID
+            peer.on('open', id => {
+                console.log('Companion PeerJS ID:', id);
+            });
+             peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                updateCompanionStatus(`Error: ${err.type}`);
+            });
+        }
+
+        function connectToHost() {
+            const code = document.getElementById('companion-code-input').value;
+            if (!peer || !code || code.length !== 4) {
+                updateCompanionStatus('Please enter a valid 4-digit code.');
+                return;
+            }
+
+            updateCompanionStatus(`Connecting to host ${code}...`);
+
+            companionConnection = peer.connect(PEER_PREFIX + code);
+
+            companionConnection.on('open', () => {
+                console.log('Connection to host established!');
+                updateCompanionStatus('✅ Connected!');
+                document.getElementById('phone-back-btn').classList.remove('hidden'); // Show back button again
+                showAppGrid(); // Move to the app grid
+            });
+
+            companionConnection.on('data', (data) => {
+                if (data.type === 'fullGameState') {
+                    console.log('Received full game state from host.');
+                    applyGameState(data.state);
+                } else if (data.type === 'feedbackMessage') {
+                    console.log('Received feedback message:', data.message);
+                    showMessage(data.message); // Show the message on the companion device
+                }
+            });
+
+            companionConnection.on('close', () => {
+                console.log('Disconnected from host.');
+                updateCompanionStatus('Disconnected from host.');
+                showAppScreen('companion-sync-screen'); // Go back to sync screen
+            });
+        }
+
+        function updateCompanionStatus(message) {
+            document.getElementById('companion-status').textContent = message;
+        }
+
+        function sendActionToHost(action) {
+            if (companionConnection && companionConnection.open) {
+                companionConnection.send(action);
+            }
+        }
+
+        function applyGameState(state) {
+            // Apply all the state properties from the host to the companion's game
+            cash = state.cash;
+            day = state.day;
+            shopPoints = state.shopPoints;
+            unlocks = state.unlocks;
+            shelves = state.shelves;
+            storageCells = state.storageCells;
+            loadingDockPackages = state.loadingDockPackages;
+            // We need to re-attach the draw method to shelves
+            shelves.forEach(shelf => shelf.draw = drawShelf);
+
+
+            // Now, refresh any open UI panels to reflect the new state
+            updateUI(); // Updates top-level cash, day, points displays
+            if (activePhoneScreen) {
+                // This is a simple way to refresh. Find the function that opens the current screen and call it.
+                // This re-renders the content with the new data.
+                switch(activePhoneScreen) {
+                    case 'restock-panel': openRestockPanel(); break;
+                    case 'unlocks-panel': openUnlocksPanel(); break;
+                    case 'shelf-assignment-panel': openShelfAssignmentPanel(); break;
+                    case 'shelf-panel': if(activeShelf) openShelfPanel(activeShelf); break;
+                    case 'storage-panel': if(activeStorageCell) openStorageCell(activeStorageCell); break;
+                    case 'employees-panel': openEmployeesPanel(); break;
+                    case 'customers-panel': openCustomersPanel(); break;
+                    case 'market-panel': openMarketPanel(); break;
+                    // Add other panels as needed
+                }
+            }
+        }
+
+        function sendFullGameStateToCompanion() {
+            if (hostConnection && hostConnection.open) {
+                const gameState = {
+                    cash, day, shopPoints, itemPopularity,
+                    inventory, storageCells, shelves,
+                    unlocks, loadingDockPackages, customerDemand,
+                    customerProfiles, enabledItems
+                };
+
+                // Prune the draw function before sending
+                const stateToSend = JSON.parse(JSON.stringify(gameState));
+
+                hostConnection.send({
+                    type: 'fullGameState',
+                    state: stateToSend
+                });
+            }
+        }
+
+        // This function overrides default event handlers in companion mode
+        function setupCompanionActionListeners() {
+            const clipboard = document.getElementById('clipboard-panel');
+            clipboard.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (button && button.id) {
+                    e.stopPropagation(); // Prevent the event from bubbling further
+                    e.preventDefault(); // Stop the default action
+                    console.log(`Companion sending click for #${button.id}`);
+                    sendActionToHost({ action: 'click', elementId: button.id });
+                }
+            }, true); // Use capture phase to intercept clicks early
+
+            clipboard.addEventListener('input', (e) => {
+                const input = e.target.closest('input[type="number"]');
+                 if (input && input.id) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log(`Companion sending input for #${input.id}`);
+                    sendActionToHost({ action: 'input', elementId: input.id, value: input.value });
+                 }
+            }, true);
+        }
+
     </script>
 </body>
 </html>

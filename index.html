@@ -5966,15 +5966,38 @@ function showHint() {
 
             const history = itemData.history;
             const predictions = itemData.predictions || [];
+            const baseCost = originalItemCosts[itemName];
             const fullData = [...history, ...predictions];
 
-            const maxVal = Math.max(...fullData);
-            const minVal = Math.min(...fullData);
+            // --- Find high/low points from HISTORY ONLY ---
+            const highPoint = { value: -1, index: -1 };
+            const lowPoint = { value: Infinity, index: -1 };
+            history.forEach((val, index) => {
+                if (val > highPoint.value) {
+                    highPoint.value = val;
+                    highPoint.index = index;
+                }
+                if (val < lowPoint.value) {
+                    lowPoint.value = val;
+                    lowPoint.index = index;
+                }
+            });
+
+            // --- Y-Axis Scaling (include base cost) ---
+            const maxVal = Math.max(...fullData, baseCost);
+            const minVal = Math.min(...fullData, baseCost);
             const range = (maxVal - minVal === 0) ? 1 : (maxVal - minVal);
 
             const padding = { top: 10, right: 10, bottom: 20, left: 30 };
             const chartWidth = canvas.width - padding.left - padding.right;
             const chartHeight = canvas.height - padding.top - padding.bottom;
+
+            // Helper to get coordinates
+            const getCoords = (value, index) => {
+                const x = padding.left + (index / (fullData.length - 1)) * chartWidth;
+                const y = padding.top + chartHeight - ((value - minVal) / range) * chartHeight;
+                return { x, y };
+            };
 
             // --- Draw Y-Axis Labels ---
             ctx.font = '10px "VT323"';
@@ -5995,17 +6018,27 @@ function showHint() {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             labels.forEach((label, index) => {
-                const x = padding.left + (index / (fullData.length - 1)) * chartWidth;
+                const x = getCoords(0, index).x; // Only need x-coord
                 ctx.fillText(label, x, canvas.height - padding.bottom + 4);
             });
+
+            // --- Draw Baseline (Base Cost) ---
+            const baselineY = getCoords(baseCost, 0).y; // Only need y-coord
+            ctx.setLineDash([3, 4]);
+            ctx.strokeStyle = 'rgba(93, 64, 55, 0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, baselineY);
+            ctx.lineTo(padding.left + chartWidth, baselineY);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
 
             // --- Draw Historical Data (Solid Line) ---
             ctx.strokeStyle = '#5d4037';
             ctx.lineWidth = 2;
             ctx.beginPath();
             history.forEach((point, index) => {
-                const x = padding.left + (index / (fullData.length - 1)) * chartWidth;
-                const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
+                const { x, y } = getCoords(point, index);
                 if (index === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
@@ -6016,30 +6049,46 @@ function showHint() {
                 ctx.setLineDash([4, 4]);
                 ctx.strokeStyle = 'rgba(93, 64, 55, 0.6)';
                 ctx.beginPath();
-                // Start from the last historical point
-                const lastHistoryIndex = history.length - 1;
-                const startX = padding.left + (lastHistoryIndex / (fullData.length - 1)) * chartWidth;
-                const startY = padding.top + chartHeight - ((history[lastHistoryIndex] - minVal) / range) * chartHeight;
+                const { x: startX, y: startY } = getCoords(history[history.length - 1], history.length - 1);
                 ctx.moveTo(startX, startY);
-                // Draw lines to each prediction
                 predictions.forEach((point, index) => {
-                    const x = padding.left + ((lastHistoryIndex + 1 + index) / (fullData.length - 1)) * chartWidth;
-                    const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
+                    const { x, y } = getCoords(point, history.length + index);
                     ctx.lineTo(x, y);
                 });
                 ctx.stroke();
-                ctx.setLineDash([]); // Reset line dash
+                ctx.setLineDash([]); // Reset
             }
 
             // --- Draw Data Points ---
             fullData.forEach((point, index) => {
-                const x = padding.left + (index / (fullData.length - 1)) * chartWidth;
-                const y = padding.top + chartHeight - ((point - minVal) / range) * chartHeight;
+                const { x, y } = getCoords(point, index);
                 ctx.fillStyle = (index < history.length) ? '#5d4037' : 'rgba(93, 64, 55, 0.6)';
                 ctx.beginPath();
                 ctx.arc(x, y, 3, 0, Math.PI * 2);
                 ctx.fill();
             });
+
+            // --- Draw High and Low Points ---
+            if (highPoint.index !== -1) {
+                const { x, y } = getCoords(highPoint.value, highPoint.index);
+                ctx.fillStyle = '#ef4444'; // Red
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+            if (lowPoint.index !== -1) {
+                const { x, y } = getCoords(lowPoint.value, lowPoint.index);
+                ctx.fillStyle = '#22c55e'; // Green
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
         }
 
         function openMarketDetailPanel(categoryKey) {

@@ -235,21 +235,9 @@
                     <div id="companion-sync-screen" class="phone-app-screen hidden h-full flex flex-col items-center justify-center text-center p-4">
                         <h2 class="text-3xl font-handwritten mb-4">Companion Sync</h2>
                         <p id="companion-instructions" class="mb-4">Enter the 4-digit code displayed on your main screen.</p>
-                        <div class="flex items-center space-x-2">
-                            <input type="text" id="companion-code-input" maxlength="4" class="w-48 p-2 text-center text-3xl font-bold tracking-widest border-4 border-amber-800 rounded-md bg-white/80">
-                            <button id="companion-connect-btn" class="btn-style px-6 py-3 text-xl">Connect</button>
-                        </div>
-                        <p class="my-4">or</p>
-                        <button id="scan-qr-btn" class="btn-style px-8 py-3 text-xl w-full">Scan QR Code</button>
+                        <input type="text" id="companion-code-input" maxlength="4" class="w-48 p-2 text-center text-3xl font-bold tracking-widest border-4 border-amber-800 rounded-md bg-white/80 mb-4">
+                        <button id="companion-connect-btn" class="btn-style px-8 py-3 text-xl">Connect</button>
                         <p id="companion-status" class="mt-4 text-sm text-amber-800/80"></p>
-                    </div>
-
-                    <!-- QR Scanner Modal -->
-                    <div id="qr-scanner-modal" class="phone-app-screen hidden absolute inset-0 bg-amber-50 z-10 flex flex-col items-center justify-center p-4">
-                        <video id="qr-video" playsinline class="w-full max-w-sm h-auto border-4 border-amber-800 rounded-lg"></video>
-                        <canvas id="qr-canvas" width="640" height="480" class="hidden"></canvas>
-                        <p id="qr-scan-status" class="mt-4 font-bold text-lg">Align QR code in the frame</p>
-                        <button id="qr-cancel-btn" class="btn-style bg-red-700 hover:bg-red-600 mt-4 px-6 py-2">Cancel</button>
                     </div>
 
 
@@ -7917,24 +7905,32 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         function init() {
             const urlParams = new URLSearchParams(window.location.search);
+            const companionId = urlParams.get('companion_id');
             const isCompanion = urlParams.get('mode') === 'companion';
             const isSmallScreen = window.innerWidth < 768;
 
-            // Automatically enter companion mode on small screens or with the URL parameter.
-            if (isCompanion || isSmallScreen) {
+            // Automatically enter companion mode if a companion_id is present,
+            // or via the old methods (small screen / ?mode=companion)
+            if (companionId || isCompanion || isSmallScreen) {
                 document.body.classList.add('companion-mode');
                 openClipboardPanel();
-                showAppScreen('companion-sync-screen');
-                document.getElementById('phone-back-btn').classList.add('hidden');
 
-                if (isSmallScreen && !isCompanion) {
-                    // Show the specific warning message for small screens
-                    const instructions = document.getElementById('companion-instructions');
-                    instructions.innerHTML = "Your screen is small! To play the full game, please enlarge your browser window. <br>To use this as a companion controller, enter the code from your main game screen below.";
-                }
-
-                initializeCompanion();
+                initializeCompanion(); // This sets up the `peer` object
                 setupCompanionActionListeners();
+
+                if (companionId) {
+                    // If we have an ID from the QR code, connect immediately.
+                    connectToHost(companionId);
+                } else {
+                    // Otherwise, show the sync screen for manual entry.
+                    showAppScreen('companion-sync-screen');
+                    document.getElementById('phone-back-btn').classList.add('hidden');
+                     if (isSmallScreen && !isCompanion) {
+                        // Show the specific warning message for small screens
+                        const instructions = document.getElementById('companion-instructions');
+                        instructions.innerHTML = "Your screen is small! To play the full game, please enlarge your browser window. <br>To use this as a companion controller, enter the code from your main game screen below.";
+                    }
+                }
                 return; // Stop normal game initialization for companion
             }
 
@@ -7956,8 +7952,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             // Companion listeners
             document.getElementById('companion-connect-btn').addEventListener('click', () => connectToHost()); // Manual connection
-            document.getElementById('scan-qr-btn').addEventListener('click', startQrScanner);
-            document.getElementById('qr-cancel-btn').addEventListener('click', stopQrScanner);
 
 
             const hasSave = localStorage.getItem('artEmporiumSave');
@@ -8335,11 +8329,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             // Generate and display the QR code
             try {
+                const baseUrl = window.location.origin + window.location.pathname;
+                const companionUrl = `${baseUrl}?companion_id=${fullPeerId}`;
+
                 const qr = qrcode(0, 'L');
-                qr.addData(fullPeerId);
+                qr.addData(companionUrl);
                 qr.make();
                 const canvas = document.getElementById('qr-code-canvas');
-                // The library has a `createCanvasContext` method, but we'll draw it manually for more control.
                 const ctx = canvas.getContext('2d');
                 const cellSize = 4; // Size of each QR code module
                 const margin = cellSize * 4;
@@ -8426,73 +8422,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 updateCompanionStatus(`Error: ${err.type}`);
             });
         }
-
-        let qrScanner = null; // To hold the animation frame request
-
-        function startQrScanner() {
-            const video = document.getElementById('qr-video');
-            const statusP = document.getElementById('qr-scan-status');
-            const scannerModal = document.getElementById('qr-scanner-modal');
-            const syncScreen = document.getElementById('companion-sync-screen');
-
-            scannerModal.classList.remove('hidden');
-            syncScreen.classList.add('hidden');
-            statusP.textContent = 'Requesting camera access...';
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(function(stream) {
-                    video.srcObject = stream;
-                    video.play();
-                    statusP.textContent = 'Align QR code in the frame';
-                    qrScanner = requestAnimationFrame(scanQrCode);
-                })
-                .catch(function(err) {
-                    console.error("Camera Error:", err);
-                    statusP.textContent = 'Could not access camera.';
-                });
-        }
-
-        function stopQrScanner() {
-            if (qrScanner) {
-                cancelAnimationFrame(qrScanner);
-                qrScanner = null;
-            }
-            const video = document.getElementById('qr-video');
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-            document.getElementById('qr-scanner-modal').classList.add('hidden');
-            document.getElementById('companion-sync-screen').classList.remove('hidden');
-        }
-
-        function scanQrCode() {
-            const video = document.getElementById('qr-video');
-            const canvas = document.getElementById('qr-canvas');
-            const ctx = canvas.getContext('2d');
-            const statusP = document.getElementById('qr-scan-status');
-
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.height = video.videoHeight;
-                canvas.width = video.videoWidth;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert",
-                });
-
-                if (code) {
-                    statusP.textContent = `Found code: ${code.data}`;
-                    stopQrScanner();
-                    connectToHost(code.data); // Connect using the full ID from QR
-                    return;
-                } else {
-                    statusP.textContent = 'Scanning...';
-                }
-            }
-            qrScanner = requestAnimationFrame(scanQrCode);
-        }
-
 
         function connectToHost(fullPeerId = null) {
             let connectId = fullPeerId;

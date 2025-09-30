@@ -6657,6 +6657,8 @@ function showHint() {
 
             apps.forEach(app => {
                 const appButton = document.createElement('button');
+                // Add a unique ID for companion mode tracking
+                appButton.id = `app-btn-${app.name.toLowerCase()}`;
                 appButton.className = 'flex flex-col items-center justify-center space-y-1 text-amber-900 hover:bg-amber-200/50 rounded-lg p-2 transition-colors';
                 const iconDiv = document.createElement('div');
                 iconDiv.className = 'text-4xl';
@@ -8418,70 +8420,89 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         // --- Companion Mode Networking ---
 
+        // --- REFACTORED ASYNC PEERJS LOGIC ---
         function initializeHost() {
-            // If a peer object already exists, destroy the old one
-            if (peer) {
-                peer.destroy();
-            }
-
+            // This function now just orchestrates the async setup.
             document.getElementById('host-sync-modal').classList.remove('hidden');
             document.getElementById('host-status').textContent = 'Generating connection...';
-            document.getElementById('open-in-tab-btn').classList.add('hidden'); // Hide button initially
+            document.getElementById('open-in-tab-btn').classList.add('hidden');
 
-            // Let PeerJS generate a unique ID for us.
-            peer = new Peer();
+            setupHostPeer().then(hostId => {
+                console.log(`Host is ready with ID: ${hostId}`);
+                displayHostQRCode(hostId);
+                listenForCompanionConnections();
+            }).catch(error => {
+                console.error("Host setup failed:", error);
+                document.getElementById('host-status').textContent = `Error: ${error.message || error}`;
+            });
+        }
 
-            peer.on('open', id => {
-                console.log('Host PeerJS ID:', id);
-                document.getElementById('host-status').textContent = 'Waiting for connection...';
+        function setupHostPeer() {
+            return new Promise((resolve, reject) => {
+                if (peer) {
+                    peer.destroy();
+                }
+                peer = new Peer(); // Let PeerJS generate the ID
 
-                // Generate and display the QR code now that we have the unique ID
-                try {
-                    const baseUrl = window.location.origin + window.location.pathname;
-                    const companionUrl = `${baseUrl}?companion_id=${id}`;
+                peer.on('open', id => {
+                    console.log('Host PeerJS object open. ID:', id);
+                    resolve(id);
+                });
 
-                    // Set up the "Open in Tab" button
-                    const openInTabBtn = document.getElementById('open-in-tab-btn');
-                    openInTabBtn.href = companionUrl;
-                    openInTabBtn.classList.remove('hidden');
+                peer.on('error', err => {
+                    console.error("PeerJS error during host setup:", err);
+                    reject(err);
+                });
+            });
+        }
 
-                    const qr = qrcode(0, 'L');
-                    qr.addData(companionUrl);
-                    qr.make();
-                    const canvas = document.getElementById('qr-code-canvas');
-                    const ctx = canvas.getContext('2d');
-                    const cellSize = 4; // Size of each QR code module
-                    const margin = cellSize * 4;
-                    const qrSize = qr.getModuleCount() * cellSize;
-                    canvas.width = qrSize + margin * 2;
-                    canvas.height = qrSize + margin * 2;
-                    ctx.fillStyle = "#f7e7d8"; // Background color
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = "#5d4037"; // QR code color
+        function displayHostQRCode(hostId) {
+            document.getElementById('host-status').textContent = 'Waiting for connection...';
+            try {
+                const baseUrl = window.location.origin + window.location.pathname;
+                const companionUrl = `${baseUrl}?companion_id=${hostId}`;
 
-                    for (let row = 0; row < qr.getModuleCount(); row++) {
-                        for (let col = 0; col < qr.getModuleCount(); col++) {
-                            if (qr.isDark(row, col)) {
-                                ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
-                            }
+                const openInTabBtn = document.getElementById('open-in-tab-btn');
+                openInTabBtn.href = companionUrl;
+                openInTabBtn.classList.remove('hidden');
+
+                const qr = qrcode(0, 'L');
+                qr.addData(companionUrl);
+                qr.make();
+                const canvas = document.getElementById('qr-code-canvas');
+                const ctx = canvas.getContext('2d');
+                const cellSize = 4;
+                const margin = cellSize * 4;
+                const qrSize = qr.getModuleCount() * cellSize;
+                canvas.width = qrSize + margin * 2;
+                canvas.height = qrSize + margin * 2;
+                ctx.fillStyle = "#f7e7d8";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#5d4037";
+
+                for (let row = 0; row < qr.getModuleCount(); row++) {
+                    for (let col = 0; col < qr.getModuleCount(); col++) {
+                        if (qr.isDark(row, col)) {
+                            ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
                         }
                     }
-                } catch (err) {
-                    console.error("QR Code generation failed:", err);
-                    document.getElementById('qr-code-canvas').style.display = 'none'; // Hide if it fails
-                    document.getElementById('host-status').textContent = 'QR generation failed.';
                 }
-            });
+            } catch (err) {
+                console.error("QR Code generation failed:", err);
+                document.getElementById('qr-code-canvas').style.display = 'none';
+                document.getElementById('host-status').textContent = 'QR generation failed.';
+            }
+        }
 
+        function listenForCompanionConnections() {
             peer.on('connection', (conn) => {
                 console.log('Companion has connected!');
                 hostConnection = conn;
                 document.getElementById('host-status').textContent = '✅ Connected!';
-                document.getElementById('companion-sync-btn').classList.add('bg-green-500'); // Indicate connection
+                document.getElementById('companion-sync-btn').classList.add('bg-green-500');
 
                 hostConnection.on('data', (data) => {
                     if (data.action === 'click') {
-                        // Special handling for the back button to ensure it works.
                         if (data.elementId === 'phone-back-btn') {
                             console.log('Host executing special action for phone-back-btn');
                             showAppGrid();
@@ -8493,22 +8514,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         if (element) {
                             console.log(`Host executing click on: #${data.elementId}`);
                             element.click();
-                            // After any action, send the latest game state back
                             sendFullGameStateToCompanion();
                         }
                     } else if (data.action === 'input') {
                         const element = document.getElementById(data.elementId);
                         if (element) {
-                             console.log(`Host setting input on: #${data.elementId} to ${data.value}`);
-                             element.value = data.value;
-                             // Dispatch an input event to trigger any listeners
-                             element.dispatchEvent(new Event('input', { bubbles: true }));
-                             sendFullGameStateToCompanion();
+                            console.log(`Host setting input on: #${data.elementId} to ${data.value}`);
+                            element.value = data.value;
+                            element.dispatchEvent(new Event('input', { bubbles: true }));
+                            sendFullGameStateToCompanion();
                         }
                     }
                 });
 
-                // Send the initial state right after connecting
                 sendFullGameStateToCompanion();
 
                 hostConnection.on('close', () => {
@@ -8518,65 +8536,76 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     hostConnection = null;
                 });
             });
-
-            peer.on('error', (err) => {
-                console.error("PeerJS Error:", err);
-                document.getElementById('host-status').textContent = `Error: ${err.type}`;
-            });
         }
+
 
         function initializeCompanion() {
-            if (peer) {
-                peer.destroy();
-            }
-            peer = new Peer(); // Create a peer with a random ID
-            peer.on('open', id => {
-                console.log('Companion PeerJS ID:', id);
-            });
-             peer.on('error', (err) => {
-                console.error("PeerJS Error:", err);
-                updateCompanionStatus(`Error: ${err.type}`);
+            // This function now returns a promise that resolves when the peer is ready.
+            return new Promise((resolve, reject) => {
+                 if (peer) {
+                    peer.destroy();
+                }
+                peer = new Peer(); // Create a peer with a random ID
+
+                peer.on('open', id => {
+                    console.log('Companion PeerJS object open. ID:', id);
+                    resolve(); // Resolve the promise when the peer is ready
+                });
+
+                 peer.on('error', (err) => {
+                    console.error("Companion PeerJS Error:", err);
+                    updateCompanionStatus(`Error: ${err.type}`);
+                    reject(err);
+                });
             });
         }
 
-        function connectToHost(fullPeerId) {
-            if (!fullPeerId) {
+        async function connectToHost(hostId) {
+            if (!hostId) {
                 updateCompanionStatus('No connection ID provided. Please scan the QR code again.');
                 return;
             }
 
-            if (!peer) {
-                 updateCompanionStatus('Peer object not initialized.');
-                 return;
+            try {
+                // Wait for the local peer object to be ready before trying to connect.
+                await initializeCompanion();
+                console.log("Companion peer initialized, now attempting to connect to host.");
+
+                updateCompanionStatus(`Connecting to host...`);
+                companionConnection = peer.connect(hostId);
+
+                companionConnection.on('open', () => {
+                    console.log('Connection to host established!');
+                    updateCompanionStatus('✅ Connected!');
+                    document.getElementById('phone-back-btn').classList.remove('hidden');
+                    showAppGrid();
+                });
+
+                companionConnection.on('data', (data) => {
+                    if (data.type === 'fullGameState') {
+                        // console.log('Received full game state from host.');
+                        applyGameState(data.state);
+                    } else if (data.type === 'feedbackMessage') {
+                        console.log('Received feedback message:', data.message);
+                        showMessage(data.message);
+                    }
+                });
+
+                companionConnection.on('close', () => {
+                    console.log('Disconnected from host.');
+                    updateCompanionStatus('Disconnected from host.');
+                    showAppScreen('companion-sync-screen');
+                });
+
+                companionConnection.on('error', (err) => {
+                    console.error("Connection error:", err);
+                    updateCompanionStatus(`Connection error: ${err.type}`);
+                });
+
+            } catch (error) {
+                console.error("Failed to initialize companion peer:", error);
+                updateCompanionStatus('Failed to initialize. Please refresh.');
             }
-
-            updateCompanionStatus(`Connecting to host...`);
-
-            const connectId = fullPeerId;
-            companionConnection = peer.connect(connectId);
-
-            companionConnection.on('open', () => {
-                console.log('Connection to host established!');
-                updateCompanionStatus('✅ Connected!');
-                document.getElementById('phone-back-btn').classList.remove('hidden'); // Show back button again
-                showAppGrid(); // Move to the app grid
-            });
-
-            companionConnection.on('data', (data) => {
-                if (data.type === 'fullGameState') {
-                    console.log('Received full game state from host.');
-                    applyGameState(data.state);
-                } else if (data.type === 'feedbackMessage') {
-                    console.log('Received feedback message:', data.message);
-                    showMessage(data.message); // Show the message on the companion device
-                }
-            });
-
-            companionConnection.on('close', () => {
-                console.log('Disconnected from host.');
-                updateCompanionStatus('Disconnected from host.');
-                showAppScreen('companion-sync-screen'); // Go back to sync screen
-            });
         }
 
         function updateCompanionStatus(message) {
@@ -8706,7 +8735,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     player: { basket: player.basket },
                     employees: employeesToSave,
                     isMandatoryBreak,
-                    currentRestockOrder
+                    currentRestockOrder,
+                    activePhoneScreen // <-- ADDED: Sync the active screen
                 };
 
                 // Prune the draw function before sending

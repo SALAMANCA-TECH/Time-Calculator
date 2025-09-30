@@ -8478,6 +8478,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function applyGameState(state) {
+            // Store the previous screen to see if we need to change view
+            const oldActiveScreen = activePhoneScreen;
+
             // Apply all the state properties from the host to the companion's game
             cash = state.cash;
             day = state.day;

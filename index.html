@@ -8619,10 +8619,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function applyGameState(state) {
+            console.log("Companion receiving new game state. Active screen:", state.activePhoneScreen);
             // Store the previous screen to see if we need to change view
             const oldActiveScreen = activePhoneScreen;
 
             // Apply all the state properties from the host to the companion's game
+            activePhoneScreen = state.activePhoneScreen; // <-- THE MISSING FIX
             cash = state.cash;
             day = state.day;
             shopPoints = state.shopPoints;
@@ -8665,8 +8667,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             updateBasketUI(); // Update basket display
 
             if (activePhoneScreen) {
-                // This is a simple way to refresh. Find the function that opens the current screen and call it.
-                // This re-renders the content with the new data.
+                // A screen is active on the host, so we should refresh that screen's content.
+                // The functions called in the switch statement handle calling showAppScreen.
+                console.log(`Companion is refreshing active screen: ${activePhoneScreen}`);
                 switch(activePhoneScreen) {
                     case 'restock-panel': openRestockPanel(); break;
                     case 'order-quantity-modal':
@@ -8677,7 +8680,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     case 'unlocks-panel': openUnlocksPanel(); break;
                     case 'shelf-assignment-panel': openShelfAssignmentPanel(); break;
                     case 'shelf-panel':
-                         // Find the correct shelf object to pass. Don't rely on the potentially stale activeShelf.
                         const shelfTitle = document.getElementById('shelf-title')?.textContent || '';
                         const shelfIndexMatch = shelfTitle.match(/Shelf (\d+)/);
                         if (shelfIndexMatch) {
@@ -8691,7 +8693,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         if (cell) openStorageCell(cell);
                         break;
                      case 'assignment-panel':
-                        // This panel is transient; it's better to go back one level.
                         openShelfAssignmentPanel();
                         break;
                     case 'employees-panel': openEmployeesPanel(); break;
@@ -8705,9 +8706,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                          const deepDiveTitle = document.getElementById('market-deep-dive-title')?.textContent || '';
                          if(deepDiveTitle) openMarketItemDeepDivePanel(deepDiveTitle);
                          break;
-                    case 'settings-panel': showAppScreen('settings-panel'); break; // No data refresh needed, just show
+                    case 'settings-panel': showAppScreen('settings-panel'); break;
                     case 'items-panel': openItemsPanel(); break;
                 }
+            } else {
+                // No screen is active on the host, so the companion should show the app grid.
+                console.log("Companion returning to app grid.");
+                showAppGrid();
             }
         }
 

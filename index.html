@@ -6816,6 +6816,7 @@ function showHint() {
         }
 
         function openOrderQuantityModal(itemName) {
+            phoneScreenContext = { itemName: itemName }; // Store context
             const itemData = items[itemName];
             const restockPrice = itemData.cost;
 
@@ -7164,6 +7165,7 @@ function showHint() {
         }
 
         function openStorageCell(cell) {
+            phoneScreenContext = { cellLabel: cell.label }; // Store context
             activeStorageCell = cell;
             const storageGrid = document.getElementById('storage-grid');
             document.getElementById('storage-title').textContent = cell.label;
@@ -7415,6 +7417,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function openShelfPanel(shelf) {
+            phoneScreenContext = { shelfIndex: shelves.indexOf(shelf) }; // Store context
             activeShelf = shelf;
             const shelfGrid = document.getElementById('shelf-grid');
             document.getElementById('shelf-title').textContent = `Manage Shelf ${shelves.indexOf(shelf) + 1}`;
@@ -7599,6 +7602,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         let activePanel = null; // DEPRECATED: Will be replaced by phone-specific logic
         let activePhoneScreen = null; // Tracks the currently open app screen inside the phone
+        let phoneScreenContext = {}; // Stores context for screens that need it (e.g., which item is being ordered)
         let isPhoneOpen = false;
         let activeShelf = null;
         let activeStorageCell = null;
@@ -7615,6 +7619,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('phone-apps-grid').classList.remove('hidden');
             document.getElementById('phone-app-screens').classList.add('hidden');
             activePhoneScreen = null;
+            phoneScreenContext = {}; // Clear context when going home
             closeNewspaperModal();
         }
 
@@ -8649,11 +8654,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         function applyGameState(state) {
             console.log("Companion receiving new game state. Active screen:", state.activePhoneScreen);
-            // Store the previous screen to see if we need to change view
-            const oldActiveScreen = activePhoneScreen;
 
             // Apply all the state properties from the host to the companion's game
-            activePhoneScreen = state.activePhoneScreen; // <-- THE MISSING FIX
+            activePhoneScreen = state.activePhoneScreen;
+            phoneScreenContext = state.phoneScreenContext || {}; // IMPORTANT: Get the context
             cash = state.cash;
             day = state.day;
             shopPoints = state.shopPoints;
@@ -8666,7 +8670,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             priceHistory = state.priceHistory;
             marketType = state.marketType;
             marketEnabled = state.marketEnabled;
-            items = state.items; // Make sure item costs are updated
+            items = state.items;
             developerMode = state.developerMode;
             dayPhase = state.dayPhase;
             continuousMode = state.continuousMode;
@@ -8675,8 +8679,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             isMandatoryBreak = state.isMandatoryBreak;
             currentRestockOrder = state.currentRestockOrder;
 
-
-            // Update employee data from the host
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             if (state.employees) {
                 for (const empKey in state.employees) {
@@ -8688,58 +8690,54 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
             }
 
-            // We need to re-attach the draw method to shelves
             shelves.forEach(shelf => shelf.draw = drawShelf);
+            updateUI();
+            updateBasketUI();
 
-            // Now, refresh any open UI panels to reflect the new state
-            updateUI(); // Updates top-level cash, day, points displays
-            updateBasketUI(); // Update basket display
-
+            // REFACTORED: Use the synced context to open the correct panel with the correct data.
             if (activePhoneScreen) {
-                // A screen is active on the host, so we should refresh that screen's content.
-                // The functions called in the switch statement handle calling showAppScreen.
-                console.log(`Companion is refreshing active screen: ${activePhoneScreen}`);
-                switch(activePhoneScreen) {
+                console.log(`Companion refreshing active screen: ${activePhoneScreen} with context:`, phoneScreenContext);
+                switch (activePhoneScreen) {
                     case 'restock-panel': openRestockPanel(); break;
-                    case 'order-quantity-modal':
-                        const item = document.getElementById('order-quantity-input')?.dataset.item;
-                        if(item) openOrderQuantityModal(item);
-                        else openRestockPanel(); // Fallback if item is not found
-                        break;
                     case 'unlocks-panel': openUnlocksPanel(); break;
                     case 'shelf-assignment-panel': openShelfAssignmentPanel(); break;
-                    case 'shelf-panel':
-                        const shelfTitle = document.getElementById('shelf-title')?.textContent || '';
-                        const shelfIndexMatch = shelfTitle.match(/Shelf (\d+)/);
-                        if (shelfIndexMatch) {
-                            const shelfIndex = parseInt(shelfIndexMatch[1], 10) - 1;
-                            if (shelves[shelfIndex]) openShelfPanel(shelves[shelfIndex]);
-                        }
-                        break;
-                    case 'storage-panel':
-                        const storageTitle = document.getElementById('storage-title')?.textContent || '';
-                        const cell = storageCells.find(c => c.label === storageTitle);
-                        if (cell) openStorageCell(cell);
-                        break;
-                     case 'assignment-panel':
-                        openShelfAssignmentPanel();
-                        break;
                     case 'employees-panel': openEmployeesPanel(); break;
                     case 'customers-panel': openCustomersPanel(); break;
                     case 'market-panel': openMarketPanel(); break;
-                    case 'market-detail-panel':
-                        const detailTitle = document.getElementById('market-detail-title')?.textContent || '';
-                        if(detailTitle) openMarketDetailPanel(detailTitle);
-                        break;
-                    case 'market-item-deep-dive-panel':
-                         const deepDiveTitle = document.getElementById('market-deep-dive-title')?.textContent || '';
-                         if(deepDiveTitle) openMarketItemDeepDivePanel(deepDiveTitle);
-                         break;
                     case 'settings-panel': showAppScreen('settings-panel'); break;
                     case 'items-panel': openItemsPanel(); break;
+                    case 'order-quantity-modal':
+                        if (phoneScreenContext.itemName) {
+                            openOrderQuantityModal(phoneScreenContext.itemName);
+                        }
+                        break;
+                    case 'shelf-panel':
+                        if (phoneScreenContext.shelfIndex !== undefined && shelves[phoneScreenContext.shelfIndex]) {
+                            openShelfPanel(shelves[phoneScreenContext.shelfIndex]);
+                        }
+                        break;
+                    case 'storage-panel':
+                        if (phoneScreenContext.cellLabel) {
+                            const cell = storageCells.find(c => c.label === phoneScreenContext.cellLabel);
+                            if (cell) openStorageCell(cell);
+                        }
+                        break;
+                    case 'assignment-panel':
+                        // This screen requires more complex context, fallback to the parent
+                        openShelfAssignmentPanel();
+                        break;
+                    case 'market-detail-panel':
+                        if (phoneScreenContext.categoryKey) {
+                            openMarketDetailPanel(phoneScreenContext.categoryKey);
+                        }
+                        break;
+                    case 'market-item-deep-dive-panel':
+                        if (phoneScreenContext.itemName) {
+                            openMarketItemDeepDivePanel(phoneScreenContext.itemName);
+                        }
+                        break;
                 }
             } else {
-                // No screen is active on the host, so the companion should show the app grid.
                 console.log("Companion returning to app grid.");
                 showAppGrid();
             }
@@ -8770,7 +8768,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     employees: employeesToSave,
                     isMandatoryBreak,
                     currentRestockOrder,
-                    activePhoneScreen // <-- ADDED: Sync the active screen
+                    activePhoneScreen,
+                    phoneScreenContext // <-- ADDED: Sync the screen's context
                 };
 
                 // Prune the draw function before sending

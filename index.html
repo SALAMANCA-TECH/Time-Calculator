@@ -1008,7 +1008,7 @@
         }
 
         let marketType = 'classic'; // Stores the player's choice. Can be 'classic', 'dailyMood', 'categoryFocus', or 'liveSimulation'.
-        const originalItemCosts = {}; // Will store a clean copy of the base item costs.
+        let originalItemCosts = {}; // Will store a clean copy of the base item costs.
         let dailyPlayerPurchases = {}; // For the 'Live Simulation' market.
 
         const marketStyleDescriptions = {
@@ -1468,7 +1468,7 @@
         });
 
 
-        const items = {
+        let items = {
             // Drawing (formerly General)
             'Pencil': { cost: 1 }, 'Charcoal': { cost: 2 }, 'Markers': { cost: 5 }, 'Sketchbook': { cost: 10 },
             // Painting (formerly Quality)

@@ -8613,9 +8613,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             clipboard.addEventListener('click', (e) => {
                 const button = e.target.closest('button');
                 if (button && button.id) {
-                    // Check if the clicked button is inside the sync screen.
-                    // If it is, we let the event proceed normally for local connection.
-                    if (button.closest('#companion-sync-screen')) {
+                    // If the back button is clicked, let the default action happen.
+                    // Also, if the clicked button is inside the sync screen, let it proceed.
+                    if (button.id === 'phone-back-btn' || button.closest('#companion-sync-screen')) {
                         return;
                     }
 

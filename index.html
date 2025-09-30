@@ -179,7 +179,6 @@
             bottom: 0;
             background-color: rgba(93, 64, 55, 0.7); /* semi-transparent brown */
             z-index: 4000; /* Above the paper, below the clip */
-            /* display: flex; <-- REMOVED to fix specificity issue */
             align-items: center;
             justify-content: center;
             text-align: center;
@@ -6835,8 +6834,6 @@ function showHint() {
                     buyNowOne(itemName);
                 });
             });
-
-            showAppScreen('restock-panel');
         }
 
         function openOrderQuantityModal(itemName) {
@@ -7050,8 +7047,6 @@ function showHint() {
                     purchaseUnlock(type, key);
                 });
             });
-
-            showAppScreen('unlocks-panel');
         }
 
 
@@ -7637,11 +7632,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             isPhoneOpen = false;
             activePhoneScreen = null;
             closeNewspaperModal();
-
-            // STEP 2: Notify host of UI change
-            if (companionConnection && companionConnection.open) {
-                sendActionToHost({ type: 'ui_change', screen: 'closed' });
-            }
         }
 
         function showAppGrid() {
@@ -7650,11 +7640,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             activePhoneScreen = null;
             phoneScreenContext = {}; // Clear context when going home
             closeNewspaperModal();
-
-            // STEP 2: Notify host of UI change
-            if (companionConnection && companionConnection.open) {
-                sendActionToHost({ type: 'ui_change', screen: 'app-grid' });
-            }
         }
 
         function showAppScreen(panelId) {
@@ -7683,11 +7668,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 orderFooter.classList.remove('hidden');
             } else {
                 orderFooter.classList.add('hidden');
-            }
-
-            // STEP 2: Notify host of UI change
-            if (companionConnection && companionConnection.open) {
-                sendActionToHost({ type: 'ui_change', screen: panelId, context: phoneScreenContext });
             }
         }
 
@@ -8545,8 +8525,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 document.getElementById('host-status').textContent = '✅ Connected!';
                 document.getElementById('companion-sync-btn').classList.add('bg-green-500');
 
-                // STEP 4: Show the overlay on the host's clipboard
+                // Show the overlay on the host's clipboard and hide the paper
                 document.getElementById('host-clipboard-overlay').classList.remove('hidden');
+                document.getElementById('clipboard-paper').classList.add('hidden');
+
 
                 // This map links button IDs from the companion to functions on the host.
                 // This is more reliable than simulating clicks.
@@ -8571,27 +8553,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 ]);
 
                 hostConnection.on('data', (data) => {
-                    // STEP 3: Handle UI mirroring messages from the companion
-                    if (data.type === 'ui_change') {
-                        console.log(`Host received UI change command:`, data);
-                        // The host's phone UI should now mirror the companion's actions.
-                        phoneScreenContext = data.context || {}; // Update context for complex screens
-                        switch (data.screen) {
-                            case 'closed':
-                                closeClipboard();
-                                break;
-                            case 'app-grid':
-                                openClipboardPanel(); // Ensure panel is open
-                                showAppGrid();
-                                break;
-                            default:
-                                openClipboardPanel(); // Ensure panel is open
-                                showAppScreen(data.screen);
-                                break;
-                        }
-                        return; // Don't need to send a full state update back for a UI-only change.
-                    }
-
                     if (data.action === 'click') {
                         const elementId = data.elementId;
                         console.log(`Host received click command for #${elementId}`);
@@ -8632,8 +8593,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     document.getElementById('companion-sync-btn').classList.remove('bg-green-500');
                     hostConnection = null;
 
-                    // STEP 4: Hide the overlay and close the clipboard for the host
+                    // Hide the overlay, show the paper, and close the clipboard for the host
                     document.getElementById('host-clipboard-overlay').classList.add('hidden');
+                    document.getElementById('clipboard-paper').classList.remove('hidden');
                     closeClipboard();
                 });
             });
@@ -8720,11 +8682,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function applyGameState(state) {
-            // STEP 1 REFACTOR: Don't log the host's screen, the companion is now in charge.
-            // console.log("Companion receiving new game state. Active screen:", state.activePhoneScreen);
+            // DEBUG: Log the state being received by the companion
+            console.log(`COMPANION RECEIVED -> activePhoneScreen: ${state.activePhoneScreen}, context: ${JSON.stringify(state.phoneScreenContext)}`);
 
-            // Apply all the DATA properties from the host.
-            // UI state like activePhoneScreen and phoneScreenContext are now managed by the companion.
+            // Apply all the state properties from the host to the companion's game
+            activePhoneScreen = state.activePhoneScreen;
+            phoneScreenContext = state.phoneScreenContext || {}; // IMPORTANT: Get the context
             cash = state.cash;
             day = state.day;
             shopPoints = state.shopPoints;
@@ -8757,62 +8720,47 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
             }
 
-            // Update basic UI elements that are always visible.
             shelves.forEach(shelf => shelf.draw = drawShelf);
             updateUI();
             updateBasketUI();
 
-            // REFACTORED: Instead of changing the screen to match the host,
-            // simply REFRESH the companion's currently active screen with the new data.
+            // REFACTORED: Decouple data population from UI visibility.
+            // First, call the functions that populate the data for each panel.
+            switch (activePhoneScreen) {
+                case 'restock-panel': openRestockPanel(); break;
+                case 'unlocks-panel': openUnlocksPanel(); break;
+                case 'shelf-assignment-panel': openShelfAssignmentPanel(); break;
+                case 'employees-panel': openEmployeesPanel(); break;
+                case 'customers-panel': openCustomersPanel(); break;
+                case 'market-panel': openMarketPanel(); break;
+                case 'items-panel': openItemsPanel(); break;
+                case 'order-quantity-modal':
+                    if (phoneScreenContext.itemName) openOrderQuantityModal(phoneScreenContext.itemName);
+                    break;
+                case 'shelf-panel':
+                    if (phoneScreenContext.shelfIndex !== undefined && shelves[phoneScreenContext.shelfIndex]) {
+                        openShelfPanel(shelves[phoneScreenContext.shelfIndex]);
+                    }
+                    break;
+                case 'storage-panel':
+                    if (phoneScreenContext.cellLabel) {
+                        const cell = storageCells.find(c => c.label === phoneScreenContext.cellLabel) || coffeeShop.storage;
+                        if (cell) openStorageCell(cell);
+                    }
+                    break;
+                case 'market-detail-panel':
+                     if (phoneScreenContext.categoryKey) openMarketDetailPanel(phoneScreenContext.categoryKey);
+                    break;
+                case 'market-item-deep-dive-panel':
+                    if (phoneScreenContext.itemName) openMarketItemDeepDivePanel(phoneScreenContext.itemName);
+                    break;
+            }
+
+            // Second, manage the UI visibility based on the state.
             if (activePhoneScreen) {
-                console.log(`Companion has new data. Refreshing its own screen: ${activePhoneScreen}`);
-                switch (activePhoneScreen) {
-                    case 'restock-panel': openRestockPanel(); break;
-                    case 'unlocks-panel': openUnlocksPanel(); break;
-                    case 'shelf-assignment-panel': openShelfAssignmentPanel(); break;
-                    case 'employees-panel': openEmployeesPanel(); break;
-                    case 'customers-panel': openCustomersPanel(); break;
-                    case 'market-panel': openMarketPanel(); break;
-                    case 'settings-panel': showAppScreen('settings-panel'); break;
-                    case 'items-panel': openItemsPanel(); break;
-                    case 'order-quantity-modal':
-                        if (phoneScreenContext.itemName) {
-                            openOrderQuantityModal(phoneScreenContext.itemName);
-                        }
-                        break;
-                    case 'shelf-panel':
-                        if (phoneScreenContext.shelfIndex !== undefined && shelves[phoneScreenContext.shelfIndex]) {
-                            openShelfPanel(shelves[phoneScreenContext.shelfIndex]);
-                        }
-                        break;
-                    case 'storage-panel':
-                        if (phoneScreenContext.cellLabel) {
-                            const cell = storageCells.find(c => c.label === phoneScreenContext.cellLabel) || coffeeShop.storage;
-                            if (cell) openStorageCell(cell);
-                        }
-                        break;
-                    case 'assignment-panel':
-                        // This screen is transient, if we get a refresh here, it's best to go back.
-                        if (phoneScreenContext.shelfIndex !== undefined && shelves[phoneScreenContext.shelfIndex]) {
-                            openShelfPanel(shelves[phoneScreenContext.shelfIndex]);
-                        } else {
-                           showAppGrid(); // Fallback
-                        }
-                        break;
-                    case 'market-detail-panel':
-                        if (phoneScreenContext.categoryKey) {
-                            openMarketDetailPanel(phoneScreenContext.categoryKey);
-                        }
-                        break;
-                    case 'market-item-deep-dive-panel':
-                        if (phoneScreenContext.itemName) {
-                            openMarketItemDeepDivePanel(phoneScreenContext.itemName);
-                        }
-                        break;
-                }
+                showAppScreen(activePhoneScreen);
             } else {
-                // If no screen is active, we are on the app grid. No refresh needed besides the main UI update.
-                 console.log("Companion has new data. On app grid, no screen refresh needed.");
+                showAppGrid();
             }
         }
 
@@ -8842,8 +8790,11 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     isMandatoryBreak,
                     currentRestockOrder,
                     activePhoneScreen,
-                    phoneScreenContext // <-- ADDED: Sync the screen's context
+                    phoneScreenContext
                 };
+
+                // DEBUG: Log the state being sent from the host
+                console.log(`HOST SENDING -> activePhoneScreen: ${gameState.activePhoneScreen}, context: ${JSON.stringify(gameState.phoneScreenContext)}`);
 
                 // Prune the draw function before sending
                 const stateToSend = JSON.parse(JSON.stringify(gameState));

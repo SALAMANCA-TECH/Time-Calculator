@@ -829,6 +829,19 @@
         </div>
     </div>
 
+    <!-- DEV Report Modal -->
+    <div id="dev-report-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-5000">
+        <div class="bg-amber-100 w-full max-w-3xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-3xl font-handwritten">Developer Forecast Report</h2>
+                <button id="close-dev-report-btn" class="text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
+            </div>
+            <div id="dev-report-content" class="flex-grow bg-white/50 p-4 rounded-md border-2 border-amber-800/30 overflow-y-auto">
+                <!-- Content will be populated by JS -->
+            </div>
+        </div>
+    </div>
+
 
     <script>
         function showMessage(text, callback) {
@@ -4673,6 +4686,64 @@ function closeManagerReportModal() {
     modal.classList.add('hidden');
 }
 
+function openDevReportModal() {
+    const modal = document.getElementById('dev-report-modal');
+    const contentDiv = document.getElementById('dev-report-content');
+    contentDiv.innerHTML = ''; // Clear previous content
+
+    if (!marketForecast || marketForecast.length === 0) {
+        contentDiv.innerHTML = '<p class="text-center">No forecast data available. Is the market enabled?</p>';
+        modal.classList.remove('hidden');
+        return;
+    }
+
+    marketForecast.forEach((dayEvent, index) => {
+        const dayContainer = document.createElement('div');
+        dayContainer.className = 'mb-2 border border-amber-800/20 rounded-md';
+
+        const dayButton = document.createElement('button');
+        dayButton.className = 'w-full p-2 text-left font-bold bg-amber-200/50 hover:bg-amber-300/50 transition-colors flex justify-between items-center';
+        dayButton.innerHTML = `<span>Day ${day + index + 1}</span><span class="font-sans text-xl">+</span>`;
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'p-3 border-t border-amber-800/20 hidden bg-white/30';
+
+        let detailsHtml = '';
+        if (dayEvent.type === 'dailyMood' && dayEvent.event) {
+            detailsHtml += `<p><strong class="font-handwritten">Headline:</strong> ${dayEvent.event.headline}</p>`;
+            detailsHtml += `<p><strong class="font-handwritten">Story:</strong> ${dayEvent.event.description}</p>`;
+            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Effects:</strong><pre class="text-xs bg-gray-800 text-white p-2 rounded-md overflow-x-auto">${JSON.stringify(dayEvent.event.effects, null, 2)}</pre></div>`;
+        } else if (dayEvent.type === 'categoryFocus' && dayEvent.changes) {
+            detailsHtml += `<p><strong class="font-handwritten">Event Type:</strong> Category Focus</p>`;
+            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Changes:</strong><pre class="text-xs bg-gray-800 text-white p-2 rounded-md overflow-x-auto">${JSON.stringify(dayEvent.changes, null, 2)}</pre></div>`;
+        } else if (dayEvent.type === 'classic' && dayEvent.fluctuations) {
+            detailsHtml += `<p><strong class="font-handwritten">Event Type:</strong> Classic Fluctuation</p>`;
+            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Fluctuations:</strong><pre class="text-xs bg-gray-800 text-white p-2 rounded-md overflow-x-auto">${JSON.stringify(dayEvent.fluctuations, null, 2)}</pre></div>`;
+        } else {
+             detailsHtml += `<p>No event data for this day.</p>`;
+        }
+
+        detailsDiv.innerHTML = detailsHtml;
+
+        dayButton.addEventListener('click', () => {
+            const isHidden = detailsDiv.classList.toggle('hidden');
+            dayButton.querySelector('span:last-child').textContent = isHidden ? '+' : '-';
+        });
+
+        dayContainer.appendChild(dayButton);
+        dayContainer.appendChild(detailsDiv);
+        contentDiv.appendChild(dayContainer);
+    });
+
+
+    modal.classList.remove('hidden');
+}
+
+function closeDevReportModal() {
+    const modal = document.getElementById('dev-report-modal');
+    modal.classList.add('hidden');
+}
+
 function toggleNewspaperModal() {
     const modal = document.getElementById('newspaper-modal');
     if (modal.classList.contains('hidden')) {
@@ -8455,6 +8526,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('settings-open-market-style-modal-btn').addEventListener('click', openMarketStyleModal);
             document.getElementById('market-style-cancel-btn').addEventListener('click', closeMarketStyleModal);
             document.getElementById('close-manager-report-btn').addEventListener('click', closeManagerReportModal);
+            document.getElementById('manager-dev-report-btn').addEventListener('click', openDevReportModal);
+            document.getElementById('close-dev-report-btn').addEventListener('click', closeDevReportModal);
 
             document.getElementById('market-style-confirm-btn').addEventListener('click', () => {
                 marketType = tempMarketStyle;

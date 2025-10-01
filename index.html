@@ -7375,9 +7375,10 @@ function showHint() {
             } else if (type === 'storage') {
                 key = parseInt(key);
                 cost = unlockCosts.storage[key];
-                if (key > 0 && !unlocks.storage[key - 1]) {
-                    prerequisite = false;
-                }
+                // Prerequisite check removed to allow unlocking art styles in any order.
+                // if (key > 0 && !unlocks.storage[key - 1]) {
+                //     prerequisite = false;
+                // }
             }
 
             if (developerMode) {
@@ -7526,7 +7527,7 @@ function showHint() {
                 const cost = developerMode ? 0 : unlockCosts.storage[i];
                 const isUnlocked = unlocks.storage[i];
                 const canAfford = shopPoints >= cost;
-                const prerequisiteMet = i === 0 || unlocks.storage[i - 1];
+                // Prerequisite check for storage (art styles) has been removed.
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-2 bg-white/50 rounded-md';
                 const textDiv = document.createElement('div');
@@ -7539,8 +7540,8 @@ function showHint() {
                 button.id = `unlock-storage-${i}`;
                 button.dataset.type = 'storage';
                 button.dataset.key = i;
-                button.disabled = isUnlocked || !prerequisiteMet || !canAfford;
-                button.textContent = isUnlocked ? 'Unlocked' : (prerequisiteMet ? 'Buy' : 'Locked');
+                button.disabled = isUnlocked || !canAfford;
+                button.textContent = isUnlocked ? 'Unlocked' : 'Buy';
 
                 div.appendChild(textDiv);
                 div.appendChild(button);

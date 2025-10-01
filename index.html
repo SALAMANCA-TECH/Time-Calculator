@@ -3322,7 +3322,8 @@
                 case 'idle':
                     if (manager.stateTimer <= 0) {
 
-                        // --- Morning Prep Logic ---
+                        // --- Morning Prep Logic (DISABLED) ---
+                        /*
                         if (dayPhase === 'opening' && manager.canOrder && !manager.hasPlacedMorningOrder) {
                             const shelfDemand = {};
                             const shelfStock = {};
@@ -3380,8 +3381,10 @@
                                 }
                             }
                         }
+                        */
 
-                        // --- Urgent Order Logic (Any Time) ---
+                        // --- Urgent Order Logic (DISABLED) ---
+                        /*
                         let urgentOrderItem = null;
                         let requiredQuantity = 0;
                         const waitingCustomers = customers.filter(c => c.isWaitingForRestock);
@@ -3420,8 +3423,10 @@
                             manager.stateTimer = 1000;
                             break;
                         }
+                        */
 
-                        // --- Evening Low-Stock Check ---
+                        // --- Evening Low-Stock Check (DISABLED) ---
+                        /*
                         if (manager.canOrder && dayPhase === 'closing') {
                             const lowStockItems = Object.keys(items).filter(item => {
                                 const stock = getTotalStock(item);
@@ -3452,6 +3457,8 @@
                         } else {
                              manager.stateTimer = 5000;
                         }
+                        */
+                        manager.stateTimer = 5000; // Manager will now just idle
                     }
 
                      if(manager.task && manager.task.target) {

@@ -366,63 +366,6 @@
                         <div id="all-customer-list" class="hidden flex-col space-y-2"></div>
                     </div>
 
-                     <!-- Market Panel -->
-                    <div id="market-panel" class="phone-app-screen hidden">
-                        <h2 class="text-3xl font-handwritten mb-4">Market Report</h2>
-                        <div id="market-categories-container" class="space-y-2">
-                            <!-- Category reports will be dynamically inserted here -->
-                        </div>
-                    </div>
-
-                    <!-- Market Detail Panel (for individual items) -->
-                    <div id="market-detail-panel" class="phone-app-screen hidden">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 id="market-detail-title" class="text-3xl font-handwritten">Category Details</h2>
-                            <button id="market-detail-back-btn" class="btn-style px-4 py-1">Back</button>
-                        </div>
-                        <div id="market-items-container" class="space-y-2">
-                            <!-- Individual item reports will be dynamically inserted here -->
-                        </div>
-                    </div>
-
-                    <!-- Market Item Deep Dive Panel -->
-                    <div id="market-item-deep-dive-panel" class="phone-app-screen hidden">
-                        <div class="flex justify-between items-center mb-2">
-                            <h2 id="market-deep-dive-title" class="text-3xl font-handwritten">Item Details</h2>
-                            <button id="market-deep-dive-back-btn" class="btn-style px-4 py-1">Back</button>
-                        </div>
-                        <div class="space-y-4">
-                            <!-- Detailed Graph -->
-                            <div class="w-full h-48 bg-white/50 rounded-md border-2 border-amber-800/20 p-1">
-                                <canvas id="market-deep-dive-canvas"></canvas>
-                            </div>
-                            <!-- Stats and Ordering -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="p-2 bg-white/50 rounded-md border border-amber-800/10">
-                                    <h3 class="font-handwritten text-lg border-b border-amber-800/20 mb-1">Stats</h3>
-                                    <div class="text-sm space-y-1">
-                                        <p>Base Cost: <span id="deep-dive-base-cost" class="font-bold">$--.--</span></p>
-                                        <p>7-Day High: <span id="deep-dive-high" class="font-bold text-red-500">$--.--</span></p>
-                                        <p>7-Day Low: <span id="deep-dive-low" class="font-bold text-green-500">$--.--</span></p>
-                                    </div>
-                                </div>
-                                <div class="p-2 bg-white/50 rounded-md border border-amber-800/10">
-                                    <h3 class="font-handwritten text-lg border-b border-amber-800/20 mb-1">Place Order</h3>
-                                    <div class="space-y-2">
-                                         <div class="flex items-center justify-between">
-                                            <span>Price:</span>
-                                            <span id="deep-dive-current-price" class="font-bold">$--.--</span>
-                                        </div>
-                                        <div class="flex items-center justify-between">
-                                            <label for="deep-dive-order-qty">Quantity:</label>
-                                            <input type="number" id="deep-dive-order-qty" min="1" value="1" class="w-20 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80">
-                                        </div>
-                                        <button id="deep-dive-place-order-btn" data-item="" class="btn-style w-full py-1 mt-1">Order for $--.--</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <!-- Items Panel -->
                     <div id="items-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Toggle Items</h2>
@@ -847,6 +790,79 @@
             </div>
             <div id="simulated-market-report-content" class="flex-grow bg-white/40 p-4 rounded-md border-2 border-amber-800/30 overflow-y-auto">
                 <!-- Simulated content will be populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Panel Modal -->
+    <div id="market-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-4000">
+        <div class="relative bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-3xl font-handwritten">Market Report</h2>
+                <button id="close-market-panel-btn" class="text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
+            </div>
+            <div id="market-categories-container" class="space-y-2 flex-grow overflow-y-auto p-2 bg-white/30 rounded-md border">
+                <!-- Category reports will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Detail Panel Modal -->
+    <div id="market-detail-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-4000">
+        <div class="relative bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 id="market-detail-title" class="text-3xl font-handwritten">Category Details</h2>
+                <div>
+                     <button id="market-detail-back-btn" class="btn-style px-4 py-1 mr-2">Back</button>
+                     <button id="close-market-detail-panel-btn" class="text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
+                </div>
+            </div>
+            <div id="market-items-container" class="space-y-2 flex-grow overflow-y-auto p-2 bg-white/30 rounded-md border">
+                <!-- Individual item reports will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Item Deep Dive Panel Modal -->
+    <div id="market-item-deep-dive-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-4000">
+        <div class="relative bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 80vh;">
+            <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                <h2 id="market-deep-dive-title" class="text-3xl font-handwritten">Item Details</h2>
+                <div>
+                    <button id="market-deep-dive-back-btn" class="btn-style px-4 py-1 mr-2">Back</button>
+                    <button id="close-market-deep-dive-panel-btn" class="text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
+                </div>
+            </div>
+            <div class="space-y-4 flex-grow overflow-y-auto p-2">
+                <!-- Detailed Graph -->
+                <div class="w-full h-48 bg-white/50 rounded-md border-2 border-amber-800/20 p-1">
+                    <canvas id="market-deep-dive-canvas"></canvas>
+                </div>
+                <!-- Stats and Ordering -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-2 bg-white/50 rounded-md border border-amber-800/10">
+                        <h3 class="font-handwritten text-lg border-b border-amber-800/20 mb-1">Stats</h3>
+                        <div class="text-sm space-y-1">
+                            <p>Base Cost: <span id="deep-dive-base-cost" class="font-bold">$--.--</span></p>
+                            <p>7-Day High: <span id="deep-dive-high" class="font-bold text-red-500">$--.--</span></p>
+                            <p>7-Day Low: <span id="deep-dive-low" class="font-bold text-green-500">$--.--</span></p>
+                        </div>
+                    </div>
+                    <div class="p-2 bg-white/50 rounded-md border border-amber-800/10">
+                        <h3 class="font-handwritten text-lg border-b border-amber-800/20 mb-1">Place Order</h3>
+                        <div class="space-y-2">
+                             <div class="flex items-center justify-between">
+                                <span>Price:</span>
+                                <span id="deep-dive-current-price" class="font-bold">$--.--</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label for="deep-dive-order-qty">Quantity:</label>
+                                <input type="number" id="deep-dive-order-qty" min="1" value="1" class="w-20 p-1 text-center border-2 border-amber-800 rounded-md bg-white/80">
+                            </div>
+                            <button id="deep-dive-place-order-btn" data-item="" class="btn-style w-full py-1 mt-1">Order for $--.--</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -6551,35 +6567,25 @@ function showHint() {
             return percentChange;
         }
 
-        function openMarketItemDeepDivePanel(itemName) {
-            // 1. Switch view
-            showAppScreen('market-item-deep-dive-panel');
-
+        function populateMarketItemDeepDivePanel(itemName) {
             const itemData = priceHistory[itemName];
-            if (!itemData) {
-                console.error("No price history for item:", itemName);
-                return;
-            }
+            if (!itemData) { return; }
 
             const history = itemData.history;
             const baseCost = originalItemCosts[itemName];
             const currentPrice = items[itemName].cost;
 
-            // 2. Populate panel with stats
             document.getElementById('market-deep-dive-title').textContent = itemName;
             document.getElementById('deep-dive-base-cost').textContent = `$${baseCost.toFixed(2)}`;
             document.getElementById('deep-dive-high').textContent = `$${Math.max(...history).toFixed(2)}`;
             document.getElementById('deep-dive-low').textContent = `$${Math.min(...history).toFixed(2)}`;
             document.getElementById('deep-dive-current-price').textContent = `$${currentPrice.toFixed(2)}`;
 
-            // 3. Setup ordering controls
             const qtyInput = document.getElementById('deep-dive-order-qty');
             const orderBtn = document.getElementById('deep-dive-place-order-btn');
-
-            qtyInput.value = 1; // Reset to 1
+            qtyInput.value = 1;
             orderBtn.dataset.item = itemName;
 
-            // Function to update the button text based on quantity
             function updateOrderButtonText() {
                 const quantity = parseInt(qtyInput.value, 10) || 0;
                 const totalCost = (currentPrice * quantity);
@@ -6587,42 +6593,28 @@ function showHint() {
             }
 
             qtyInput.oninput = updateOrderButtonText;
-            updateOrderButtonText(); // Set initial text
+            updateOrderButtonText();
 
-            // Order button logic
             orderBtn.onclick = () => {
                 const itemName = orderBtn.dataset.item;
                 const quantity = parseInt(qtyInput.value, 10);
                 const currentPrice = items[itemName].cost;
                 const totalCost = currentPrice * quantity;
-
-                if (isNaN(quantity) || quantity <= 0) {
-                    showMessage("Please enter a valid quantity.");
-                    return;
-                }
+                if (isNaN(quantity) || quantity <= 0) { return; }
 
                 if (cash >= totalCost) {
                     cash -= totalCost;
                     dailyPlayerPurchases[itemName] = (dailyPlayerPurchases[itemName] || 0) + quantity;
-                    dailySupplyOrders.push({
-                        orderedBy: 'Player',
-                        itemName: itemName,
-                        quantity: quantity,
-                        cost: totalCost
-                    });
-
+                    dailySupplyOrders.push({ orderedBy: 'Player', itemName: itemName, quantity: quantity, cost: totalCost });
                     let remainingQuantity = quantity;
                     while (remainingQuantity > 0) {
                         const quantityForPackage = Math.min(remainingQuantity, MAX_PACKAGE_SIZE);
                         loadingDockPackages.push({ itemName: itemName, quantity: quantityForPackage });
                         remainingQuantity -= quantityForPackage;
                     }
-
                     updateUI();
                     saveGame();
-                    // closeClipboard(); // <-- REMOVED to keep phone open
                     showMessage(`Ordered ${quantity} ${itemName} for $${totalCost.toFixed(2)}!`);
-                    // Go back to the market detail panel after ordering
                     const itemCategoryKey = Object.keys(storageCells).find(key => storageCells[key].allowedItems.includes(itemName)) || "Coffee Supplies";
                     openMarketDetailPanel(itemCategoryKey);
                 } else {
@@ -6630,20 +6622,21 @@ function showHint() {
                 }
             };
 
-            // Back button logic
             document.getElementById('market-deep-dive-back-btn').onclick = () => {
-                // Find the category this item belongs to in order to go back to the correct detail screen
-                let itemCategoryKey = "Coffee Supplies"; // Default for coffee items
+                let itemCategoryKey = "Coffee Supplies";
                 const foundCategory = storageCells.find(cell => cell.allowedItems.includes(itemName));
-                if (foundCategory) {
-                    itemCategoryKey = foundCategory.label;
-                }
+                if (foundCategory) { itemCategoryKey = foundCategory.label; }
                 openMarketDetailPanel(itemCategoryKey);
             };
 
-            // 4. Call the detailed chart drawing function (to be fully implemented in the next step)
             const canvas = document.getElementById('market-deep-dive-canvas');
             drawDetailedMarketChart(canvas, itemName);
+        }
+
+        function openMarketItemDeepDivePanel(itemName) {
+            phoneScreenContext = { itemName: itemName, panel: 'market-item-deep-dive-panel' };
+            populateMarketItemDeepDivePanel(itemName);
+            showScreen('market-item-deep-dive-panel');
         }
 
         function drawDetailedMarketChart(canvas, itemName) {
@@ -6789,14 +6782,9 @@ function showHint() {
             }
         }
 
-        function openMarketDetailPanel(categoryKey) {
-            const detailPanel = document.getElementById('market-detail-panel');
-            const mainPanel = document.getElementById('market-panel');
+        function populateMarketDetailPanel(categoryKey) {
             const container = document.getElementById('market-items-container');
             const title = document.getElementById('market-detail-title');
-
-            mainPanel.classList.add('hidden');
-            detailPanel.classList.remove('hidden');
             container.innerHTML = '';
             title.textContent = `${categoryKey}`;
 
@@ -6805,9 +6793,7 @@ function showHint() {
                 itemsToList = ['Beans', 'Milks', 'Sugar', 'Snacks'];
             } else {
                 const category = storageCells.find(cell => cell.label === categoryKey);
-                if (category) {
-                    itemsToList = category.allowedItems;
-                }
+                if (category) { itemsToList = category.allowedItems; }
             }
 
             itemsToList.forEach((itemName, index) => {
@@ -6835,7 +6821,7 @@ function showHint() {
                 container.appendChild(itemButton);
 
                 setTimeout(() => {
-                    drawMarketChart(canvas, itemName); // Draw the chart, but ignore its return value now.
+                    drawMarketChart(canvas, itemName);
                     const todayPriceSpan = document.getElementById(`today-price-${itemName.replace(/\s+/g, '-')}`);
                     const yesterdayPriceSpan = document.getElementById(`yesterday-price-${itemName.replace(/\s+/g, '-')}`);
 
@@ -6843,13 +6829,10 @@ function showHint() {
                     if (itemHistory && itemHistory.length > 0) {
                         const todayPrice = itemHistory[itemHistory.length - 1];
                         const idealPrice = originalItemCosts[itemName];
-
                         if (idealPrice > 0) {
-                            // Red if price is higher than ideal (bad for buying), Green if lower (good for buying)
                             const color = todayPrice > idealPrice ? 'text-red-600' : 'text-green-600';
                             todayPriceSpan.className = `font-handwritten font-bold ${color}`;
                         }
-
                         todayPriceSpan.textContent = `$${todayPrice.toFixed(2)}`;
                         if (itemHistory.length > 1) {
                             yesterdayPriceSpan.textContent = `$${itemHistory[itemHistory.length - 2].toFixed(2)}`;
@@ -6859,36 +6842,31 @@ function showHint() {
             });
 
             const backBtn = document.getElementById('market-detail-back-btn');
-            backBtn.onclick = () => {
-                detailPanel.classList.add('hidden');
-                mainPanel.classList.remove('hidden');
-            };
+            backBtn.onclick = () => { openMarketPanel(); };
         }
 
-        function openMarketPanel() {
+        function openMarketDetailPanel(categoryKey) {
+            phoneScreenContext = { categoryKey: categoryKey, panel: 'market-detail-panel' };
+            populateMarketDetailPanel(categoryKey);
+            showScreen('market-detail-panel');
+        }
+
+        function populateMarketPanel() {
             const container = document.getElementById('market-categories-container');
             container.innerHTML = ''; // Clear previous reports
 
-            // --- Add Market Style and Newspaper Button ---
             const styleName = marketType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
             let headerHtml = `<div class="flex justify-between items-center border-b-2 border-amber-800/30 mb-2">`;
             headerHtml += `<h3 class="text-xl font-handwritten">Market Style: ${styleName}</h3>`;
             if (marketType === 'dailyMood' && currentDailyMood) {
                 headerHtml += `<button id="market-app-newspaper-btn" class="btn-style p-2" title="Read Today's News">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 12h6m-6-4h6" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 12h6m-6-4h6" /></svg>
                 </button>`;
             }
             headerHtml += `</div>`;
             container.innerHTML += headerHtml;
 
-
-            const allCategories = [
-                ...storageCells.map(cell => cell.label),
-                "Coffee Supplies"
-            ];
-
+            const allCategories = [...storageCells.map(cell => cell.label), "Coffee Supplies"];
             allCategories.forEach((categoryKey, index) => {
                 if (categoryKey === "Coffee Supplies" && !unlocks.facilities.coffeeShop) return;
 
@@ -6899,10 +6877,7 @@ function showHint() {
 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'flex-grow';
-                infoDiv.innerHTML = `
-                    <h3 class="font-handwritten text-xl">${categoryKey}</h3>
-                    <div id="percent-change-${index}" class="text-lg font-bold">--%</div>
-                `;
+                infoDiv.innerHTML = `<h3 class="font-handwritten text-xl">${categoryKey}</h3><div id="percent-change-${index}" class="text-lg font-bold">--%</div>`;
 
                 const canvasContainer = document.createElement('div');
                 canvasContainer.className = 'w-32 h-16';
@@ -6914,7 +6889,6 @@ function showHint() {
                 categoryButton.appendChild(canvasContainer);
                 container.appendChild(categoryButton);
 
-                // Wait a tick for the canvas to be in the DOM, then draw
                 setTimeout(() => {
                     const percentChange = drawMarketChart(canvas, categoryKey);
                     const percentDiv = document.getElementById(`percent-change-${index}`);
@@ -6928,8 +6902,11 @@ function showHint() {
                     }
                 }, 0);
             });
+        }
 
-            showAppScreen('market-panel');
+        function openMarketPanel() {
+            populateMarketPanel();
+            showScreen('market-panel');
         }
 
         function openCustomersPanel() {
@@ -8850,6 +8827,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('close-dev-report-btn').addEventListener('click', closeDevReportModal);
             document.getElementById('close-simulated-report-btn').addEventListener('click', closeSimulatedMarketReport);
 
+            // Market Modal Navigation
+            document.getElementById('close-market-panel-btn').addEventListener('click', () => hideScreen('market-panel'));
+            document.getElementById('close-market-detail-panel-btn').addEventListener('click', () => hideScreen('market-detail-panel'));
+            document.getElementById('close-market-deep-dive-panel-btn').addEventListener('click', () => hideScreen('market-item-deep-dive-panel'));
+
+
             document.getElementById('market-style-confirm-btn').addEventListener('click', () => {
                 marketType = tempMarketStyle;
                 marketEnabled = (marketType !== 'disabled');
@@ -9123,6 +9106,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     // Navigation
                     ['phone-back-btn', showAppGrid],
                     ['market-detail-back-btn', openMarketPanel],
+                    // Market Modals
+                    ['close-market-panel-btn', () => hideScreen('market-panel')],
+                    ['close-market-detail-panel-btn', () => hideScreen('market-detail-panel')],
+                    ['close-market-deep-dive-panel-btn', () => hideScreen('market-item-deep-dive-panel')],
                     // Order Screen
                     ['place-order-btn', () => placeOrder(false)],
                     ['order-quantity-done-btn', openRestockPanel],
@@ -9272,7 +9259,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 'specialty-store-screen', 'casual-mode-screen', 'final-settings-screen',
                 'market-style-modal', 'host-sync-modal', 'newspaper-modal',
                 'end-of-day-panel', 'manager-report-modal', 'dev-report-modal',
-                'simulated-market-report-modal'
+                'simulated-market-report-modal',
+                'market-panel', 'market-detail-panel', 'market-item-deep-dive-panel'
             ];
 
             // Apply all the state properties from the host to the companion's game
@@ -9414,6 +9402,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         case 'specialty-store-screen':
                             populateSpecialtyDropdowns();
                             handleSpecialtyChange();
+                            break;
+                        case 'market-panel':
+                            populateMarketPanel();
+                            break;
+                        case 'market-detail-panel':
+                            if (phoneScreenContext.categoryKey) {
+                                populateMarketDetailPanel(phoneScreenContext.categoryKey);
+                            }
+                            break;
+                        case 'market-item-deep-dive-panel':
+                            if (phoneScreenContext.itemName) {
+                                populateMarketItemDeepDivePanel(phoneScreenContext.itemName);
+                            }
                             break;
                     }
                     modal.classList.remove('hidden');

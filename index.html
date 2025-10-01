@@ -133,20 +133,16 @@
         /* Companion Mode Styles */
         body.companion-mode #game-ui,
         body.companion-mode #game-canvas,
-        body.companion-mode #message-box,
-        body.companion-mode #new-game-screen,
-        body.companion-mode #dev-mode-screen,
-        body.companion-mode #family-store-screen,
-        body.companion-mode #specialty-store-screen,
-        body.companion-mode #casual-mode-screen,
-        body.companion-mode #market-style-modal,
-        body.companion-mode #newspaper-modal,
-        body.companion-mode #end-of-day-panel {
+        body.companion-mode #message-box {
             display: none !important;
         }
 
         body.companion-mode {
             background-color: #000; /* Black background for the phone */
+        }
+
+        body.companion-mode #clipboard-panel.force-hidden {
+            display: none !important;
         }
 
         body.companion-mode #clipboard-panel {
@@ -1356,6 +1352,7 @@
         let tempMarketStyle = 'classic'; // To hold selection before confirming
         let newGameOptions = {};
         let previousNewGameScreen = '';
+        let currentModalScreen = null;
 
         function openFinalSettingsScreen(options, previousScreen) {
             newGameOptions = options;
@@ -8333,17 +8330,37 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function showScreen(screenId) {
+            // If we are the host with a connection, send the screen change to the companion.
+            if (hostConnection && hostConnection.open) {
+                currentModalScreen = screenId;
+                sendFullGameStateToCompanion();
+                // Don't show the modal on the host screen
+                return;
+            }
             const screen = document.getElementById(screenId);
             if (screen) screen.classList.remove('hidden');
         }
 
         function hideScreen(screenId) {
+            // If we are the host with a connection, update state for the companion.
+            if (hostConnection && hostConnection.open) {
+                if (currentModalScreen === screenId) {
+                    currentModalScreen = null;
+                    sendFullGameStateToCompanion();
+                }
+            }
+            // Always hide the element on the host. This handles cases where a companion
+            // disconnects or for non-companion play.
             const screen = document.getElementById(screenId);
             if (screen) screen.classList.add('hidden');
         }
 
         function startGame(options = {}) {
             // 1. Hide all modal screens & close phone
+            if (hostConnection && hostConnection.open) {
+                currentModalScreen = null;
+                sendFullGameStateToCompanion();
+            }
             hideScreen('new-game-screen');
             hideScreen('dev-mode-screen');
             hideScreen('family-store-screen');
@@ -9141,9 +9158,15 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     } else if (data.action === 'input') {
                         const element = document.getElementById(data.elementId);
                         if (element) {
-                            console.log(`Host setting input on: #${data.elementId} to ${data.value}`);
-                            element.value = data.value;
-                            element.dispatchEvent(new Event('input', { bubbles: true }));
+                            console.log(`Host processing event for: #${data.elementId} with value ${data.value}`);
+                            if (data.type === 'checkbox') {
+                                element.checked = data.value;
+                            } else {
+                                element.value = data.value;
+                            }
+                            // Dispatch 'change' for toggles and selects, 'input' for number fields
+                            const eventType = (data.type === 'checkbox' || data.type === 'select-one') ? 'change' : 'input';
+                            element.dispatchEvent(new Event(eventType, { bubbles: true }));
                             sendFullGameStateToCompanion();
                         }
                     }
@@ -9242,11 +9265,20 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         function applyGameState(state) {
             // DEBUG: Log the state being received by the companion
-            console.log(`COMPANION RECEIVED -> activePhoneScreen: ${state.activePhoneScreen}, context: ${JSON.stringify(state.phoneScreenContext)}`);
+            console.log(`COMPANION RECEIVED -> activePhoneScreen: ${state.activePhoneScreen}, modal: ${state.currentModalScreen}, context: ${JSON.stringify(state.phoneScreenContext)}`);
+
+            const allModalIds = [
+                'new-game-screen', 'dev-mode-screen', 'family-store-screen',
+                'specialty-store-screen', 'casual-mode-screen', 'final-settings-screen',
+                'market-style-modal', 'host-sync-modal', 'newspaper-modal',
+                'end-of-day-panel', 'manager-report-modal', 'dev-report-modal',
+                'simulated-market-report-modal'
+            ];
 
             // Apply all the state properties from the host to the companion's game
             activePhoneScreen = state.activePhoneScreen;
             phoneScreenContext = state.phoneScreenContext || {}; // IMPORTANT: Get the context
+            currentModalScreen = state.currentModalScreen;
             cash = state.cash;
             day = state.day;
             shopPoints = state.shopPoints;
@@ -9348,6 +9380,48 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             } else {
                 showAppGrid();
             }
+
+            // --- Companion Modal Logic ---
+            const clipboardPanel = document.getElementById('clipboard-panel');
+
+            // Hide all modals first to prevent overlap
+            allModalIds.forEach(id => {
+                const modal = document.getElementById(id);
+                if (modal) modal.classList.add('hidden');
+            });
+
+            // Then show the correct one based on the host's state
+            if (currentModalScreen) {
+                 // If a modal should be visible, hide the main phone UI
+                if (clipboardPanel) clipboardPanel.classList.add('force-hidden');
+
+                const modal = document.getElementById(currentModalScreen);
+                if (modal) {
+                    // Re-populate dynamic modals if they are the one being shown
+                    switch(currentModalScreen) {
+                        case 'family-store-screen':
+                             const relativeSelect = document.getElementById('family-relative-select');
+                            if (relativeSelect.options.length === 0) {
+                                const employeeTypes = Object.keys(unlocks.employees);
+                                employeeTypes.forEach(emp => {
+                                    const option = document.createElement('option');
+                                    option.value = emp;
+                                    option.textContent = emp.charAt(0).toUpperCase() + emp.slice(1);
+                                    relativeSelect.appendChild(option);
+                                });
+                            }
+                            break;
+                        case 'specialty-store-screen':
+                            populateSpecialtyDropdowns();
+                            handleSpecialtyChange();
+                            break;
+                    }
+                    modal.classList.remove('hidden');
+                }
+            } else {
+                // If no modal is active, ensure the main phone UI is visible
+                if (clipboardPanel) clipboardPanel.classList.remove('force-hidden');
+            }
         }
 
         function sendFullGameStateToCompanion() {
@@ -9378,11 +9452,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     activePhoneScreen,
                     phoneScreenContext,
                     isPaused,
-                    isDoubleTime: timeMultiplier > 1
+                    isDoubleTime: timeMultiplier > 1,
+                    currentModalScreen
                 };
 
                 // DEBUG: Log the state being sent from the host
-                console.log(`HOST SENDING -> activePhoneScreen: ${gameState.activePhoneScreen}, context: ${JSON.stringify(gameState.phoneScreenContext)}`);
+                console.log(`HOST SENDING -> activePhoneScreen: ${gameState.activePhoneScreen}, modal: ${gameState.currentModalScreen}, context: ${JSON.stringify(gameState.phoneScreenContext)}`);
 
                 // Prune the draw function before sending
                 const stateToSend = JSON.parse(JSON.stringify(gameState));
@@ -9396,8 +9471,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         // This function overrides default event handlers in companion mode
         function setupCompanionActionListeners() {
-            const clipboard = document.getElementById('clipboard-panel');
-            clipboard.addEventListener('click', (e) => {
+            // Listen on the entire body to capture clicks on modals outside the clipboard
+            document.body.addEventListener('click', (e) => {
                 const button = e.target.closest('button');
                 if (button && button.id) {
                     // Also, if the clicked button is inside the sync screen, let it proceed.
@@ -9412,13 +9487,19 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
             }, true); // Use capture phase to intercept clicks early
 
-            clipboard.addEventListener('input', (e) => {
-                const input = e.target.closest('input[type="number"]');
+            document.body.addEventListener('input', (e) => {
+                const input = e.target.closest('input[type="number"], input[type="checkbox"], select');
                  if (input && input.id) {
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log(`Companion sending input for #${input.id}`);
-                    sendActionToHost({ action: 'input', elementId: input.id, value: input.value });
+                    console.log(`Companion sending event for #${input.id}`);
+                    const eventData = {
+                        action: 'input',
+                        elementId: input.id,
+                        value: input.type === 'checkbox' ? input.checked : input.value,
+                        type: input.type
+                    };
+                    sendActionToHost(eventData);
                  }
             }, true);
         }

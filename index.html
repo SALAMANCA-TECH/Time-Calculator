@@ -4577,8 +4577,8 @@ function generateHintText() {
 
     const hintParts = currentDailyMood.effects.map(effect => {
         const { category, modifier, items: affectedItems } = effect;
-        const percentage = (modifier * 100).toFixed(0);
-        const sign = modifier > 0 ? '+' : '';
+        const percentage = Math.abs(modifier * 100).toFixed(0);
+        const priceText = modifier > 0 ? 'more expensive' : 'cheaper';
         const color = modifier > 0 ? 'text-red-600' : 'text-green-600';
 
         let itemLimiter = '';
@@ -4586,7 +4586,7 @@ function generateHintText() {
             itemLimiter = ` (${affectedItems.join(', ')} only)`;
         }
 
-        return `<span class="font-bold ${color}">${category}${itemLimiter}: ${sign}${percentage}%</span>`;
+        return `<span class="font-bold ${color}">${category}${itemLimiter}: ${percentage}% ${priceText}</span>`;
     });
 
     return hintParts.join('<br>');

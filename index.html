@@ -1216,6 +1216,8 @@
         let floatingTexts = [];
         let clipboardUpdateTimer = 0;
         const CLIPBOARD_UPDATE_INTERVAL = 250; // ms
+        let companionUpdateTimer = 0;
+        const COMPANION_UPDATE_INTERVAL = 1000; // ms, for 1-second updates
         let dailySalesReport = [];
         let startingDayInventory = {};
         let dailySupplyOrders = [];
@@ -4257,12 +4259,25 @@
 
             // Real-time clipboard updates
             clipboardUpdateTimer += deltaTime;
-            if (activePanel === 'customers' && clipboardUpdateTimer >= CLIPBOARD_UPDATE_INTERVAL) {
+            if (activePhoneScreen === 'customers-panel' && clipboardUpdateTimer >= CLIPBOARD_UPDATE_INTERVAL) {
                 const inStoreList = document.getElementById('in-store-customer-list');
+                const allList = document.getElementById('all-customer-list');
                 if (inStoreList && inStoreList.offsetParent !== null) {
                     populateInStoreCustomers();
                 }
+                if (allList && allList.offsetParent !== null) {
+                    populateAllCustomers();
+                }
                 clipboardUpdateTimer = 0;
+            }
+
+            // Send periodic updates to the companion
+            if (hostConnection && hostConnection.open) {
+                companionUpdateTimer += deltaTime;
+                if (companionUpdateTimer >= COMPANION_UPDATE_INTERVAL) {
+                    sendFullGameStateToCompanion();
+                    companionUpdateTimer = 0;
+                }
             }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -8638,7 +8653,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             player.basket = state.player.basket;
             isMandatoryBreak = state.isMandatoryBreak;
             currentRestockOrder = state.currentRestockOrder;
-            customers = state.customers || []; // Apply the received customer list
 
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             if (state.employees) {
@@ -8709,14 +8723,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     }
                 }
 
-                const activeCustomers = customers.map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    state: c.state,
-                    waitTimer: c.waitTimer,
-                    requestedItems: c.requestedItems
-                }));
-
                 const gameState = {
                     cash, day, shopPoints, itemPopularity,
                     inventory, storageCells, shelves,
@@ -8729,8 +8735,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     isMandatoryBreak,
                     currentRestockOrder,
                     activePhoneScreen,
-                    phoneScreenContext,
-                    customers: activeCustomers
+                    phoneScreenContext
                 };
 
                 // DEBUG: Log the state being sent from the host

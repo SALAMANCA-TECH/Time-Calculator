@@ -1027,6 +1027,72 @@
             liveSimulation: "<strong>Live Simulation:</strong> The most dynamic option. Prices react directly to your actions. Buying lots of one item will decrease its cost tomorrow, while high customer demand will increase it."
         };
 
+        function generateMarketForecast() {
+            const forecast = [];
+            let lastDayCosts = { ...items }; // Start with current item costs for chained calculations
+
+            for (let i = 0; i < 7; i++) {
+                let dayEvent = { type: marketType };
+
+                switch (marketType) {
+                    case 'classic':
+                        {
+                            const fluctuations = {};
+                            Object.keys(items).forEach(itemName => {
+                                const baseCost = originalItemCosts[itemName];
+                                // Fluctuate price by up to +/- 10% of the base cost
+                                const fluctuation = (Math.random() - 0.5) * (baseCost * 0.2);
+                                fluctuations[itemName] = fluctuation;
+                            });
+                            dayEvent.fluctuations = fluctuations;
+                            break;
+                        }
+                    case 'dailyMood':
+                        {
+                            const mood = dailyMoodHeadlines[Math.floor(Math.random() * dailyMoodHeadlines.length)];
+                            dayEvent.event = mood;
+                            break;
+                        }
+                    case 'categoryFocus':
+                        {
+                            const modifiers = {
+                                "inDemand": { modifier: 0.25, message: "is in high demand! Prices are up." },
+                                "onSale": { modifier: -0.20, message: "is on sale! Prices are down." }
+                            };
+                            const categories = [...storageCells];
+                            let modifiedCategories = 0;
+                            const maxChanges = 2;
+                            const changes = [];
+
+                            categories.sort(() => 0.5 - Math.random());
+
+                            for (const category of categories) {
+                                if (modifiedCategories >= maxChanges) break;
+                                if (Math.random() > 0.6) continue;
+
+                                const modifierKeys = Object.keys(modifiers);
+                                const chosenModifierKey = modifierKeys[Math.floor(Math.random() * modifierKeys.length)];
+                                const chosenModifier = modifiers[chosenModifierKey];
+                                changes.push({
+                                    categoryLabel: category.label,
+                                    modifier: chosenModifier.modifier,
+                                    message: chosenModifier.message
+                                });
+                                modifiedCategories++;
+                            }
+                            dayEvent.changes = changes;
+                            break;
+                        }
+                    case 'liveSimulation':
+                    case 'disabled':
+                        // These modes are handled differently and don't use a pre-generated forecast.
+                        return []; // Return an empty forecast
+                }
+                forecast.push(dayEvent);
+            }
+            return forecast;
+        }
+
         const dailyMoodHeadlines = [
             // Positive Events
             {
@@ -1153,6 +1219,8 @@
             }
         ];
 
+        let marketForecast = []; // Will hold the 7-day forecast array.
+        let nextMarketForecast = []; // Will hold the next 7-day forecast, generated in advance.
         let currentDailyMood = null; // This will store the active headline object for the day.
         let tempMarketStyle = 'classic'; // To hold selection before confirming
         let newGameOptions = {};
@@ -4807,37 +4875,102 @@ function showHint() {
 
             // Apply the market logic based on player's choice
             if (marketEnabled) {
-                // For modes that are modifiers on a base price, reset costs first.
-                if (['dailyMood', 'categoryFocus'].includes(marketType)) {
-                    Object.keys(items).forEach(key => {
-                        if (originalItemCosts[key]) {
-                            items[key].cost = originalItemCosts[key];
-                        }
-                    });
-                }
+                if (marketType === 'liveSimulation') {
+                    applyLiveSimulationMarket();
+                } else if (marketForecast && marketForecast.length > 0) {
+                    const forecastIndex = (day - 1) % 7;
+                    const dayEvent = marketForecast[forecastIndex];
 
-                switch (marketType) {
-                    case 'dailyMood':
-                        applyDailyMoodMarket();
-                        break;
-                    case 'categoryFocus':
-                        applyCategoryFocusMarket();
-                        break;
-                    case 'liveSimulation':
-                        applyLiveSimulationMarket();
-                        break;
-                    case 'classic':
-                    default:
-                        applyClassicMarket();
-                        break;
+                    if (dayEvent) {
+                        switch (dayEvent.type) {
+                            case 'classic':
+                                if (dayEvent.fluctuations) {
+                                    Object.keys(items).forEach(itemName => {
+                                        // Classic fluctuates based on the previous day's price
+                                        let newCost = items[itemName].cost + dayEvent.fluctuations[itemName];
+                                        items[itemName].cost = parseFloat(newCost.toFixed(2));
+                                    });
+                                    spawnFloatingText("Market prices fluctuated overnight.", canvas.width / 2, 120, '#6b7280');
+                                }
+                                break;
+                            case 'dailyMood':
+                                // Reset prices to base before applying mood effect
+                                Object.keys(items).forEach(key => {
+                                    if (originalItemCosts[key]) {
+                                        items[key].cost = originalItemCosts[key];
+                                    }
+                                });
+                                if (dayEvent.event) {
+                                    currentDailyMood = dayEvent.event;
+                                    currentDailyMood.effects.forEach(effect => {
+                                        const { category, modifier, items: affectedItems } = effect;
+                                        let targetItems = [];
+                                        if (category === "All") {
+                                            targetItems = Object.keys(items);
+                                        } else {
+                                            const storageCategory = storageCells.find(cell => cell.label === category);
+                                            if (storageCategory) {
+                                                targetItems = storageCategory.allowedItems;
+                                            }
+                                        }
+                                        targetItems.forEach(itemName => {
+                                            if (affectedItems === "all" || affectedItems.includes(itemName)) {
+                                                const baseCost = items[itemName].cost;
+                                                items[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                                            }
+                                        });
+                                    });
+                                    spawnFloatingText(currentDailyMood.headline, canvas.width / 2, 120, '#3b82f6');
+                                }
+                                break;
+                            case 'categoryFocus':
+                                // Reset prices to base before applying category focus
+                                Object.keys(items).forEach(key => {
+                                    if (originalItemCosts[key]) {
+                                        items[key].cost = originalItemCosts[key];
+                                    }
+                                });
+                                if (dayEvent.changes && dayEvent.changes.length > 0) {
+                                    dayEvent.changes.forEach((change, index) => {
+                                        const category = storageCells.find(cell => cell.label === change.categoryLabel);
+                                        if (category) {
+                                            category.allowedItems.forEach(itemName => {
+                                                if (items[itemName]) {
+                                                    const baseCost = items[itemName].cost;
+                                                    items[itemName].cost = parseFloat((baseCost * (1 + change.modifier)).toFixed(2));
+                                                }
+                                            });
+                                            spawnFloatingText(`${change.categoryLabel} ${change.message}`, canvas.width / 2, 120 + (index * 30), '#f59e0b');
+                                        }
+                                    });
+                                } else {
+                                    spawnFloatingText("Market is stable today.", canvas.width / 2, 120, '#6b7280');
+                                }
+                                break;
+                        }
+                    }
                 }
             } else {
-                 // If market is off, prices should reset to base.
+                // If market is disabled, prices should reset to base.
                 Object.keys(items).forEach(key => {
                     if (originalItemCosts[key]) {
                         items[key].cost = originalItemCosts[key];
                     }
                 });
+            }
+
+            // --- Weekly Market Forecast Logic ---
+            if (marketEnabled) {
+                // On day 6, 13, 20, etc., generate the next week's forecast in advance.
+                if (day > 0 && day % 7 === 6) {
+                    nextMarketForecast = generateMarketForecast();
+                     spawnFloatingText("Next week's market forecast generated.", canvas.width / 2, 150, '#9333ea');
+                }
+                // On day 7, 14, 21, etc., cycle the forecast for the week that's about to start.
+                if (day > 0 && day % 7 === 0) {
+                    marketForecast = [...nextMarketForecast];
+                    nextMarketForecast = []; // It will be regenerated on the next Day 6.
+                }
             }
 
             // Clamp all prices after any market logic has been applied
@@ -5239,6 +5372,7 @@ function showHint() {
 
             document.getElementById('next-day-report-btn').onclick = () => {
                 day++;
+                updateUI();
                 for (const type in customerProfiles) {
                     for (const name in customerProfiles[type]) {
                         customerProfiles[type][name].visitedToday = false;
@@ -5252,6 +5386,8 @@ function showHint() {
                 dailySalesReport = [];
                 if (continuousMode) {
                     document.getElementById('start-day-btn').click();
+                } else {
+                    document.getElementById('start-day-btn').classList.remove('hidden');
                 }
             };
         }
@@ -7884,7 +8020,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
         // Generate data if market is enabled, after all options are processed.
         if (marketEnabled) {
-            generateInitialMarketData();
+            marketForecast = generateMarketForecast();
+            nextMarketForecast = generateMarketForecast();
+            generateInitialMarketData(); // This now uses the forecast to set day 1 prices.
         }
 
             // 4. Finalize setup
@@ -7914,7 +8052,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 priceHistory,
                 marketType, marketEnabled,
                 continuousMode,
-                currentDailyMood
+                currentDailyMood,
+                marketForecast,
+                nextMarketForecast
             };
             localStorage.setItem('artEmporiumSave', JSON.stringify(gameState));
         }
@@ -7984,6 +8124,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     // Load market settings, with fallbacks for older saves
                     marketEnabled = gameState.marketEnabled !== undefined ? gameState.marketEnabled : true;
                     marketType = gameState.marketType || 'classic';
+                    marketForecast = gameState.marketForecast || [];
+                    nextMarketForecast = gameState.nextMarketForecast || [];
 
                     continuousMode = gameState.continuousMode || false;
                     currentDailyMood = gameState.currentDailyMood || null;

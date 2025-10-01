@@ -8372,13 +8372,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             const reportViews = document.querySelectorAll('.report-view');
             reportToggleButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    // SPECIAL CASE: The market button now opens the phone app.
-                    if (button.id === 'report-toggle-market') {
-                        openClipboardPanel();
-                        openMarketPanel();
-                        return; // Stop further processing for this button
-                    }
-
                     const targetViewId = button.id.replace('report-toggle-', 'report-view-');
 
                     // Toggle views

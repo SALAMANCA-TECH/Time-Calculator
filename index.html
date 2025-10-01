@@ -842,6 +842,19 @@
         </div>
     </div>
 
+    <!-- Simulated Market Report Modal -->
+    <div id="simulated-market-report-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-6000">
+        <div class="bg-amber-50 w-full max-w-4xl p-6 rounded-lg shadow-2xl border-4 border-amber-900 text-amber-900 flex flex-col" style="height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 id="simulated-report-title" class="text-3xl font-handwritten">Simulated Market Report</h2>
+                <button id="close-simulated-report-btn" class="text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
+            </div>
+            <div id="simulated-market-report-content" class="flex-grow bg-white/40 p-4 rounded-md border-2 border-amber-800/30 overflow-y-auto">
+                <!-- Simulated content will be populated by JS -->
+            </div>
+        </div>
+    </div>
+
 
     <script>
         function showMessage(text, callback) {
@@ -4822,12 +4835,26 @@ function openDevReportModal() {
              detailsHtml += `<p>No event data for this day.</p>`;
         }
 
+        // Add the button to the HTML string
+        detailsHtml += `<div class="mt-4 text-right"><button class="btn-style view-market-btn !px-2 !py-1 !text-sm" data-forecast-index="${index}">View Market on this Day</button></div>`;
+
         detailsDiv.innerHTML = detailsHtml;
 
         dayButton.addEventListener('click', () => {
             const isHidden = detailsDiv.classList.toggle('hidden');
             dayButton.querySelector('span:last-child').textContent = isHidden ? '+' : '-';
         });
+
+        // Add listener for the new button
+        const viewMarketBtn = detailsDiv.querySelector('.view-market-btn');
+        if (viewMarketBtn) {
+            viewMarketBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent the accordion from closing
+                const forecastIndex = parseInt(e.target.dataset.forecastIndex, 10);
+                // This function will be created in a later step
+                openSimulatedMarketReport(forecastIndex);
+            });
+        }
 
         dayContainer.appendChild(dayButton);
         dayContainer.appendChild(detailsDiv);
@@ -4840,6 +4867,135 @@ function openDevReportModal() {
 
 function closeDevReportModal() {
     const modal = document.getElementById('dev-report-modal');
+    modal.classList.add('hidden');
+}
+
+function openSimulatedMarketReport(forecastIndex) {
+    const modal = document.getElementById('simulated-market-report-modal');
+    const contentDiv = document.getElementById('simulated-market-report-content');
+    const title = document.getElementById('simulated-report-title');
+    contentDiv.innerHTML = '';
+    const targetDay = day + forecastIndex + 1;
+    title.textContent = `Simulated Market Report for Day ${targetDay}`;
+
+    // --- 1. Create deep copies to avoid modifying the live game state ---
+    let simulatedPriceHistory = JSON.parse(JSON.stringify(priceHistory));
+    let simulatedItems = JSON.parse(JSON.stringify(items));
+
+    // --- 2. Loop through forecasts up to the target day to simulate price changes ---
+    for (let i = 0; i <= forecastIndex; i++) {
+        const dayEvent = marketForecast[i];
+        if (!dayEvent) continue;
+
+        let nextDayPrices = JSON.parse(JSON.stringify(simulatedItems));
+
+        // --- Apply the same logic as the nextDay() function ---
+        switch (dayEvent.type) {
+            case 'classic':
+                if (dayEvent.fluctuations) {
+                    Object.keys(nextDayPrices).forEach(itemName => {
+                        nextDayPrices[itemName].cost += dayEvent.fluctuations[itemName];
+                    });
+                }
+                break;
+            case 'dailyMood':
+            case 'categoryFocus':
+                // These types reset to base cost before applying modifiers
+                Object.keys(nextDayPrices).forEach(key => {
+                    if (originalItemCosts[key]) nextDayPrices[key].cost = originalItemCosts[key];
+                });
+
+                if (dayEvent.type === 'dailyMood' && dayEvent.event) {
+                    dayEvent.event.effects.forEach(effect => {
+                        let targetItems = [];
+                        if (effect.category === "All") targetItems = Object.keys(items);
+                        else {
+                            const cat = storageCells.find(c => c.label === effect.category);
+                            if (cat) targetItems = cat.allowedItems;
+                        }
+                        targetItems.forEach(itemName => {
+                            if (effect.items === "all" || effect.items.includes(itemName)) {
+                                nextDayPrices[itemName].cost *= (1 + effect.modifier);
+                            }
+                        });
+                    });
+                } else if (dayEvent.type === 'categoryFocus' && dayEvent.changes) {
+                    dayEvent.changes.forEach(change => {
+                        const cat = storageCells.find(c => c.label === change.categoryLabel);
+                        if (cat) {
+                            cat.allowedItems.forEach(itemName => {
+                                nextDayPrices[itemName].cost *= (1 + change.modifier);
+                            });
+                        }
+                    });
+                }
+                break;
+        }
+
+        // Clamp prices and round them
+        Object.keys(nextDayPrices).forEach(itemName => {
+            if (originalItemCosts[itemName]) {
+                const baseCost = originalItemCosts[itemName];
+                const minCost = baseCost * 0.25;
+                const maxCost = baseCost * 1.75;
+                nextDayPrices[itemName].cost = Math.max(minCost, Math.min(maxCost, nextDayPrices[itemName].cost));
+            }
+            nextDayPrices[itemName].cost = parseFloat(nextDayPrices[itemName].cost.toFixed(2));
+        });
+
+        // Update the main simulation object for the next iteration
+        simulatedItems = nextDayPrices;
+
+        // Update the history object for rendering
+        Object.keys(simulatedPriceHistory).forEach(itemName => {
+            simulatedPriceHistory[itemName].history.push(simulatedItems[itemName].cost);
+            if (simulatedPriceHistory[itemName].history.length > 7) {
+                simulatedPriceHistory[itemName].history.shift();
+            }
+        });
+    }
+
+    // --- 3. Render the report using the simulated data ---
+    // This logic is copied from `openMarketPanel` but uses `simulatedPriceHistory`
+    const allCategories = [...storageCells.map(cell => cell.label), "Coffee Supplies"];
+    allCategories.forEach((categoryKey, index) => {
+        if (categoryKey === "Coffee Supplies" && !unlocks.facilities.coffeeShop) return;
+
+        const categoryButton = document.createElement('button');
+        categoryButton.className = 'w-full p-2 bg-white/50 rounded-md border-2 border-amber-800/20 flex items-center space-x-4 text-left';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'flex-grow';
+        infoDiv.innerHTML = `<h3 class="font-handwritten text-xl">${categoryKey}</h3><div id="sim-percent-change-${index}" class="text-lg font-bold">--%</div>`;
+
+        const canvasContainer = document.createElement('div');
+        canvasContainer.className = 'w-32 h-16';
+        const canvas = document.createElement('canvas');
+
+        canvasContainer.appendChild(canvas);
+        categoryButton.appendChild(infoDiv);
+        categoryButton.appendChild(canvasContainer);
+        contentDiv.appendChild(categoryButton);
+
+        setTimeout(() => {
+            const percentChange = drawMarketChart(canvas, categoryKey, simulatedPriceHistory);
+            const percentDiv = document.getElementById(`sim-percent-change-${index}`);
+            if (percentChange !== null && isFinite(percentChange)) {
+                const sign = percentChange >= 0 ? '+' : '';
+                const color = percentChange >= 0 ? 'text-green-600' : 'text-red-600';
+                percentDiv.textContent = `${sign}${percentChange.toFixed(1)}%`;
+                percentDiv.className = `text-lg font-bold ${color}`;
+            } else {
+                percentDiv.textContent = '...';
+            }
+        }, 0);
+    });
+
+    modal.classList.remove('hidden');
+}
+
+function closeSimulatedMarketReport() {
+    const modal = document.getElementById('simulated-market-report-modal');
     modal.classList.add('hidden');
 }
 
@@ -6219,7 +6375,7 @@ function showHint() {
             });
         }
 
-        function drawMarketChart(canvas, selectedKey) {
+        function drawMarketChart(canvas, selectedKey, priceHistoryData = priceHistory) {
             if (!canvas.parentElement) return null;
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
@@ -6239,22 +6395,22 @@ function showHint() {
             }
 
             if (itemsToAverage.length > 0) { // Aggregate category data
-                const firstItemHistory = priceHistory[itemsToAverage[0]]?.history;
+                const firstItemHistory = priceHistoryData[itemsToAverage[0]]?.history;
                 if (!firstItemHistory) return null;
 
                 const historyLength = firstItemHistory.length;
                 for (let i = 0; i < historyLength; i++) {
                     let sum = 0, count = 0;
                     itemsToAverage.forEach(item => {
-                        if (priceHistory[item] && priceHistory[item].history[i] !== undefined) {
-                            sum += priceHistory[item].history[i];
+                        if (priceHistoryData[item] && priceHistoryData[item].history[i] !== undefined) {
+                            sum += priceHistoryData[item].history[i];
                             count++;
                         }
                     });
                     aggregatedHistory.push(count > 0 ? sum / count : 0);
                 }
             } else { // Individual item data
-                const itemData = priceHistory[selectedKey];
+                const itemData = priceHistoryData[selectedKey];
                 if (itemData) {
                     aggregatedHistory = itemData.history || [];
                 }
@@ -8627,6 +8783,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('close-manager-report-btn').addEventListener('click', closeManagerReportModal);
             document.getElementById('manager-dev-report-btn').addEventListener('click', openDevReportModal);
             document.getElementById('close-dev-report-btn').addEventListener('click', closeDevReportModal);
+            document.getElementById('close-simulated-report-btn').addEventListener('click', closeSimulatedMarketReport);
 
             document.getElementById('market-style-confirm-btn').addEventListener('click', () => {
                 marketType = tempMarketStyle;

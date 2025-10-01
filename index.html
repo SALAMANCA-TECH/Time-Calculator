@@ -975,6 +975,19 @@
         };
 
         async function generateCustomerRequest() {
+            // Step 1: Determine the in-demand items for today (Day 2 onwards)
+            let inDemandItems = new Set();
+            if (day > 1 && marketForecast && marketForecast.length > 0) {
+                // The forecast for the *current* day was set at the end of the *previous* day.
+                // marketForecast[0] is for day 2, marketForecast[1] for day 3, etc.
+                // So for the current day `D`, we need the forecast from index `D-2`.
+                const forecastIndex = (day - 2 + 7) % 7; // Safer modulo for JS
+                const todaysForecast = marketForecast[forecastIndex];
+                if (todaysForecast && todaysForecast.recommendations) {
+                    todaysForecast.recommendations.forEach(item => inDemandItems.add(item));
+                }
+            }
+
             const unlockedAndEnabledItems = new Set();
             Object.keys(enabledItems).forEach(item => {
                 if (enabledItems[item]) {
@@ -1013,10 +1026,25 @@
                     continue; // Try another customer type
                 }
 
-                const chosenCustomerName = availableCustomers[Math.floor(Math.random() * availableCustomers.length)];
+                // Step 2: Implement weighted random selection
+                const weightedCustomers = [];
+                availableCustomers.forEach(customerName => {
+                    const customer = customersForType[customerName];
+                    // Base weight is 1. Add 1 for each in-demand item they want.
+                    const weight = 1 + customer.requestedItems.filter(item => inDemandItems.has(item)).length;
+                    for (let j = 0; j < weight; j++) {
+                        weightedCustomers.push(customerName);
+                    }
+                });
+
+                if (weightedCustomers.length === 0) {
+                     continue; // Should not happen if availableCustomers has items, but as a safeguard.
+                }
+
+                const chosenCustomerName = weightedCustomers[Math.floor(Math.random() * weightedCustomers.length)];
                 const customerData = { ...customersForType[chosenCustomerName] };
 
-                // No need to filter requestedItems again, it was done when filtering availableCustomers
+                // Mark the chosen customer as visited for the day
                 customersForType[chosenCustomerName].visitedToday = true;
 
                 return {
@@ -1024,7 +1052,6 @@
                     ...customerData,
                     customerType: chosenTypeKey
                 };
-
             }
 
             return null; // Return null if no suitable customer is found

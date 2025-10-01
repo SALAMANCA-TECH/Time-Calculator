@@ -1099,13 +1099,16 @@
                         const mood = dailyMoodHeadlines[Math.floor(Math.random() * dailyMoodHeadlines.length)];
                         dayEvent.event = mood;
 
-                        // Reset simulated prices to base before applying mood effect
-                        Object.keys(nextDaySimulatedPrices).forEach(key => {
-                            if (originalItemCosts[key]) {
-                                nextDaySimulatedPrices[key].cost = originalItemCosts[key];
+                        // First, apply a minor random fluctuation to all items from the previous simulated day's price.
+                        Object.keys(nextDaySimulatedPrices).forEach(itemName => {
+                            const baseCost = originalItemCosts[itemName];
+                            if (baseCost) {
+                                const fluctuation = (Math.random() - 0.5) * (baseCost * 0.1); // +/- 5%
+                                nextDaySimulatedPrices[itemName].cost += fluctuation;
                             }
                         });
 
+                        // Then, overwrite the price for event-specific items based on their original cost.
                         mood.effects.forEach(effect => {
                             const { category, modifier, items: affectedItems } = effect;
                             let targetItems = [];
@@ -1117,8 +1120,10 @@
                             }
                             targetItems.forEach(itemName => {
                                 if (affectedItems === "all" || affectedItems.includes(itemName)) {
-                                    const baseCost = nextDaySimulatedPrices[itemName].cost;
-                                    nextDaySimulatedPrices[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                                    const baseCost = originalItemCosts[itemName]; // Use original cost for event calculation
+                                    if (baseCost) {
+                                        nextDaySimulatedPrices[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                                    }
                                 }
                             });
                         });
@@ -1135,13 +1140,16 @@
                         const changes = [];
                         categories.sort(() => 0.5 - Math.random());
 
-                        // Reset simulated prices to base before applying focus effect
-                        Object.keys(nextDaySimulatedPrices).forEach(key => {
-                            if (originalItemCosts[key]) {
-                                nextDaySimulatedPrices[key].cost = originalItemCosts[key];
+                        // First, apply a minor random fluctuation to all items from the previous simulated day's price.
+                        Object.keys(nextDaySimulatedPrices).forEach(itemName => {
+                            const baseCost = originalItemCosts[itemName];
+                            if (baseCost) {
+                                const fluctuation = (Math.random() - 0.5) * (baseCost * 0.1); // +/- 5%
+                                nextDaySimulatedPrices[itemName].cost += fluctuation;
                             }
                         });
 
+                        // Then, overwrite the price for event-specific categories based on their original cost.
                         for (const category of categories) {
                             if (modifiedCategories >= maxChanges) break;
                             if (Math.random() > 0.6) continue;
@@ -1159,8 +1167,10 @@
                             // Apply to simulated prices
                             category.allowedItems.forEach(itemName => {
                                 if (items[itemName]) {
-                                    const baseCost = nextDaySimulatedPrices[itemName].cost;
-                                    nextDaySimulatedPrices[itemName].cost = parseFloat((baseCost * (1 + chosenModifier.modifier)).toFixed(2));
+                                    const baseCost = originalItemCosts[itemName]; // Use original cost for event calculation
+                                    if (baseCost) {
+                                        nextDaySimulatedPrices[itemName].cost = parseFloat((baseCost * (1 + chosenModifier.modifier)).toFixed(2));
+                                    }
                                 }
                             });
                         }
@@ -5264,12 +5274,15 @@ function showHint() {
                                 }
                                 break;
                             case 'dailyMood':
-                                // Reset prices to base before applying mood effect
-                                Object.keys(items).forEach(key => {
-                                    if (originalItemCosts[key]) {
-                                        items[key].cost = originalItemCosts[key];
+                                // First, apply a minor random fluctuation to all items based on yesterday's price.
+                                Object.keys(items).forEach(itemName => {
+                                    const baseCost = originalItemCosts[itemName];
+                                    if (baseCost) {
+                                        const fluctuation = (Math.random() - 0.5) * (baseCost * 0.1); // +/- 5%
+                                        items[itemName].cost += fluctuation;
                                     }
                                 });
+                                // Then, overwrite the price for event-specific items based on their original cost.
                                 if (dayEvent.event) {
                                     currentDailyMood = dayEvent.event;
                                     currentDailyMood.effects.forEach(effect => {
@@ -5285,8 +5298,10 @@ function showHint() {
                                         }
                                         targetItems.forEach(itemName => {
                                             if (affectedItems === "all" || affectedItems.includes(itemName)) {
-                                                const baseCost = items[itemName].cost;
-                                                items[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                                                const baseCost = originalItemCosts[itemName]; // Use original cost for event calculation
+                                                if (baseCost) {
+                                                    items[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                                                }
                                             }
                                         });
                                     });
@@ -5294,20 +5309,25 @@ function showHint() {
                                 }
                                 break;
                             case 'categoryFocus':
-                                // Reset prices to base before applying category focus
-                                Object.keys(items).forEach(key => {
-                                    if (originalItemCosts[key]) {
-                                        items[key].cost = originalItemCosts[key];
+                                // First, apply a minor random fluctuation to all items based on yesterday's price.
+                                Object.keys(items).forEach(itemName => {
+                                    const baseCost = originalItemCosts[itemName];
+                                    if (baseCost) {
+                                        const fluctuation = (Math.random() - 0.5) * (baseCost * 0.1); // +/- 5%
+                                        items[itemName].cost += fluctuation;
                                     }
                                 });
+                                // Then, overwrite the price for event-specific categories based on their original cost.
                                 if (dayEvent.changes && dayEvent.changes.length > 0) {
                                     dayEvent.changes.forEach((change, index) => {
                                         const category = storageCells.find(cell => cell.label === change.categoryLabel);
                                         if (category) {
                                             category.allowedItems.forEach(itemName => {
                                                 if (items[itemName]) {
-                                                    const baseCost = items[itemName].cost;
-                                                    items[itemName].cost = parseFloat((baseCost * (1 + change.modifier)).toFixed(2));
+                                                    const baseCost = originalItemCosts[itemName]; // Use original cost for event calculation
+                                                    if (baseCost) {
+                                                        items[itemName].cost = parseFloat((baseCost * (1 + change.modifier)).toFixed(2));
+                                                    }
                                                 }
                                             });
                                             spawnFloatingText(`${change.categoryLabel} ${change.message}`, canvas.width / 2, 120 + (index * 30), '#f59e0b');

@@ -810,6 +810,25 @@
         </div>
     </div>
 
+    <!-- Manager Report Modal -->
+    <div id="manager-report-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-4000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-handwritten">Manager's Report</h2>
+                <button id="close-manager-report-btn" class="text-3xl font-bold text-amber-900 hover:text-red-700">&times;</button>
+            </div>
+            <div class="flex-grow bg-white/50 p-4 rounded-md border-2 border-amber-800/30">
+                <h3 class="text-xl font-handwritten border-b-2 border-amber-800/30 mb-2">Upcoming Trends</h3>
+                <div id="manager-trends-content">
+                    <p class="text-center p-4">The manager is still gathering data...</p>
+                </div>
+            </div>
+            <div class="mt-4 text-center">
+                <button id="manager-dev-report-btn" class="btn-style hidden">DEV Report</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         function showMessage(text, callback) {
@@ -4636,6 +4655,24 @@ function closeNewspaperModal() {
     modal.classList.add('hidden');
 }
 
+function openManagerReportModal() {
+    const modal = document.getElementById('manager-report-modal');
+    const devButton = document.getElementById('manager-dev-report-btn');
+
+    if (developerMode) {
+        devButton.classList.remove('hidden');
+    } else {
+        devButton.classList.add('hidden');
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closeManagerReportModal() {
+    const modal = document.getElementById('manager-report-modal');
+    modal.classList.add('hidden');
+}
+
 function toggleNewspaperModal() {
     const modal = document.getElementById('newspaper-modal');
     if (modal.classList.contains('hidden')) {
@@ -5750,6 +5787,15 @@ function showHint() {
         }
 
         function handleInteraction() {
+            // Priority 0: Manager Interaction
+            if (unlocks.employees.manager) {
+                const distToManager = Math.hypot(player.x - manager.x, player.y - manager.y);
+                if (distToManager < 150) {
+                    openManagerReportModal();
+                    return; // Interaction handled
+                }
+            }
+
             // Priority 1: Check out a customer if they are waiting and player is at the counter.
             const customerToCheckout = customers
                 .filter(c => c.state === 'waitingAtCounter' && !c.isServed)
@@ -8408,6 +8454,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             document.getElementById('dev-open-market-style-modal-btn').addEventListener('click', openMarketStyleModal);
             document.getElementById('settings-open-market-style-modal-btn').addEventListener('click', openMarketStyleModal);
             document.getElementById('market-style-cancel-btn').addEventListener('click', closeMarketStyleModal);
+            document.getElementById('close-manager-report-btn').addEventListener('click', closeManagerReportModal);
 
             document.getElementById('market-style-confirm-btn').addEventListener('click', () => {
                 marketType = tempMarketStyle;

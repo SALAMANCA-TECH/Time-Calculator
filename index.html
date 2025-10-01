@@ -652,27 +652,42 @@
                         <label for="casual-debt-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                 </div>
-                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
-                    <label for="casual-market-toggle" class="text-lg">Market ON/OFF</label>
-                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="casual-market-toggle" id="casual-market-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                        <label for="casual-market-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                    </div>
-                </div>
-                 <!-- Market Type Dropdown -->
-                <div id="market-type-container" class="flex items-center justify-between p-2 bg-white/50 rounded-md hidden">
-                    <label for="market-type-select" class="text-lg">Market Type</label>
-                    <select id="market-type-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80">
-                        <option value="classic">Classic</option>
-                        <option value="dailyMood">Daily Mood</option>
-                        <option value="categoryFocus">Category Focus</option>
-                        <option value="liveSimulation">Live Simulation</option>
-                    </select>
-                </div>
             </div>
             <div class="flex justify-between items-center">
                 <button id="casual-back-btn" class="btn-style p-4 text-xl">Back</button>
                 <button id="casual-start-game-btn" class="btn-style bg-green-700 hover:bg-green-600 p-4 text-xl">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Settings Screen -->
+    <div id="final-settings-screen" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-3000">
+        <div class="bg-amber-100 w-full max-w-2xl p-6 rounded-lg shadow-xl border-4 border-amber-900 text-amber-900 flex flex-col">
+            <h2 class="text-3xl font-handwritten text-center mb-6">Final Settings</h2>
+            <div class="space-y-4 mb-6">
+                <!-- Market Type Dropdown -->
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label for="final-market-type-select" class="text-lg">Market Type</label>
+                    <select id="final-market-type-select" class="p-2 rounded-md border-2 border-amber-800/50 bg-white/80">
+                        <option value="classic">Classic</option>
+                        <option value="dailyMood">Daily Mood</option>
+                        <option value="categoryFocus">Category Focus</option>
+                        <option value="liveSimulation">Live Simulation</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </div>
+                <!-- Continuous Day Toggle -->
+                <div class="flex items-center justify-between p-2 bg-white/50 rounded-md">
+                    <label for="final-continuous-day-toggle" class="text-lg">Continuous Day</label>
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="final-continuous-day-toggle" id="final-continuous-day-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="final-continuous-day-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center">
+                <button id="final-settings-back-btn" class="btn-style p-4 text-xl">Back</button>
+                <button id="final-settings-start-game-btn" class="btn-style bg-green-700 hover:bg-green-600 p-4 text-xl">Start Game</button>
             </div>
         </div>
     </div>
@@ -1140,6 +1155,15 @@
 
         let currentDailyMood = null; // This will store the active headline object for the day.
         let tempMarketStyle = 'classic'; // To hold selection before confirming
+        let newGameOptions = {};
+        let previousNewGameScreen = '';
+
+        function openFinalSettingsScreen(options, previousScreen) {
+            newGameOptions = options;
+            previousNewGameScreen = previousScreen;
+            hideScreen(previousScreen);
+            showScreen('final-settings-screen');
+        }
 
         function openMarketStyleModal() {
             tempMarketStyle = marketType; // Initialize with current setting
@@ -7845,17 +7869,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
             }
 
-        // Enable market by default for all new games.
-        marketEnabled = true;
-        marketType = 'classic';
+            // Apply final settings from the new modal
+            marketType = options.marketType || 'classic';
+            continuousMode = options.continuousMode || false;
+            marketEnabled = marketType !== 'disabled';
 
             if (options.casual) {
                 casualNoBreaks = options.casual.noBreaks;
                 casualNoDebtPenalty = options.casual.noDebtPenalty;
-            marketEnabled = options.casual.market; // Casual options can override
-                if (marketEnabled) {
-                    marketType = options.casual.marketType;
-                }
             }
 
         // Generate data if market is enabled, after all options are processed.
@@ -8102,7 +8123,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             // --- New Game Screen Button Listeners ---
             document.getElementById('new-game-standard').addEventListener('click', () => {
-                startGame();
+                openFinalSettingsScreen({}, 'new-game-screen');
             });
             document.getElementById('new-game-dev').addEventListener('click', () => {
                 hideScreen('new-game-screen');
@@ -8120,11 +8141,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 hideScreen('new-game-screen');
                 showScreen('casual-mode-screen');
             });
-            document.getElementById('close-new-game-screen').addEventListener('click', () => {
+             document.getElementById('close-new-game-screen').addEventListener('click', () => {
                 if (localStorage.getItem('artEmporiumSave')) {
                     hideScreen('new-game-screen');
                 } else {
-                    startGame(); // Start a default game if no save exists
+                    // If closing with no save, start a default game via the new flow
+                    openFinalSettingsScreen({}, 'new-game-screen');
                 }
             });
 
@@ -8141,7 +8163,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         startWithDebt: document.getElementById('dev-debt-toggle').checked
                     }
                 };
-                startGame(options);
+                openFinalSettingsScreen(options, 'dev-mode-screen');
             });
 
             // --- Casual Mode Screen Logic ---
@@ -8150,23 +8172,14 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 showScreen('new-game-screen');
             });
 
-            const casualMarketToggle = document.getElementById('casual-market-toggle');
-            const marketTypeContainer = document.getElementById('market-type-container');
-
-            casualMarketToggle.addEventListener('change', (e) => {
-                marketTypeContainer.classList.toggle('hidden', !e.target.checked);
-            });
-
             document.getElementById('casual-start-game-btn').addEventListener('click', () => {
                 const options = {
                     casual: {
                         noBreaks: document.getElementById('casual-breaks-toggle').checked,
-                        noDebtPenalty: document.getElementById('casual-debt-toggle').checked,
-                        market: document.getElementById('casual-market-toggle').checked,
-                        marketType: document.getElementById('market-type-select').value
+                        noDebtPenalty: document.getElementById('casual-debt-toggle').checked
                     }
                 };
-                startGame(options);
+                openFinalSettingsScreen(options, 'casual-mode-screen');
             });
 
             // --- Specialty Store Screen Logic ---
@@ -8201,29 +8214,24 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 populateSpecialtyDropdowns();
             }
 
-            function handleSpecialtyChange() {
-                // Disable the selected option in the other dropdown
+             function handleSpecialtyChange() {
                 const primaryValue = specialtyOneSelect.value;
                 const secondaryValue = specialtyTwoSelect.value;
 
-                for (let i = 0; i < specialtyTwoSelect.options.length; i++) {
-                    specialtyTwoSelect.options[i].disabled = (specialtyTwoSelect.options[i].value === primaryValue);
-                }
+                Array.from(specialtyTwoSelect.options).forEach(opt => {
+                    opt.disabled = (opt.value === primaryValue && opt.value !== 'None');
+                });
+                Array.from(specialtyOneSelect.options).forEach(opt => {
+                    opt.disabled = (opt.value === secondaryValue && opt.value !== 'None');
+                });
 
-                for (let i = 0; i < specialtyOneSelect.options.length; i++) {
-                    specialtyOneSelect.options[i].disabled = (specialtyOneSelect.options[i].value === secondaryValue);
-                }
-
-                // If the change resulted in a conflict, auto-select a valid option
-                if (primaryValue === secondaryValue) {
+                if (primaryValue === secondaryValue && primaryValue !== 'None') {
                     specialtyTwoSelect.value = 'None';
                 }
             }
 
             specialtyOneSelect.addEventListener('change', handleSpecialtyChange);
             specialtyTwoSelect.addEventListener('change', handleSpecialtyChange);
-
-            // Initial setup
             handleSpecialtyChange();
 
             document.getElementById('specialty-back-btn').addEventListener('click', () => {
@@ -8241,7 +8249,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         moreCustomers: document.getElementById('specialty-customers-toggle').checked,
                     }
                 };
-                startGame(options);
+                openFinalSettingsScreen(options, 'specialty-store-screen');
             });
 
             // --- Market Style Modal Listeners ---
@@ -8251,27 +8259,20 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             document.getElementById('market-style-confirm-btn').addEventListener('click', () => {
                 marketType = tempMarketStyle;
-                // If the market is being disabled, set the toggle accordingly. Otherwise, enable it.
                 marketEnabled = (marketType !== 'disabled');
-                document.getElementById('dev-market-toggle').checked = marketEnabled;
-                 // Also update the casual market toggle if that screen is visible/relevant
-                document.getElementById('casual-market-toggle').checked = marketEnabled;
-
                 saveGame();
                 closeMarketStyleModal();
             });
 
-            // Newspaper Modal Listeners
+             // Newspaper Modal Listeners
             document.getElementById('close-newspaper-btn').addEventListener('click', closeNewspaperModal);
             document.getElementById('eod-newspaper-btn').addEventListener('click', toggleNewspaperModal);
             document.getElementById('newspaper-hint-btn').addEventListener('click', showHint);
-            // Use event delegation for the button inside the phone app, as it's created dynamically
             document.getElementById('market-categories-container').addEventListener('click', (e) => {
                 if (e.target.closest('#market-app-newspaper-btn')) {
                     toggleNewspaperModal();
                 }
             });
-
 
             document.querySelectorAll('.market-style-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
@@ -8279,7 +8280,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     updateMarketModalUI();
                 });
             });
-
 
             // Setup Dev Toggles with dynamic labels
             setupDevToggle('dev-unlocks-toggle', 'dev-unlocks-label', 'Free Unlockables', 'Standard');
@@ -8293,7 +8293,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             });
 
             const relativeSelect = document.getElementById('family-relative-select');
-            if (relativeSelect.options.length === 0) { // Populate only once
+            if (relativeSelect.options.length === 0) {
                 const employeeTypes = Object.keys(unlocks.employees);
                 employeeTypes.forEach(emp => {
                     const option = document.createElement('option');
@@ -8303,16 +8303,31 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 });
             }
             document.getElementById('family-start-game-btn').addEventListener('click', () => {
-                const selectedEmployee = relativeSelect.value;
                 const options = {
                     family: {
                         freeCoffee: document.getElementById('family-coffee-toggle').checked,
                         badCosts: document.getElementById('family-costs-toggle').checked,
                         badSales: document.getElementById('family-sales-toggle').checked,
-                        freeEmployee: selectedEmployee
+                        freeEmployee: relativeSelect.value
                     }
                 };
-                startGame(options);
+                openFinalSettingsScreen(options, 'family-store-screen');
+            });
+
+            // --- Final Settings Screen Listeners ---
+            document.getElementById('final-settings-back-btn').addEventListener('click', () => {
+                hideScreen('final-settings-screen');
+                showScreen(previousNewGameScreen || 'new-game-screen');
+            });
+
+            document.getElementById('final-settings-start-game-btn').addEventListener('click', () => {
+                const finalMarketType = document.getElementById('final-market-type-select').value;
+                const finalContinuousDay = document.getElementById('final-continuous-day-toggle').checked;
+
+                newGameOptions.marketType = finalMarketType;
+                newGameOptions.continuousMode = finalContinuousDay;
+
+                startGame(newGameOptions);
             });
 
 

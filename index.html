@@ -1061,65 +1061,114 @@
 
         function generateMarketForecast() {
             const forecast = [];
-            let lastDayCosts = { ...items }; // Start with current item costs for chained calculations
+            // Use a simulation for prices to generate accurate recommendations
+            let simulatedPrices = JSON.parse(JSON.stringify(items)); // Deep copy of current prices for simulation
 
             for (let i = 0; i < 7; i++) {
-                let dayEvent = { type: marketType };
+                let dayEvent = { type: marketType, recommendations: [] };
+                let nextDaySimulatedPrices = JSON.parse(JSON.stringify(simulatedPrices)); // Prices for the day being forecasted
 
                 switch (marketType) {
-                    case 'classic':
-                        {
-                            const fluctuations = {};
-                            Object.keys(items).forEach(itemName => {
-                                const baseCost = originalItemCosts[itemName];
-                                // Fluctuate price by up to +/- 10% of the base cost
-                                const fluctuation = (Math.random() - 0.5) * (baseCost * 0.2);
-                                fluctuations[itemName] = fluctuation;
-                            });
-                            dayEvent.fluctuations = fluctuations;
-                            break;
-                        }
-                    case 'dailyMood':
-                        {
-                            const mood = dailyMoodHeadlines[Math.floor(Math.random() * dailyMoodHeadlines.length)];
-                            dayEvent.event = mood;
-                            break;
-                        }
-                    case 'categoryFocus':
-                        {
-                            const modifiers = {
-                                "inDemand": { modifier: 0.25, message: "is in high demand! Prices are up." },
-                                "onSale": { modifier: -0.20, message: "is on sale! Prices are down." }
-                            };
-                            const categories = [...storageCells];
-                            let modifiedCategories = 0;
-                            const maxChanges = 2;
-                            const changes = [];
+                    case 'classic': {
+                        const fluctuations = {};
+                        Object.keys(items).forEach(itemName => {
+                            const baseCost = originalItemCosts[itemName];
+                            const fluctuation = (Math.random() - 0.5) * (baseCost * 0.2);
+                            fluctuations[itemName] = fluctuation;
 
-                            categories.sort(() => 0.5 - Math.random());
+                            // Apply to simulated price for the next day
+                            nextDaySimulatedPrices[itemName].cost += fluctuation;
+                        });
+                        dayEvent.fluctuations = fluctuations;
+                        break;
+                    }
+                    case 'dailyMood': {
+                        const mood = dailyMoodHeadlines[Math.floor(Math.random() * dailyMoodHeadlines.length)];
+                        dayEvent.event = mood;
 
-                            for (const category of categories) {
-                                if (modifiedCategories >= maxChanges) break;
-                                if (Math.random() > 0.6) continue;
-
-                                const modifierKeys = Object.keys(modifiers);
-                                const chosenModifierKey = modifierKeys[Math.floor(Math.random() * modifierKeys.length)];
-                                const chosenModifier = modifiers[chosenModifierKey];
-                                changes.push({
-                                    categoryLabel: category.label,
-                                    modifier: chosenModifier.modifier,
-                                    message: chosenModifier.message
-                                });
-                                modifiedCategories++;
+                        // Reset simulated prices to base before applying mood effect
+                        Object.keys(nextDaySimulatedPrices).forEach(key => {
+                            if (originalItemCosts[key]) {
+                                nextDaySimulatedPrices[key].cost = originalItemCosts[key];
                             }
-                            dayEvent.changes = changes;
-                            break;
+                        });
+
+                        mood.effects.forEach(effect => {
+                            const { category, modifier, items: affectedItems } = effect;
+                            let targetItems = [];
+                            if (category === "All") {
+                                targetItems = Object.keys(items);
+                            } else {
+                                const storageCategory = storageCells.find(cell => cell.label === category);
+                                if (storageCategory) targetItems = storageCategory.allowedItems;
+                            }
+                            targetItems.forEach(itemName => {
+                                if (affectedItems === "all" || affectedItems.includes(itemName)) {
+                                    const baseCost = nextDaySimulatedPrices[itemName].cost;
+                                    nextDaySimulatedPrices[itemName].cost = parseFloat((baseCost * (1 + modifier)).toFixed(2));
+                                }
+                            });
+                        });
+                        break;
+                    }
+                    case 'categoryFocus': {
+                        const modifiers = {
+                            "inDemand": { modifier: 0.25, message: "is in high demand! Prices are up." },
+                            "onSale": { modifier: -0.20, message: "is on sale! Prices are down." }
+                        };
+                        const categories = [...storageCells];
+                        let modifiedCategories = 0;
+                        const maxChanges = 2;
+                        const changes = [];
+                        categories.sort(() => 0.5 - Math.random());
+
+                        // Reset simulated prices to base before applying focus effect
+                        Object.keys(nextDaySimulatedPrices).forEach(key => {
+                            if (originalItemCosts[key]) {
+                                nextDaySimulatedPrices[key].cost = originalItemCosts[key];
+                            }
+                        });
+
+                        for (const category of categories) {
+                            if (modifiedCategories >= maxChanges) break;
+                            if (Math.random() > 0.6) continue;
+
+                            const modifierKeys = Object.keys(modifiers);
+                            const chosenModifierKey = modifierKeys[Math.floor(Math.random() * modifierKeys.length)];
+                            const chosenModifier = modifiers[chosenModifierKey];
+                            changes.push({
+                                categoryLabel: category.label,
+                                modifier: chosenModifier.modifier,
+                                message: chosenModifier.message
+                            });
+                            modifiedCategories++;
+
+                            // Apply to simulated prices
+                            category.allowedItems.forEach(itemName => {
+                                if (items[itemName]) {
+                                    const baseCost = nextDaySimulatedPrices[itemName].cost;
+                                    nextDaySimulatedPrices[itemName].cost = parseFloat((baseCost * (1 + chosenModifier.modifier)).toFixed(2));
+                                }
+                            });
                         }
+                        dayEvent.changes = changes;
+                        break;
+                    }
                     case 'liveSimulation':
                     case 'disabled':
-                        // These modes are handled differently and don't use a pre-generated forecast.
-                        return []; // Return an empty forecast
+                        return [];
                 }
+
+                // Generate recommendations based on the simulated prices for the upcoming day
+                Object.keys(nextDaySimulatedPrices).forEach(itemName => {
+                    if (originalItemCosts[itemName] && nextDaySimulatedPrices[itemName].cost < originalItemCosts[itemName]) {
+                        dayEvent.recommendations.push(itemName);
+                    }
+                });
+
+                // Update the simulation for the next iteration
+                simulatedPrices = nextDaySimulatedPrices;
+
                 forecast.push(dayEvent);
             }
             return forecast;
@@ -4671,12 +4720,40 @@ function closeNewspaperModal() {
 function openManagerReportModal() {
     const modal = document.getElementById('manager-report-modal');
     const devButton = document.getElementById('manager-dev-report-btn');
+    const trendsContent = document.getElementById('manager-trends-content');
+    const trendsHeader = modal.querySelector('h3');
+
+    trendsHeader.textContent = "Today's Buying Guide";
 
     if (developerMode) {
         devButton.classList.remove('hidden');
     } else {
         devButton.classList.add('hidden');
     }
+
+    let recommendationsHtml = '';
+    let dayEvent = null;
+
+    // The forecast for the CURRENT day was set at the end of the PREVIOUS day.
+    // marketForecast[0] is for day 2, marketForecast[1] for day 3, etc.
+    // So for the current day `D`, we need the forecast from index `D-2`.
+    if (day > 1 && marketForecast && marketForecast.length > 0) {
+        const forecastIndex = (day - 2 + 7) % 7; // Safer modulo for JS
+        dayEvent = marketForecast[forecastIndex];
+    }
+
+    if (dayEvent && dayEvent.recommendations && dayEvent.recommendations.length > 0) {
+        recommendationsHtml = '<p class="mb-2">The manager suggests keeping an eye on these items, they are cheaper than usual today:</p>';
+        recommendationsHtml += '<ul class="list-disc list-inside grid grid-cols-2 gap-x-4">';
+        dayEvent.recommendations.forEach(item => {
+            recommendationsHtml += `<li class="text-green-700 font-bold">${item}</li>`;
+        });
+        recommendationsHtml += '</ul>';
+    } else {
+        recommendationsHtml = '<p class="text-center p-4">The manager reports a stable market today. No special deals.</p>';
+    }
+
+    trendsContent.innerHTML = recommendationsHtml;
 
     modal.classList.remove('hidden');
 }
@@ -4711,14 +4788,36 @@ function openDevReportModal() {
         let detailsHtml = '';
         if (dayEvent.type === 'dailyMood' && dayEvent.event) {
             detailsHtml += `<p><strong class="font-handwritten">Headline:</strong> ${dayEvent.event.headline}</p>`;
-            detailsHtml += `<p><strong class="font-handwritten">Story:</strong> ${dayEvent.event.description}</p>`;
-            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Effects:</strong><pre class="text-xs bg-gray-800 text-white p-2 rounded-md overflow-x-auto">${JSON.stringify(dayEvent.event.effects, null, 2)}</pre></div>`;
+            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Effects:</strong>`;
+            dayEvent.event.effects.forEach(effect => {
+                const modifier = effect.modifier;
+                const color = modifier > 0 ? 'text-red-600' : 'text-green-600';
+                const sign = modifier > 0 ? '+' : '';
+                const itemsAffected = Array.isArray(effect.items) ? `(${effect.items.join(', ')})` : `(All)`;
+                detailsHtml += `<div class="pl-4 ${color}"><strong>${effect.category} ${itemsAffected}:</strong> ${sign}${(modifier * 100).toFixed(0)}%</div>`;
+            });
+            detailsHtml += `</div>`;
         } else if (dayEvent.type === 'categoryFocus' && dayEvent.changes) {
             detailsHtml += `<p><strong class="font-handwritten">Event Type:</strong> Category Focus</p>`;
-            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Changes:</strong><pre class="text-xs bg-gray-800 text-white p-2 rounded-md overflow-x-auto">${JSON.stringify(dayEvent.changes, null, 2)}</pre></div>`;
+            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Changes:</strong>`;
+            dayEvent.changes.forEach(change => {
+                 const modifier = change.modifier;
+                 const color = modifier > 0 ? 'text-red-600' : 'text-green-600';
+                 const sign = modifier > 0 ? '+' : '';
+                detailsHtml += `<div class="pl-4 ${color}"><strong>${change.categoryLabel}:</strong> ${sign}${(modifier * 100).toFixed(0)}% - ${change.message}</div>`;
+            });
+            detailsHtml += `</div>`;
         } else if (dayEvent.type === 'classic' && dayEvent.fluctuations) {
             detailsHtml += `<p><strong class="font-handwritten">Event Type:</strong> Classic Fluctuation</p>`;
-            detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Fluctuations:</strong><pre class="text-xs bg-gray-800 text-white p-2 rounded-md overflow-x-auto">${JSON.stringify(dayEvent.fluctuations, null, 2)}</pre></div>`;
+             detailsHtml += `<div class="mt-2"><strong class="font-handwritten">Fluctuations:</strong>`;
+            Object.entries(dayEvent.fluctuations).forEach(([itemName, fluctuation]) => {
+                const baseCost = originalItemCosts[itemName] || 1; // Avoid division by zero
+                const percentChange = (fluctuation / baseCost) * 100;
+                const color = percentChange > 0 ? 'text-red-600' : 'text-green-600';
+                const sign = percentChange > 0 ? '+' : '';
+                detailsHtml += `<div class="pl-4 ${color}"><strong>${itemName}:</strong> ${sign}${percentChange.toFixed(1)}%</div>`;
+            });
+            detailsHtml += `</div>`;
         } else {
              detailsHtml += `<p>No event data for this day.</p>`;
         }

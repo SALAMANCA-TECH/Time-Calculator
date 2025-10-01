@@ -240,15 +240,6 @@
                         <button id="phone-back-btn" class="btn-style px-6 py-2">Back</button>
                         <button id="close-phone" class="btn-style bg-red-700 hover:bg-red-600 px-6 py-2">Close</button>
                     </div>
-                    <!-- Companion Sync Screen (for Companion Device) -->
-                    <div id="companion-sync-screen" class="phone-app-screen hidden h-full flex flex-col items-center justify-center text-center p-4">
-                        <h2 class="text-3xl font-handwritten mb-4">Companion Sync</h2>
-                        <p id="companion-instructions" class="mb-4">To connect, please use your device's camera to scan the QR code on the main game screen.</p>
-                        <!-- The input and manual connect button are removed -->
-                        <p id="companion-status" class="mt-4 text-sm text-amber-800/80">Waiting for QR code scan...</p>
-                    </div>
-
-
                     <!-- Apps Grid -->
                     <div id="phone-apps-grid" class="grid grid-cols-4 gap-x-2 gap-y-4 p-4 flex-grow overflow-y-auto">
                         <!-- App icons will be populated here by JS -->
@@ -256,6 +247,13 @@
 
                     <!-- Nested App Screens -->
                     <div id="phone-app-screens" class="flex-grow overflow-y-auto hidden p-4 space-y-4">
+                    <!-- Companion Sync Screen (for Companion Device) -->
+                    <div id="companion-sync-screen" class="phone-app-screen hidden h-full flex flex-col items-center justify-center text-center p-4">
+                        <h2 class="text-3xl font-handwritten mb-4">Companion Sync</h2>
+                        <p id="companion-instructions" class="mb-4">To connect, please use your device's camera to scan the QR code on the main game screen.</p>
+                        <!-- The input and manual connect button are removed -->
+                        <p id="companion-status" class="mt-4 text-sm text-amber-800/80">Waiting for QR code scan...</p>
+                    </div>
                     <!-- Settings Panel -->
                     <div id="settings-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Settings</h2>
@@ -433,6 +431,19 @@
                         <h2 class="text-3xl font-handwritten mb-4">Toggle Items</h2>
                         <div id="items-toggle-grid" class="space-y-2"></div>
                     </div>
+                </div>
+
+                <!-- Companion Control Footer -->
+                <div id="companion-control-footer" class="hidden mt-auto pt-2 border-t-2 border-amber-800/30 flex justify-around items-center">
+                    <button id="companion-pause-play-btn" class="btn-style p-3 flex items-center justify-center w-32">
+                        <svg id="companion-play-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 0 0 4 4.11V15.89a1.5 1.5 0 0 0 2.3 1.269l9.344-5.89a1.5 1.5 0 0 0 0-2.538L6.3 2.84Z"></path></svg>
+                        <svg id="companion-pause-icon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M5.75 4.5a.75.75 0 0 0-.75.75v9.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V5.25a.75.75 0 0 0-.75-.75h-1.5zM12.75 4.5a.75.75 0 0 0-.75.75v9.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V5.25a.75.75 0 0 0-.75-.75h-1.5z"></path></svg>
+                        <span id="companion-pause-play-text" class="ml-2">Pause</span>
+                    </button>
+                    <button id="companion-double-time-btn" class="btn-style p-3 flex items-center justify-center w-32">
+                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M15.243 12.132a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.061L13.633 13H4.75a.75.75 0 0 1 0-1.5h8.883l-3.7-3.7a.75.75 0 0 1 1.06-1.06l4.25 4.25a.75.75 0 0 1-.001 1.061z M8.75 3.75a.75.75 0 0 0-1.5 0v12.5a.75.75 0 0 0 1.5 0V3.75z"></path></svg>
+                         <span id="companion-double-time-text" class="ml-2">2x Time</span>
+                    </button>
                 </div>
 
                 <!-- Shared Order Footer -->
@@ -7594,6 +7605,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             activePhoneScreen = null;
             phoneScreenContext = {}; // Clear context when going home
             closeNewspaperModal();
+
+            // Companion-specific UI updates
+            if (document.body.classList.contains('companion-mode')) {
+                document.getElementById('companion-control-footer').classList.remove('hidden');
+                document.getElementById('order-footer').classList.add('hidden');
+            }
         }
 
         function showAppScreen(panelId) {
@@ -7618,6 +7635,12 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             // Show/hide the shared order footer
             const orderFooter = document.getElementById('order-footer');
+            const companionFooter = document.getElementById('companion-control-footer');
+
+            if (document.body.classList.contains('companion-mode')) {
+                companionFooter.classList.add('hidden');
+            }
+
             if (panelId === 'restock-panel' || panelId === 'order-quantity-modal') {
                 orderFooter.classList.remove('hidden');
             } else {
@@ -8499,7 +8522,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     ['place-order-btn', () => placeOrder(false)],
                     ['order-quantity-done-btn', openRestockPanel],
                     // Settings Screen
-                    ['new-game-btn', () => showScreen('new-game-screen')]
+                    ['new-game-btn', () => showScreen('new-game-screen')],
+                    // Game Controls
+                    ['companion-pause-play-btn', togglePause],
+                    ['companion-double-time-btn', toggleDoubleTime]
                 ]);
 
                 hostConnection.on('data', (data) => {
@@ -8653,6 +8679,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             player.basket = state.player.basket;
             isMandatoryBreak = state.isMandatoryBreak;
             currentRestockOrder = state.currentRestockOrder;
+            isPaused = state.isPaused;
+            timeMultiplier = state.isDoubleTime ? 2 : 1;
 
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             if (state.employees) {
@@ -8662,6 +8690,31 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                         allEmployees[empKey].breakPreference = state.employees[empKey].breakPreference;
                         allEmployees[empKey].onBreak = state.employees[empKey].onBreak;
                     }
+                }
+            }
+
+            // Update companion UI based on new state
+            if (document.body.classList.contains('companion-mode')) {
+                // Pause/Play Button
+                const playIcon = document.getElementById('companion-play-icon');
+                const pauseIcon = document.getElementById('companion-pause-icon');
+                const pausePlayText = document.getElementById('companion-pause-play-text');
+                if (isPaused) {
+                    playIcon.classList.remove('hidden');
+                    pauseIcon.classList.add('hidden');
+                    pausePlayText.textContent = 'Play';
+                } else {
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                    pausePlayText.textContent = 'Pause';
+                }
+
+                // Double Time Button
+                const doubleTimeBtn = document.getElementById('companion-double-time-btn');
+                if (timeMultiplier > 1) {
+                    doubleTimeBtn.classList.add('bg-yellow-300');
+                } else {
+                    doubleTimeBtn.classList.remove('bg-yellow-300');
                 }
             }
 
@@ -8735,7 +8788,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                     isMandatoryBreak,
                     currentRestockOrder,
                     activePhoneScreen,
-                    phoneScreenContext
+                    phoneScreenContext,
+                    isPaused,
+                    isDoubleTime: timeMultiplier > 1
                 };
 
                 // DEBUG: Log the state being sent from the host

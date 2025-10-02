@@ -1557,6 +1557,7 @@
             manager: 5,
             salesperson: 0
         };
+        let originalEmployeePayRates = {};
 
         const dailyOperatingCosts = {
             rent: 5,
@@ -8255,6 +8256,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             Object.keys(items).forEach(key => {
                 items[key].cost = originalItemCosts[key];
             });
+            employeePayRates = { ...originalEmployeePayRates };
             saleMultiplier = 1.5;
 
             cash = 100;
@@ -8394,6 +8396,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 }
                 if (options.family.freeEmployee) {
                     unlocks.employees[options.family.freeEmployee] = true;
+                    employeePayRates[options.family.freeEmployee] = 0;
                 }
             }
 
@@ -8644,6 +8647,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             Object.keys(items).forEach(key => {
                 originalItemCosts[key] = items[key].cost;
             });
+            originalEmployeePayRates = { ...employeePayRates };
             canvas = document.getElementById('game-canvas');
             ctx = canvas.getContext('2d');
             pieClockCanvas = document.getElementById('pie-clock-canvas');

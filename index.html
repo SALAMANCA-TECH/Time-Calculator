@@ -145,6 +145,10 @@
             display: none !important;
         }
 
+        body.companion-mode #companion-header {
+            display: flex !important;
+        }
+
         body.companion-mode #clipboard-panel {
             display: block !important; /* Ensure it's visible */
             transform: translateX(0) !important; /* Override the hiding transform */
@@ -232,8 +236,14 @@
 
                 <!-- The Paper -->
                 <div id="clipboard-paper" class="bg-amber-50 rounded-lg h-full flex flex-col overflow-hidden m-2 p-2 border-2 border-amber-900/20">
+                    <!-- Companion-only Header -->
+                    <div id="companion-header" class="hidden justify-between items-center px-2 pb-2 text-amber-900 text-lg font-bold border-b-2 border-amber-800/20">
+                        <div id="companion-funds">Funds: $--</div>
+                        <div id="companion-points">Points: --</div>
+                    </div>
+
                     <!-- Header Buttons -->
-                    <div class="flex-shrink-0 pb-4 flex justify-center items-center space-x-4">
+                    <div class="flex-shrink-0 pt-4 pb-4 flex justify-center items-center space-x-4">
                         <button id="phone-back-btn" class="btn-style px-6 py-2">Back</button>
                         <button id="close-phone" class="btn-style bg-red-700 hover:bg-red-600 px-6 py-2">Close</button>
                     </div>
@@ -9307,6 +9317,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             // Update companion UI based on new state
             if (document.body.classList.contains('companion-mode')) {
+                document.getElementById('companion-funds').textContent = `Funds: $${Math.round(cash)}`;
+                document.getElementById('companion-points').textContent = `Points: ${shopPoints}`;
+
                 // Pause/Play Button
                 const playIcon = document.getElementById('companion-play-icon');
                 const pauseIcon = document.getElementById('companion-pause-icon');

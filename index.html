@@ -5834,28 +5834,16 @@ function showHint() {
             const topPadding = 90;
             const cellPadding = 20;
 
-            // REFACTOR: Make this function non-destructive to avoid state corruption on companion.
-            if (storageCells.length === 0) {
-                storageCells = [
-                    // Bottom Row
-                    { label: "Drawing", rect: {}, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
-                    { label: "Painting", rect: {}, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
-                    { label: "Models", rect: {}, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
-                    // Top Row
-                    { label: "Woodworking", rect: {}, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
-                    { label: "Sculpture", rect: {}, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
-                    { label: "Architectural", rect: {}, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
-                ];
-            }
-
-            // Always update the geometric properties, as they depend on canvas size.
-            storageCells[0].rect = { x: storeShiftX + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight };
-            storageCells[1].rect = { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight };
-            storageCells[2].rect = { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight };
-            storageCells[3].rect = { x: storeShiftX + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight };
-            storageCells[4].rect = { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + 20, w: cellWidth, h: cellHeight };
-            storageCells[5].rect = { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + 20, w: cellWidth, h: cellHeight };
-
+            storageCells = [
+                // Bottom Row
+                { label: "Drawing", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil', 'Charcoal', 'Markers', 'Sketchbook'], items: {}, capacity: 50 },
+                { label: "Painting", rect: { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Water Color', 'Oils', 'Acrylics', 'Canvas'], items: {}, capacity: 50 },
+                { label: "Models", rect: { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + cellHeight + 60, w: cellWidth, h: cellHeight }, allowedItems: ['Razors', 'Glue', 'Mini Paints', 'Model Kits'], items: {}, capacity: 50 },
+                // Top Row
+                { label: "Woodworking", rect: { x: storeShiftX + cellPadding * 2, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Sanding Paper', 'Stainer', 'Wood Scraps', 'Lumber'], items: {}, capacity: 50 },
+                { label: "Sculpture", rect: { x: storeShiftX + cellWidth + cellPadding * 3, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Clay', 'Pottery Paints', 'Stone', 'Marble'], items: {}, capacity: 50 },
+                { label: "Architectural", rect: { x: storeShiftX + 2 * cellWidth + cellPadding * 4, y: topPadding + 20, w: cellWidth, h: cellHeight }, allowedItems: ['Pencil Lead', 'Vellum', 'Fancy Markers', 'Tiny Trees'], items: {}, capacity: 50 }
+            ];
 
             // NEW COFFEE SHOP LOGIC
             if (coffeeShopExists) {
@@ -6647,6 +6635,7 @@ function showHint() {
 
         function openMarketItemDeepDivePanel(itemName) {
             phoneScreenContext = { itemName: itemName, panel: 'market-item-deep-dive-panel' };
+            populateMarketItemDeepDivePanel(itemName);
             showScreen('market-item-deep-dive-panel');
         }
 
@@ -6858,6 +6847,7 @@ function showHint() {
 
         function openMarketDetailPanel(categoryKey) {
             phoneScreenContext = { categoryKey: categoryKey, panel: 'market-detail-panel' };
+            populateMarketDetailPanel(categoryKey);
             showScreen('market-detail-panel');
         }
 
@@ -6915,7 +6905,7 @@ function showHint() {
         }
 
         function openMarketPanel() {
-            phoneScreenContext = { panel: 'market-panel' };
+            populateMarketPanel();
             showScreen('market-panel');
         }
 
@@ -8317,11 +8307,11 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function showScreen(screenId) {
-            currentModalScreen = screenId;
             // If we are the host with a connection, send the screen change to the companion.
             if (hostConnection && hostConnection.open) {
+                currentModalScreen = screenId;
                 sendFullGameStateToCompanion();
-                // Don't show the modal on the host screen, the companion will show it.
+                // Don't show the modal on the host screen
                 return;
             }
             const screen = document.getElementById(screenId);
@@ -8329,17 +8319,17 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function hideScreen(screenId) {
-            const screen = document.getElementById(screenId);
-            if (screen) screen.classList.add('hidden');
-
-            // If we are hiding the currently active modal, clear the state.
-            if (currentModalScreen === screenId) {
-                currentModalScreen = null;
-                // If we are the host, send the update to the companion.
-                if (hostConnection && hostConnection.open) {
+            // If we are the host with a connection, update state for the companion.
+            if (hostConnection && hostConnection.open) {
+                if (currentModalScreen === screenId) {
+                    currentModalScreen = null;
                     sendFullGameStateToCompanion();
                 }
             }
+            // Always hide the element on the host. This handles cases where a companion
+            // disconnects or for non-companion play.
+            const screen = document.getElementById(screenId);
+            if (screen) screen.classList.add('hidden');
         }
 
         function startGame(options = {}) {
@@ -8360,9 +8350,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             // 2. Reset everything
             localStorage.removeItem('artEmporiumSave');
             resetGameState();
-
-            // 3. Initialize layout AFTER resetting state
-            initializeLayout();
 
             // 3. Apply options from the config object
             if (options.dev) {
@@ -8463,11 +8450,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             initializeLayout();
             updateUI();
             document.getElementById('start-day-btn').click();
-
-            // If a companion is connected, send the fresh state immediately.
-            if (hostConnection && hostConnection.open) {
-                sendFullGameStateToCompanion();
-            }
         }
 
         function saveGame() {
@@ -9108,71 +9090,76 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 document.getElementById('host-status').textContent = '✅ Connected!';
                 document.getElementById('companion-sync-btn').classList.add('phone-connected');
 
+
+                // This map links button IDs from the companion to functions on the host.
+                // This is more reliable than simulating clicks.
+                const actionMap = new Map([
+                    // Main App Grid
+                    ['app-btn-order', openRestockPanel],
+                    ['app-btn-shelves', openShelfAssignmentPanel],
+                    ['app-btn-items', openItemsPanel],
+                    ['app-btn-employees', openEmployeesPanel],
+                    ['app-btn-customers', openCustomersPanel],
+                    ['app-btn-unlocks', openUnlocksPanel],
+                    ['app-btn-market', openMarketPanel],
+                    ['app-btn-settings', () => showAppScreen('settings-panel')],
+                    // Navigation
+                    ['phone-back-btn', showAppGrid],
+                    ['market-detail-back-btn', openMarketPanel],
+                    // Market Modals
+                    ['close-market-panel-btn', () => hideScreen('market-panel')],
+                    ['close-market-detail-panel-btn', () => hideScreen('market-detail-panel')],
+                    ['close-market-deep-dive-panel-btn', () => hideScreen('market-item-deep-dive-panel')],
+                    // Order Screen
+                    ['place-order-btn', () => placeOrder(false)],
+                    ['order-quantity-done-btn', openRestockPanel],
+                    // Settings Screen
+                    ['new-game-btn', () => showScreen('new-game-screen')],
+                    // Game Controls
+                    ['companion-pause-play-btn', togglePause],
+                    ['companion-double-time-btn', toggleDoubleTime]
+                ]);
+
                 hostConnection.on('data', (data) => {
-                     // This map links button IDs from the companion to functions on the host.
-                    const actionMap = new Map([
-                        // Main App Grid
-                        ['app-btn-order', openRestockPanel],
-                        ['app-btn-shelves', openShelfAssignmentPanel],
-                        ['app-btn-items', openItemsPanel],
-                        ['app-btn-employees', openEmployeesPanel],
-                        ['app-btn-customers', openCustomersPanel],
-                        ['app-btn-unlocks', openUnlocksPanel],
-                        ['app-btn-market', openMarketPanel],
-                        ['app-btn-settings', () => showAppScreen('settings-panel')],
-                        // Navigation
-                        ['phone-back-btn', showAppGrid],
-                        ['market-detail-back-btn', openMarketPanel],
-                        // Market Modals
-                        ['close-market-panel-btn', () => hideScreen('market-panel')],
-                        ['close-market-detail-panel-btn', () => hideScreen('market-detail-panel')],
-                        ['close-market-deep-dive-panel-btn', () => hideScreen('market-item-deep-dive-panel')],
-                        // Order Screen
-                        ['place-order-btn', () => placeOrder(false)],
-                        ['order-quantity-done-btn', openRestockPanel],
-                        // Settings Screen
-                        ['new-game-btn', () => showScreen('new-game-screen')],
-                        // Game Controls
-                        ['companion-pause-play-btn', togglePause],
-                        ['companion-double-time-btn', toggleDoubleTime]
-                    ]);
-
-                    if (data.action === 'companion-ready') {
-                        console.log("Host received 'companion-ready' signal. Sending initial state.");
-                        // Companion is ready, determine and send the initial state.
-                        const newGameScreen = document.getElementById('new-game-screen');
-                        if (!newGameScreen.classList.contains('hidden')) {
-                            currentModalScreen = 'new-game-screen';
-                            newGameScreen.classList.add('hidden');
-                        }
-                        sendFullGameStateToCompanion();
-                        return;
-                    }
-
                     if (data.action === 'click') {
                         const elementId = data.elementId;
+                        console.log(`Host received click command for #${elementId}`);
                         const directAction = actionMap.get(elementId);
+
                         if (directAction) {
+                            console.log(`...found direct action, executing function.`);
                             directAction();
                         } else {
+                            // Fallback for buttons that are dynamically generated or not in the map
                             const element = document.getElementById(elementId);
-                            if (element) element.dispatchEvent(new Event('click', { bubbles: true }));
+                            if (element) {
+                                console.log(`...no direct action found, using fallback dispatchEvent.`);
+                                element.dispatchEvent(new Event('click', { bubbles: true }));
+                            } else {
+                                console.warn(`...no element found for ID: #${elementId}`);
+                            }
                         }
+                        // Always send the latest state back after any action.
                         sendFullGameStateToCompanion();
+
                     } else if (data.action === 'input') {
                         const element = document.getElementById(data.elementId);
                         if (element) {
+                            console.log(`Host processing event for: #${data.elementId} with value ${data.value}`);
                             if (data.type === 'checkbox') {
                                 element.checked = data.value;
                             } else {
                                 element.value = data.value;
                             }
+                            // Dispatch 'change' for toggles and selects, 'input' for number fields
                             const eventType = (data.type === 'checkbox' || data.type === 'select-one') ? 'change' : 'input';
                             element.dispatchEvent(new Event(eventType, { bubbles: true }));
                             sendFullGameStateToCompanion();
                         }
                     }
                 });
+
+                sendFullGameStateToCompanion();
 
                 hostConnection.on('close', () => {
                     console.log('Companion disconnected.');
@@ -9220,10 +9207,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 companionConnection = peer.connect(hostId);
 
                 companionConnection.on('open', () => {
-                    console.log('Connection to host established! Signaling ready.');
+                    console.log('Connection to host established!');
                     updateCompanionStatus('✅ Connected!');
                     document.getElementById('phone-back-btn').classList.remove('hidden');
-                    sendActionToHost({ action: 'companion-ready' });
+                    showAppGrid();
                 });
 
                 companionConnection.on('data', (data) => {
@@ -9343,12 +9330,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             updateUI();
             updateBasketUI();
 
-            // The companion needs to recalculate its layout based on the new state
-            // especially after a new game is started.
-            if (document.body.classList.contains('companion-mode')) {
-                initializeLayout();
-            }
-
             // REFACTORED: Decouple data population from UI visibility.
             // First, call the functions that populate the data for each panel.
             switch (activePhoneScreen) {
@@ -9405,7 +9386,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 const modal = document.getElementById(currentModalScreen);
                 if (modal) {
                     // Re-populate dynamic modals if they are the one being shown
-                    switch(phoneScreenContext.panel) { // Use context to determine which panel to populate
+                    switch(currentModalScreen) {
                         case 'family-store-screen':
                              const relativeSelect = document.getElementById('family-relative-select');
                             if (relativeSelect.options.length === 0) {

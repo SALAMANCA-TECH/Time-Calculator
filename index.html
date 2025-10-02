@@ -939,6 +939,7 @@
             }
         };
 
+        let originalCustomerProfiles = {};
         let customerProfiles = {
             'artist': {
                 "Leo": { "request": "I need some basic supplies for my life drawing class.", "requestedItems": ["Pencil", "Sketchbook"], "patience": 100, "visitedToday": false, "toolsOwned": [] },
@@ -8273,6 +8274,13 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             continuousMode = false;
             isMandatoryBreak = false;
             midDayBreakTriggered = false;
+            dayShiftBreakTriggered = false;
+            nightShiftBreakTriggered = false;
+            casualNoBreaks = false;
+            casualNoDebtPenalty = false;
+            marketForecast = [];
+            nextMarketForecast = [];
+            currentDailyMood = null;
             currentWeeklyAccruedBill = 0;
             currentWeeklyLaborCost = 0;
             currentWeeklyRentCost = 0;
@@ -8301,12 +8309,8 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             Object.keys(items).forEach(item => enabledItems[item] = true);
             shelves = [];
 
-            // Reset customer profiles visited status
-            for (const type in customerProfiles) {
-                for (const name in customerProfiles[type]) {
-                    customerProfiles[type][name].visitedToday = false;
-                }
-            }
+            // Reset customer profiles from the original backup
+            customerProfiles = JSON.parse(JSON.stringify(originalCustomerProfiles));
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             for (const empKey in allEmployees) {
                 if (allEmployees[empKey]) {
@@ -8644,6 +8648,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 return; // Stop normal game initialization for companion
             }
 
+            originalCustomerProfiles = JSON.parse(JSON.stringify(customerProfiles));
             Object.keys(items).forEach(key => {
                 originalItemCosts[key] = items[key].cost;
             });

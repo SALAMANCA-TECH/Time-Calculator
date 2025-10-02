@@ -9090,6 +9090,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
                 document.getElementById('host-status').textContent = '✅ Connected!';
                 document.getElementById('companion-sync-btn').classList.add('phone-connected');
 
+                // Add a short delay to show the connected message, then hide the modal.
+                setTimeout(() => {
+                    hideScreen('host-sync-modal');
+                }, 1000);
 
                 // This map links button IDs from the companion to functions on the host.
                 // This is more reliable than simulating clicks.

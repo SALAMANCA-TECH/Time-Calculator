@@ -335,30 +335,6 @@
                         </div>
                     </div>
 
-                    <!-- Shelf Assignment Panel -->
-                    <div id="shelf-assignment-panel" class="phone-app-screen hidden">
-                        <h2 id="shelf-assignment-title" class="text-3xl font-handwritten mb-4">Shelf Assignments</h2>
-                        <div id="shelf-assignment-grid" class="grid grid-cols-2 gap-2"></div>
-                    </div>
-
-                    <!-- Shelf Panel -->
-                    <div id="shelf-panel" class="phone-app-screen hidden">
-                        <h2 id="shelf-title" class="text-3xl font-handwritten mb-4">Manage Shelf</h2>
-                        <div id="shelf-grid" class="grid grid-cols-1 gap-4"></div>
-                    </div>
-
-                    <!-- Storage Panel -->
-                    <div id="storage-panel" class="phone-app-screen hidden">
-                        <h2 id="storage-title" class="text-3xl font-handwritten mb-4">Manage Storage</h2>
-                        <div id="storage-grid" class="grid grid-cols-2 gap-2"></div>
-                    </div>
-
-                    <!-- Assignment Panel -->
-                    <div id="assignment-panel" class="phone-app-screen hidden">
-                        <h2 id="assignment-title" class="text-2xl font-handwritten mb-4">Assign Item</h2>
-                        <div id="assignment-grid" class="grid grid-cols-2 gap-2"></div>
-                    </div>
-
                     <!-- Employees Panel -->
                     <div id="employees-panel" class="phone-app-screen hidden">
                         <h2 class="text-3xl font-handwritten mb-4">Manage Employees</h2>
@@ -1704,9 +1680,6 @@
                     } else {
                         closeClipboard(); // Close phone from app grid
                     }
-                } else if (activePanel) {
-                    // Handle legacy panels if any are still in use
-                    togglePanel(activePanel, false);
                 }
             }
         });
@@ -3478,143 +3451,6 @@
             switch(manager.state) {
                 case 'idle':
                     if (manager.stateTimer <= 0) {
-
-                        // --- Morning Prep Logic (DISABLED) ---
-                        /*
-                        if (dayPhase === 'opening' && manager.canOrder && !manager.hasPlacedMorningOrder) {
-                            const shelfDemand = {};
-                            const shelfStock = {};
-                            shelves.forEach(shelf => {
-                                shelf.items.forEach(slot => {
-                                    if (slot.assignedItem) {
-                                        const itemName = slot.assignedItem;
-                                        shelfDemand[itemName] = (shelfDemand[itemName] || 0) + MAX_SHELF_STACK;
-                                        shelfStock[itemName] = (shelfStock[itemName] || 0) + slot.quantity;
-                                    }
-                                });
-                            });
-
-                            const shoppingList = [];
-                            for (const itemName in shelfDemand) {
-                                const neededToFillShelves = shelfDemand[itemName] - shelfStock[itemName];
-                                const backroomStock = getBackroomStock(itemName);
-                                const neededFromSupplier = neededToFillShelves - backroomStock;
-                                if (neededFromSupplier > 0) {
-                                    shoppingList.push({ itemName, quantity: neededFromSupplier });
-                                }
-                            }
-
-                            if (shoppingList.length > 0) {
-                                shoppingList.sort((a, b) => (itemPopularity[b.itemName] || 0) - (itemPopularity[a.itemName] || 0));
-                                const finalOrderList = [];
-                                let totalCost = 0;
-                                const availableCash = cash - 30;
-
-                                for (const orderItem of shoppingList) {
-                                    const itemCost = items[orderItem.itemName].cost * orderItem.quantity;
-                                    if (totalCost + itemCost <= availableCash) {
-                                        totalCost += itemCost;
-                                        finalOrderList.push(orderItem);
-                                    }
-                                }
-
-                                let packagesFromOrder = 0;
-                                finalOrderList.forEach(orderItem => {
-                                    packagesFromOrder += Math.ceil(orderItem.quantity / MAX_PACKAGE_SIZE);
-                                });
-
-                                if (finalOrderList.length > 0) {
-                                    manager.task = {
-                                        action: 'order_bulk',
-                                        items: finalOrderList,
-                                        totalCost: totalCost,
-                                        target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                                    };
-                                    manager.state = 'going_to_office';
-                                    manager.hasPlacedMorningOrder = true;
-                                    manager.canOrder = false;
-                                    manager.lastOrderQuarter = 0;
-                                    break; // Exit switch case to process new state
-                                }
-                            }
-                        }
-                        */
-
-                        // --- Urgent Order Logic (DISABLED) ---
-                        /*
-                        let urgentOrderItem = null;
-                        let requiredQuantity = 0;
-                        const waitingCustomers = customers.filter(c => c.isWaitingForRestock);
-                        if (waitingCustomers.length > 0) {
-                            const customerDemands = {};
-                            for (const customer of waitingCustomers) {
-                                const waitingOnItem = customer.requestedItems[customer.currentItemIndex];
-                                if (waitingOnItem && getTotalStock(waitingOnItem) === 0) {
-                                    const isItemUnlocked = storageCells.some(cell => unlocks.storage[storageCells.indexOf(cell)] && cell.allowedItems.includes(waitingOnItem));
-                                    if (isItemUnlocked) {
-                                        customerDemands[waitingOnItem] = (customerDemands[waitingOnItem] || 0) + 1;
-                                    }
-                                }
-                            }
-                            let maxDemand = 0;
-                            for (const item in customerDemands) {
-                                if (customerDemands[item] > maxDemand) {
-                                    maxDemand = customerDemands[item];
-                                    urgentOrderItem = item;
-                                    requiredQuantity = customerDemands[item];
-                                }
-                            }
-                        }
-
-                        if (urgentOrderItem) {
-                            const quantityToOrder = requiredQuantity;
-                            const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
-                            manager.task = {
-                                action: 'order',
-                                item: urgentOrderItem,
-                                isUrgent: true,
-                                requiredQuantity: requiredQuantity,
-                                target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                            };
-                            manager.state = 'going_to_office';
-                            manager.stateTimer = 1000;
-                            break;
-                        }
-                        */
-
-                        // --- Evening Low-Stock Check (DISABLED) ---
-                        /*
-                        if (manager.canOrder && dayPhase === 'closing') {
-                            const lowStockItems = Object.keys(items).filter(item => {
-                                const stock = getTotalStock(item);
-                                return stock < 5;
-                            });
-
-                            if (lowStockItems.length > 0) {
-                                lowStockItems.sort((a, b) => (itemPopularity[b] || 0) - (itemPopularity[a] || 0));
-                                const mostPopularLowItem = lowStockItems[0];
-                                const quantityToOrder = 1;
-                                const packagesFromOrder = Math.ceil(quantityToOrder / MAX_PACKAGE_SIZE);
-
-                                manager.task = {
-                                    action: 'order',
-                                    item: mostPopularLowItem,
-                                    isUrgent: false,
-                                    target: { x: managersOffice.x + managersOffice.w / 2, y: managersOffice.y + managersOffice.h + 10 }
-                                };
-                                manager.state = 'going_to_office';
-                            } else {
-                                 manager.stateTimer = 10000;
-                                if(Math.hypot(manager.x - manager.idleX, manager.y - manager.idleY) > 5) {
-                                     manager.task = { target: {x: manager.idleX, y: manager.idleY} };
-                                 } else {
-                                     manager.task = null;
-                                 }
-                            }
-                        } else {
-                             manager.stateTimer = 5000;
-                        }
-                        */
                         manager.stateTimer = 5000; // Manager will now just idle
                     }
 
@@ -4507,21 +4343,6 @@
             const pointsProgress = isPaused ? 0 : Math.min(100, (zone1PointTimer / 5000) * 100);
             pointsProgressBar.style.width = `${pointsProgress}%`;
         }
-
-        if (activeShelf) {
-                const shelf = activeShelf;
-                const dist = Math.hypot(player.x - (shelf.rect.x + shelf.rect.w/2), player.y - (shelf.rect.y + shelf.rect.h/2));
-                if (dist > 200) {
-                    togglePanel('shelf', false);
-                }
-            }
-            if (activeStorageCell) {
-                const cell = activeStorageCell;
-                const dist = Math.hypot(player.x - (cell.rect.x + cell.rect.w/2), player.y - (cell.rect.y + cell.rect.h/2));
-                if (dist > 200) {
-                    togglePanel('storage', false);
-                }
-            }
 
             populateInStoreCustomers();
 
@@ -7079,63 +6900,6 @@ function showHint() {
             showAppScreen('employees-panel');
         }
 
-        function openShelfAssignmentPanel() {
-            const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
-            shelfAssignmentGrid.innerHTML = ''; // Clear existing buttons
-
-            shelves.forEach((shelf, index) => {
-                if (unlocks.shelves[index]) {
-                    const shelfButton = document.createElement('button');
-                    shelfButton.className = 'btn-style p-4';
-                    shelfButton.id = `assign-shelf-${index}`;
-                    shelfButton.textContent = `Shelf ${index + 1}`;
-                    shelfButton.onclick = () => {
-                        showShelfSlotsForAssignment(shelf);
-                    };
-                    shelfAssignmentGrid.appendChild(shelfButton);
-                }
-            });
-
-            showAppScreen('shelf-assignment-panel');
-        }
-
-
-        function showShelfSlotsForAssignment(shelf) {
-            const shelfAssignmentGrid = document.getElementById('shelf-assignment-grid');
-            const shelfAssignmentTitle = document.getElementById('shelf-assignment-title');
-            shelfAssignmentGrid.innerHTML = ''; // Clear shelf buttons
-            shelfAssignmentTitle.textContent = `Assign to Shelf ${shelves.indexOf(shelf) + 1}`;
-
-            // Add a back button
-            const backButton = document.createElement('button');
-            backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600 col-span-2';
-            backButton.id = 'back-to-shelves-btn';
-            backButton.textContent = '← Back to Shelves';
-            backButton.onclick = openShelfAssignmentPanel;
-            shelfAssignmentGrid.appendChild(backButton);
-
-            for (let i = 0; i < 4; i++) {
-                const slot = shelf.items[i];
-                const slotButton = document.createElement('button');
-                slotButton.className = 'btn-style p-4';
-                slotButton.id = `assign-shelf-${shelves.indexOf(shelf)}-slot-${i}`;
-                let buttonText = `Slot ${i + 1}`;
-                if (slot.assignedItem) {
-                    buttonText += ` (${slot.assignedItem.substring(0,8)})`;
-                } else {
-                    buttonText += ` (Empty)`;
-                }
-                slotButton.textContent = buttonText;
-                slotButton.onclick = () => {
-                    openProductAssignmentForShelf(shelf, i);
-                };
-                shelfAssignmentGrid.appendChild(slotButton);
-            }
-             togglePanel('shelf-assignment', true);
-        }
-
-
-
         function takeItemFromPackage(packageIndex) {
             if (player.basket.length >= MAX_BASKET_SIZE) {
                 spawnFloatingText("Your basket is full!", player.x, player.y - 90, '#ef4444');
@@ -7208,7 +6972,7 @@ function showHint() {
 
             const apps = [
                 { name: 'Order', icon: '📦', panelId: 'restock-panel', action: openRestockPanel },
-                { name: 'Shelves', icon: '📚', panelId: 'shelf-assignment-panel', action: openShelfAssignmentPanel },
+                { name: 'Shelves', icon: '📚', panelId: 'shelf-panel', action: openShelfPanel },
                 { name: 'Items', icon: '💡', panelId: 'items-panel', action: openItemsPanel },
                 { name: 'Employees', icon: '👥', panelId: 'employees-panel', action: openEmployeesPanel },
                 { name: 'Customers', icon: '👤', panelId: 'customers-panel', action: openCustomersPanel },
@@ -7799,101 +7563,6 @@ function showHint() {
         }
 
 
-function openProductAssignmentForShelf(shelf, slotIndex) {
-            const assignmentGrid = document.getElementById('assignment-grid');
-            const assignmentTitle = document.getElementById('assignment-title');
-            assignmentGrid.innerHTML = '';
-            assignmentTitle.textContent = `Assign to Shelf ${shelves.indexOf(shelf) + 1} - Slot ${slotIndex + 1}`;
-
-            const currentSlot = shelf.items[slotIndex];
-
-            const backButton = document.createElement('button');
-            backButton.className = 'btn-style bg-amber-700/80 hover:bg-amber-600';
-            backButton.id = `back-to-shelf-slots-${shelves.indexOf(shelf)}`;
-            backButton.textContent = '← Back';
-            backButton.onclick = () => showShelfSlotsForAssignment(shelf);
-            assignmentGrid.appendChild(backButton);
-
-            const clearButton = document.createElement('button');
-            clearButton.className = 'btn-style bg-red-700/80 hover:bg-red-600';
-            clearButton.id = `clear-shelf-${shelves.indexOf(shelf)}-slot-${slotIndex}`;
-            clearButton.textContent = 'Clear';
-            clearButton.onclick = () => {
-                const itemToMove = currentSlot.assignedItem;
-                const quantityToMove = currentSlot.quantity;
-
-                if (quantityToMove > 0 && itemToMove) {
-                    const storageCell = storageCells.find(c => c.allowedItems.includes(itemToMove));
-                    if (!storageCell) {
-                        showMessage(`Error: No storage cell for ${itemToMove}. Cannot move items.`);
-                        return;
-                    }
-                    const currentFill = Object.values(storageCell.items).reduce((a, b) => a + b, 0);
-                    if (currentFill + quantityToMove > storageCell.capacity) {
-                        showMessage(`Not enough room in ${storageCell.label} storage to move ${quantityToMove} items.`);
-                        return;
-                    }
-                    storageCell.items[itemToMove] = (storageCell.items[itemToMove] || 0) + quantityToMove;
-                }
-
-                currentSlot.assignedItem = null;
-                currentSlot.quantity = 0;
-                saveGame();
-                togglePanel('assignment', false);
-                togglePanel('shelf-assignment', true);
-                showShelfSlotsForAssignment(shelf);
-            };
-            assignmentGrid.appendChild(clearButton);
-
-            const unlockedItems = new Set();
-            storageCells.forEach((cell, index) => {
-                if (unlocks.storage[index]) {
-                    cell.allowedItems.forEach(item => unlockedItems.add(item));
-                }
-            });
-
-
-            for (const itemName of unlockedItems) {
-                const button = document.createElement('button');
-                button.className = 'btn-style';
-                button.id = `assign-item-${itemName.replace(/\s+/g, '-')}-to-shelf-${shelves.indexOf(shelf)}-slot-${slotIndex}`;
-                button.textContent = itemName;
-                button.dataset.item = itemName;
-                button.onclick = () => {
-                    const oldItem = currentSlot.assignedItem;
-                    const oldQuantity = currentSlot.quantity;
-                    const newItem = itemName;
-
-                    if (oldItem === newItem) {
-                        togglePanel('assignment', false);
-                        return;
-                    }
-
-                    if (oldQuantity > 0 && oldItem) {
-                        const storageCell = storageCells.find(c => c.allowedItems.includes(oldItem));
-                        if (!storageCell) {
-                            showMessage(`Error: No storage cell for ${oldItem}. Cannot move items.`);
-                            return;
-                        }
-                        const currentFill = Object.values(storageCell.items).reduce((a, b) => a + b, 0);
-                        if (currentFill + oldQuantity > storageCell.capacity) {
-                            showMessage(`Not enough room in ${storageCell.label} storage to move ${oldQuantity} ${oldItem}.`);
-                            return;
-                        }
-                        storageCell.items[oldItem] = (storageCell.items[oldItem] || 0) + oldQuantity;
-                        currentSlot.quantity = 0;
-                    }
-
-                    currentSlot.assignedItem = newItem;
-                    saveGame();
-                    togglePanel('assignment', false);
-                    togglePanel('shelf-assignment', true);
-                    showShelfSlotsForAssignment(shelf);
-                };
-                assignmentGrid.appendChild(button);
-            }
-            showAppScreen('assignment-panel');
-        }
 
         function stockAllRelevantFromBasket(shelf) {
             let itemsMoved = 0;
@@ -8162,13 +7831,9 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
 
-        let activePanel = null; // DEPRECATED: Will be replaced by phone-specific logic
         let activePhoneScreen = null; // Tracks the currently open app screen inside the phone
         let phoneScreenContext = {}; // Stores context for screens that need it (e.g., which item is being ordered)
         let isPhoneOpen = false;
-        let activeShelf = null;
-        let activeStorageCell = null;
-
         function closeClipboard() {
             const clipboardPanel = document.getElementById('clipboard-panel');
             clipboardPanel.classList.remove('open');
@@ -8224,21 +7889,6 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             } else {
                 orderFooter.classList.add('hidden');
             }
-        }
-
-
-        function togglePanel(panelName, forceOpen = false) {
-            // This function is now a legacy wrapper. New UI should use the phone functions.
-            const targetPanel = document.getElementById(`${panelName}-panel`);
-            if (forceOpen) {
-                 if (targetPanel) targetPanel.classList.remove('hidden');
-                 activePanel = panelName;
-            } else {
-                 if (targetPanel) targetPanel.classList.add('hidden');
-                 activePanel = null;
-            }
-             if (panelName === 'shelf') activeShelf = null;
-             if (panelName === 'storage') activeStorageCell = null;
         }
 
 

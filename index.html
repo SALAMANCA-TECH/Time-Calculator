@@ -1452,6 +1452,7 @@
         let coffeeShopExists = true;
         let isPaused = false;
         let timeMultiplier = 1;
+        let isGameActive = false;
 
         // WebRTC Companion Variables
         let peer = null;
@@ -4345,7 +4346,7 @@
             const deltaTime = timestamp - lastTimestamp;
             lastTimestamp = timestamp;
 
-            if (!isPaused) {
+            if (isGameActive && !isPaused) {
                 const effectiveDeltaTime = deltaTime * timeMultiplier;
 
                 if (dayStarted) {
@@ -8252,73 +8253,116 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
         }
 
         function resetGameState() {
-            CUSTOMER_SPAWN_INTERVAL = 8000;
-            // Restore original costs before anything else
-            Object.keys(items).forEach(key => {
-                items[key].cost = originalItemCosts[key];
-            });
-            employeePayRates = { ...originalEmployeePayRates };
-            saleMultiplier = 1.5;
-
-            cash = 100;
-            day = 1;
-            shopPoints = 0;
-            itemPopularity = {};
-            priceHistory = {};
-            customers = [];
-            customerDemand = {};
+            // Core Game Loop Control
+            isGameActive = false;
+            isPaused = false;
             lastTimestamp = 0;
-            running = true;
-            dayStarted = false;
-            developerMode = false;
-            continuousMode = false;
-            isMandatoryBreak = false;
-            midDayBreakTriggered = false;
-            dayShiftBreakTriggered = false;
-            nightShiftBreakTriggered = false;
-            casualNoBreaks = false;
-            casualNoDebtPenalty = false;
-            marketForecast = [];
-            nextMarketForecast = [];
-            currentDailyMood = null;
-            currentWeeklyAccruedBill = 0;
-            currentWeeklyLaborCost = 0;
-            currentWeeklyRentCost = 0;
-            currentWeeklyStorageCost = 0;
-            currentWeeklyCoffeeCost = 0;
+
+            // Player and Camera
+            cameraState = 'store';
+            targetCameraX = 0;
+            cameraX = 0;
+            player.targetX = null;
+            player.targetY = null;
+
+            // Time and Day
+            day = 1;
             dayTimer = DAY_DURATION;
             dayPhase = 'pre-open';
+            dayStarted = false;
+            timeMultiplier = 1;
+
+            // Financials and Points
+            cash = 100;
+            shopPoints = 0;
+            saleMultiplier = 1.5;
+
+            // Arrays and Dynamic Objects
+            customers = [];
+            loadingDockPackages = [];
             floatingTexts = [];
+            shelves = []; // This will be repopulated by initializeLayout
+
+            // Daily and Weekly Trackers
             dailySalesReport = [];
             startingDayInventory = {};
             dailySupplyOrders = [];
             dailyLaborCosts = {};
             dailyEmployeeWorkTimes = {};
-            cameraState = 'store';
-            loadingDockPackages = [];
-            coffeeShopExists = true;
+            currentWeeklyAccruedBill = 0;
+            currentWeeklyLaborCost = 0;
+            currentWeeklyRentCost = 0;
+            currentWeeklyStorageCost = 0;
+            currentWeeklyCoffeeCost = 0;
+            dayShiftBreakTriggered = false;
+            nightShiftBreakTriggered = false;
 
+            // Market State
+            marketForecast = [];
+            nextMarketForecast = [];
+            currentDailyMood = null;
+            itemPopularity = {};
+            priceHistory = {};
+            dailyPlayerPurchases = {};
+            // Restore original costs from the master backup
+            if (Object.keys(originalItemCosts).length > 0) {
+                 Object.keys(items).forEach(key => {
+                    items[key].cost = originalItemCosts[key];
+                });
+            }
+
+
+            // Game Mode Flags
+            developerMode = false;
+            continuousMode = false;
+            casualNoBreaks = false;
+            casualNoDebtPenalty = false;
+            marketEnabled = true;
+            coffeeShopExists = true;
+            CUSTOMER_SPAWN_INTERVAL = 8000;
+
+
+            // Unlocks and Inventory
             unlocks = {
                 employees: { cashier: false, stocker: false, barista: false, manager: false, salesperson: false },
                 shelves: [true, false, false, false, false, false],
                 facilities: { coffeeShop: false },
                 storage: [true, false, false, false, false, false]
             };
-
             Object.keys(items).forEach(item => inventory[item] = 5);
             Object.keys(items).forEach(item => enabledItems[item] = true);
-            shelves = [];
 
-            // Reset customer profiles from the original backup
+
+            // Reset customer and employee data from backups
             customerProfiles = JSON.parse(JSON.stringify(originalCustomerProfiles));
+            employeePayRates = { ...originalEmployeePayRates };
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             for (const empKey in allEmployees) {
-                if (allEmployees[empKey]) {
-                    allEmployees[empKey].breakTakenToday = false;
+                const employee = allEmployees[empKey];
+                if (employee) {
+                    employee.breakTakenToday = false;
+                    employee.onBreak = false;
+                    employee.playerInitiatedBreak = false;
+                    employee.task = null;
+                    employee.state = 'idle';
+                    employee.basket = [];
+                    employee.stateTimer = 0;
                 }
             }
 
-            initializeLayout();
+
+            // UI State
+            closeClipboard();
+            document.getElementById('start-day-btn').classList.add('hidden');
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            if (playIcon && pauseIcon) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            }
+
+
+            // Finalize Reset
             updateUI();
         }
 

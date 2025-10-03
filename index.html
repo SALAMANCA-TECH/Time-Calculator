@@ -8335,7 +8335,10 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
 
             // Reset customer and employee data from backups
             customerProfiles = JSON.parse(JSON.stringify(originalCustomerProfiles));
-            employeePayRates = { ...originalEmployeePayRates };
+            // employeePayRates is a const, so we must modify its properties instead of reassigning it.
+            for (const key in originalEmployeePayRates) {
+                employeePayRates[key] = originalEmployeePayRates[key];
+            }
             const allEmployees = { cashier, stocker, barista, manager, salesperson };
             for (const empKey in allEmployees) {
                 const employee = allEmployees[empKey];
@@ -8511,6 +8514,7 @@ function openProductAssignmentForShelf(shelf, slotIndex) {
             initializeLayout();
             updateUI();
             document.getElementById('start-day-btn').click();
+            isGameActive = true; // Reactivate the game loop
         }
 
         function saveGame() {
